@@ -1,0 +1,23 @@
+{
+    "PENTAX":{
+	"Super-Takumar 50mm F1.4":{
+	    "mount":"M42",
+	    "focal_length":"50mm",
+	    "f_steps":[]
+	},
+	"Super-Takumar 55mm F1.8":{
+	    "mount":"M42",
+	    "focal_length":"55mm",
+	    "f_steps":[]
+	}
+    },
+    "USSR":{
+	
+    },
+    "Carl Zeiss":{
+	
+    },
+    "Carl Zeiss Jena":{
+	
+    }
+}

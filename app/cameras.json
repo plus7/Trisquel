@@ -1,0 +1,291 @@
+{
+    "PENTAX":{
+	"Asahiflex I":{
+	    "mount":"M37",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"Asahiflex IIA":{
+	    "mount":"M37",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"Asahiflex IIB":{
+	    "mount":"M37",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX K":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX S2":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX S3":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX SV":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX SP":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[1.0, 0.5, 0.25, 0.125, 0.0666666666666667, 0.0333333333333333, 0.0166666666666667, 0.008, 0.004, 0.002, 0.001]
+	},
+	"ASAHI PENTAX SL":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX ES":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX ES II":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX SP F":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX SP II":{
+	    "mount":"M42",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX K2":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX KX":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX KM":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX K1000":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX K2DMD":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX MX":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX ME":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX MV1":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX ME Super":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX LX":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX MG":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX Super A":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX ME-F":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX Program A":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX A3 DATE":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX P30":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX P50 DATE":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX SFX":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX SF7":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX Z-10":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX Z-1":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX Z-20":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX Z-5":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX Z-1P":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX MZ-5":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX MZ-10":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX MZ-3":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX MZ-M":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX MZ-7":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX MZ-S":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX *ist":{
+	    "mount":"PK",
+	    "format":"FF",
+	    "ss_steps":[]
+	},
+	"PENTAX 645":{
+	    "mount":"P645",
+	    "format":"645",
+	    "ss_steps":[]
+	},
+	"PENTAX 645N":{
+	    "mount":"P645",
+	    "format":"645",
+	    "ss_steps":[]
+	},
+	"PENTAX 645NII":{
+	    "mount":"P645",
+	    "format":"645",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX 6x7":{
+	    "mount":"P67",
+	    "format":"67",
+	    "ss_steps":[]
+	},
+	"PENTAX 67":{
+	    "mount":"P67",
+	    "format":"67",
+	    "ss_steps":[]
+	},
+	"PENTAX 67II":{
+	    "mount":"P67",
+	    "format":"67",
+	    "ss_steps":[]
+	},
+	"ASAHI PENTAX auto110":{
+	    "mount":"P110",
+	    "format":"110",
+	    "ss_steps":[]
+	},
+	"PENTAX auto110 Super":{
+	    "mount":"P110",
+	    "format":"110",
+	    "ss_steps":[]
+	}
+    },
+    "Nikon":{
+	"Nikon FM3A":{
+	    "mount":"F",
+	    "format":"FF",
+	    "ss_steps":[]
+	}
+    },
+    "Canon":{
+	"Canon F-1":{
+	    "mount":"FD",
+	    "format":"FF",
+	    "ss_steps":[]
+	}
+    },
+    "Olympus":{
+    },
+    "Minolta":{
+    },
+    "CONTAX":{
+    },
+    "Ricoh":{
+    }
+}

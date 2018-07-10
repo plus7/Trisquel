@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="film_formats">
+        <item>8x10inch</item>
+        <item>4x5inch</item>
+        <item>6x9cm</item>
+        <item>6x7cm</item>
+        <item>6x6cm</item>
+        <item>6x4.5cm</item>
+        <item>35mm full-frame</item>
+        <item>35mm half-frame</item>
+        <item>APS</item>
+        <item>110</item>
+        <item>127</item>
+    </string-array>
+</resources>

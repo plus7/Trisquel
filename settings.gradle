@@ -1,0 +1,7 @@
+include ':app', ':library1', ':library1-material', ':dirchooser'
+
+project(':library1').projectDir = new File(settingsDir, '../BetterSpinner/library')
+
+project(':library1-material').projectDir = new File(settingsDir, '../BetterSpinner/library-material')
+
+project(':dirchooser').projectDir = new File(settingsDir, '../Android-DirectoryChooser/library')

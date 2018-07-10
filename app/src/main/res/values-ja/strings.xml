@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_settings">設定</string>
+    <string name="action_releasenotes">リリースノート</string>
+    <string name="title_activity_spec_editor">機材を編集</string>
+    <string name="title_activity_camera_spec_editor">カメラを編集</string>
+    <string name="title_activity_edit_cam">カメラを編集</string>
+    <string name="title_activity_edit_cam_and_lens">カメラとレンズを編集</string>
+    <string name="title_activity_cam_list">カメラ一覧</string>
+    <string name="title_activity_lens_list">レンズ一覧</string>
+    <string name="title_activity_filmroll_list">フィルム一覧</string>
+    <string name="title_activity_accessory_list">アクセサリ一覧</string>
+    <string name="title_activity_reg_cam">カメラを登録</string>
+    <string name="title_activity_reg_lens">レンズを登録</string>
+    <string name="title_activity_reg_filmroll">フィルムを追加</string>
+    <string name="title_activity_edit_lens">レンズを編集</string>
+    <string name="title_activity_edit_photo">写真情報を編集</string>
+    <string name="title_activity_add_photo">写真情報を追加</string>
+    <string name="title_activity_edit_filmroll">フィルム情報を編集</string>
+    <string name="title_activity_edit_photo_list">フィルム</string>
+    <string name="title_activity_settings">設定</string>
+    <string name="title_activity_dirchooser">ディレクトリを選択</string>
+    <string name="menu_reg_cam">カメラを登録</string>
+    <string name="menu_reg_lens">レンズを登録</string>
+    <string name="menu_edit_film">フィルム情報を編集</string>
+    <string name="menu_save">保存</string>
+    <string name="menu_copy_to_clipboard">クリップボードにコピー</string>
+    <string name="action_backup_sqlite">データベースをバックアップ</string>
+    <string name="title_backup">データベースをバックアップ</string>
+    <string name="description_backup">
+        本アプリのデータはSQLite形式で保存されています。
+        バグによるデータ破壊への備えや端末の移行用（現在インポートは未実装ですがそのうち実装します）
+        に、このデータベースをSDカードにコピーすることができます。続行しますか？
+    </string>
+    <string name="notify_copied">クリップボードにコピーしました</string>
+    <string name="error_permission_denied_sdcard">SDカードにアクセスする許可が得られませんでした</string>
+    <string name="error_permission_location">位置情報にアクセスする許可が得られませんでした</string>
+    <string name="error_please_reg_cam">フィルム情報を新規作成する前に「カメラ一覧」からカメラを登録してください</string>
+    <string name="save">保存</string>
+    <string name="discard">破棄</string>
+    <string name="continue_">続行</string>
+    <string name="continue_editing">編集を続ける</string>
+    <string name="close">閉じる</string>
+    <string name="show_release_notes">リリースノートを表示</string>
+    <string name="register_ilc">レンズ交換式カメラを登録</string>
+    <string name="register_flc">レンズ固定式カメラを登録</string>
+    <string name="change">変更</string>
+    <string name="prime">単焦点</string>
+    <string name="delete">削除</string>
+    <string name="add_photo_above">一つ上に写真情報を追加</string>
+    <string name="hint_zoom">ズームの場合ハイフンで区切る（例: 70-300）</string>
+    <string name="label_date">日付</string>
+    <string name="label_aperture">絞り値</string>
+    <string name="label_f_stops">設定できるF値</string>
+    <string name="label_lens">レンズ</string>
+    <string name="label_lens_name">レンズ名</string>
+    <string name="label_shutter_speed">シャッタースピード</string>
+    <string name="label_shutter_speed_step">シャッタースピードの刻み幅</string>
+    <string name="label_shutter_speed_step_one">1段</string>
+    <string name="label_shutter_speed_step_half">1/2段</string>
+    <string name="label_shutter_speed_step_one_third">1/3段</string>
+    <string name="label_shutter_speed_range">シャッタースピード範囲</string>
+    <string name="label_to">～</string>
+    <string name="label_shutter_speed_slowest">最低速</string>
+    <string name="label_shutter_speed_fastest">最高速</string>
+    <string name="label_focal_length">焦点距離</string>
+    <string name="label_exposure_value">EV</string>
+    <string name="label_exposure_compensation">露出補正</string>
+    <string name="label_ttl_light_meter">TTL測光メーター</string>
+    <string name="label_step">ステップ</string>
+    <string name="label_range">幅</string>
+    <string name="label_memo">メモ</string>
+    <string name="label_location">場所</string>
+    <string name="label_coordinate">座標</string>
+    <string name="label_camera">カメラ</string>
+    <string name="label_manufacturer">メーカー</string>
+    <string name="label_brand">銘柄</string>
+    <string name="label_iso">感度</string>
+    <string name="label_name">名前</string>
+    <string name="label_mount">マウント</string>
+    <string name="label_model">型番</string>
+    <string name="label_format">フォーマット</string>
+    <string name="label_comma_separated">カンマ区切りで入力</string>
+    <string name="label_bulb">バルブ(B)あり</string>
+    <string name="error_nolens">%sマウントのレンズが登録されていません</string>
+    <string name="warning_lens_not_registered">レンズが登録されていません</string>
+    <string name="warning_cam_not_registered">カメラが登録されていません</string>
+    <string name="warning_filmroll_not_registered">フィルムが登録されていません</string>
+    <string name="warning_photo_not_registered">写真がありません</string>
+    <string name="warning_firstrun">
+        本アプリケーションは早期アクセス版です。
+        未成熟な機能や予期せぬクラッシュバグ、データ破壊バグ、ユーザーインターフェースの不具合などが
+        含まれている可能性があります。詳細につきましてはリリースノートを熟読ください。
+    </string>
+    <string name="warning_newversion">
+        Trisquelはアップデートされました。詳細についてはリリースノートをお読み下さい。
+    </string>
+    <string name="msg_save_or_discard_data">閉じる前に保存しますか？</string>
+    <string name="msg_continue_editing_or_discard_data">変更されたデータがあります。編集を継続しますか？</string>
+    <string name="empty_name">(名前なし)</string>
+    <!-- Strings related to Settings -->
+
+    <!-- Example General settings -->
+    <string name="pref_header_general">一般</string>
+
+    <string name="pref_title_autocomplete_from_previous_shot">直前のショットからレンズを補完</string>
+    <string name="pref_description_autocomplete_from_previous_shot">
+        写真情報を新規作成するとき、直前のショットのレンズをコピーして予め入力する
+    </string>
+
+    <string name="pref_title_social_recommendations">Enable social recommendations</string>
+    <string name="pref_description_social_recommendations">Recommendations for people to contact
+        based on your message history
+    </string>
+
+    <string name="pref_title_display_name">表示名</string>
+    <string name="pref_default_display_name">John Smith</string>
+
+    <string name="pref_title_add_friends_to_messages">Add friends to messages</string>
+    <string-array name="pref_example_list_titles">
+        <item>Always</item>
+        <item>When possible</item>
+        <item>Never</item>
+    </string-array>
+    <string-array name="pref_example_list_values">
+        <item>1</item>
+        <item>0</item>
+        <item>-1</item>
+    </string-array>
+
+    <!-- Example settings for Data & Sync -->
+    <string name="pref_header_data_sync">Data &amp; sync</string>
+
+    <string name="pref_title_sync_frequency">Sync frequency</string>
+    <string-array name="pref_sync_frequency_titles">
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+        <item>1 hour</item>
+        <item>3 hours</item>
+        <item>6 hours</item>
+        <item>Never</item>
+    </string-array>
+    <string-array name="pref_sync_frequency_values">
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+        <item>180</item>
+        <item>360</item>
+        <item>-1</item>
+    </string-array>
+
+    <string-array name="list_preference_entries">
+        <item>Entry 1</item>
+        <item>Entry 2</item>
+        <item>Entry 3</item>
+    </string-array>
+
+    <string-array name="list_preference_entry_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+
+    <string-array name="multi_select_list_preference_default_value" />
+
+    <string name="pref_title_system_sync_settings">System sync settings</string>
+
+    <!-- Example settings for Notifications -->
+    <string name="pref_header_notifications">通知</string>
+
+    <string name="pref_title_new_message_notifications">New message notifications</string>
+
+    <string name="pref_title_ringtone">Ringtone</string>
+    <string name="pref_ringtone_silent">Silent</string>
+
+    <string name="pref_title_vibrate">Vibrate</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>

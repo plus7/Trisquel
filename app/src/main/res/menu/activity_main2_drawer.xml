@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_filmrolls"
+            android:icon="@drawable/ic_filmroll_vector"
+            android:title="@string/title_activity_filmroll_list" />
+        <item
+            android:id="@+id/nav_camera"
+            android:icon="@drawable/ic_menu_camera"
+            android:title="@string/title_activity_cam_list" />
+        <item
+            android:id="@+id/nav_lens"
+            android:icon="@drawable/ic_lens"
+            android:title="@string/title_activity_lens_list" />
+        <item
+            android:id="@+id/nav_accessory"
+            android:icon="@drawable/ic_extension_black_24dp"
+            android:title="@string/title_activity_accessory_list"
+            android:visible="false"/>
+    </group>
+
+    <item
+        android:title="Communicate"
+        android:visible="false">
+        <menu>
+            <item
+                android:id="@+id/nav_manage"
+                android:icon="@drawable/ic_menu_manage"
+                android:title="Tools" />
+            <item
+                android:id="@+id/nav_share"
+                android:icon="@drawable/ic_menu_share"
+                android:title="Share" />
+            <item
+                android:id="@+id/nav_send"
+                android:icon="@drawable/ic_menu_send"
+                android:title="Send" />
+        </menu>
+    </item>
+
+</menu>

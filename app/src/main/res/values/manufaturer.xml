@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="camera_manufacturer">
+        <item>PENTAX</item>
+        <item>Ricoh</item>
+        <item>Nikon</item>
+        <item>Canon</item>
+        <item>Olympus</item>
+        <item>Contax</item>
+        <item>Fujifilm</item>
+        <item>Minolta</item>
+        <item>Leica</item>
+    </string-array>
+
+    <string-array name="camera_mounts">
+        <item>M42</item>
+        <item>M37</item>
+        <item>PENTAX K</item>
+        <item>PENTAX 645</item>
+        <item>PENTAX 67</item>
+        <item>PENTAX 110</item>
+        <item>Nikon F</item>
+        <item>Canon FD</item>
+        <item>Canon EF</item>
+        <item>Olympus OM</item>
+        <item>Olympus PEN F</item>
+        <item>Contax</item>
+        <item>Contax G</item>
+        <item>Fujifilm ST</item>
+        <item>Minolta SR</item>
+        <item>Minolta A</item>
+        <item>Leica L</item>
+        <item>Leica M</item>
+    </string-array>
+
+    <string-array name="lens_manufacturer">
+        <item>PENTAX</item>
+        <item>Ricoh</item>
+        <item>Nikon</item>
+        <item>Canon</item>
+        <item>Olympus</item>
+        <item>Contax</item>
+        <item>Fujifilm</item>
+        <item>Minolta</item>
+        <item>Sigma</item>
+        <item>Tamron</item>
+        <item>Carl Zeiss</item>
+        <item>Carl Zeiss Jena</item>
+        <item>Leica</item>
+        <item>USSR</item>
+    </string-array>
+
+</resources>

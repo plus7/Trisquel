@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="film_manufacturer">
+        <item>Fujifilm</item>
+        <item>Kodak</item>
+        <item>ILFORD</item>
+        <item>Lomography</item>
+    </string-array>
+
+    <string-array name="film_iso">
+        <item>50</item>
+        <item>100</item>
+        <item>200</item>
+        <item>400</item>
+        <item>800</item>
+        <item>1600</item>
+        <item>3200</item>
+    </string-array>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ev_grain_size_list">
+        <item>1EV</item>
+        <item>1/2EV</item>
+        <item>1/3EV</item>
+    </string-array>
+    <string-array name="ev_width_list">
+        <item>&#177;1EV</item>
+        <item>&#177;2EV</item>
+        <item>&#177;3EV</item>
+    </string-array>
+</resources>
