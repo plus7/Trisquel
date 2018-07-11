@@ -414,6 +414,7 @@ public class MainActivity extends AppCompatActivity
                                 dst.transferFrom(src, 0, src.size());
                                 src.close();
                                 dst.close();
+                                // MediaScannerに教えないとすぐにはPCから見えない
                                 Uri contentUri = Uri.fromFile(backupDB);
                                 Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, contentUri);
                                 this.sendBroadcast(mediaScanIntent);
