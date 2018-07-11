@@ -95,6 +95,8 @@
     <string name="warning_newversion">
         Trisquelはアップデートされました。詳細についてはリリースノートをお読み下さい。
     </string>
+    <string name="msg_reset_autocomplete">本当に自動補完の履歴をリセットしますか？</string>
+    <string name="msg_reset_autocomplete_done">自動補完の履歴をリセットしました</string>
     <string name="msg_save_or_discard_data">閉じる前に保存しますか？</string>
     <string name="msg_continue_editing_or_discard_data">変更されたデータがあります。編集を継続しますか？</string>
     <string name="empty_name">(名前なし)</string>
@@ -106,6 +108,12 @@
     <string name="pref_title_autocomplete_from_previous_shot">直前のショットからレンズを補完</string>
     <string name="pref_description_autocomplete_from_previous_shot">
         写真情報を新規作成するとき、直前のショットのレンズをコピーして予め入力する
+    </string>
+
+    <string name="pref_title_reset_autocomplete_history">自動補完の履歴をリセット</string>
+    <string name="pref_description_reset_autocomplete_history">
+        フィルムの銘柄、カメラとレンズとフィルムの製造者、そしてカメラのマウントの入力履歴をリセットします。
+        デフォルトの候補は残ります。
     </string>
 
     <string name="pref_title_social_recommendations">Enable social recommendations</string>

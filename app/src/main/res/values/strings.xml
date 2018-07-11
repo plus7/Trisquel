@@ -97,6 +97,8 @@
     <string name="warning_newversion">
         Trisquel has been updated. Read the release notes for details.
     </string>
+    <string name="msg_reset_autocomplete">Are you sure to reset autocomplete history?</string>
+    <string name="msg_reset_autocomplete_done">Autocomplete history reset.</string>
     <string name="msg_save_or_discard_data">Save changes before closing?</string>
     <string name="msg_continue_editing_or_discard_data">Continue editing or discard unsaved changes?</string>
     <string name="empty_name">(empty)</string>
@@ -113,6 +115,12 @@
     <string name="pref_title_autocomplete_from_previous_shot">Copy lens from the previous shot</string>
     <string name="pref_description_autocomplete_from_previous_shot">
         Copy the lens from the previous shot when creating a new photo
+    </string>
+
+    <string name="pref_title_reset_autocomplete_history">Reset autocomplete history</string>
+    <string name="pref_description_reset_autocomplete_history">
+        Clear autocomplete history of film brands and camera, lens, and film manufacturers and camera mounts.
+        Default candidates remains.
     </string>
 
     <string name="pref_title_social_recommendations">Enable social recommendations</string>

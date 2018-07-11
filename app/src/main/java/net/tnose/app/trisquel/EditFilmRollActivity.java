@@ -23,6 +23,7 @@ import com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.regex.Matcher;
@@ -108,6 +109,11 @@ public class EditFilmRollActivity extends AppCompatActivity implements AbstractD
             public void afterTextChanged(Editable s) {
                 invalidateOptionsMenu();
                 isDirty = true;
+                ArrayAdapter<String> brand_adapter =
+                        getSuggestListSubPref("film_brand",
+                                editManufacturer.getText().toString(),
+                                android.R.layout.simple_dropdown_item_1line);
+                editBrand.setAdapter(brand_adapter);
             }
         });
 
@@ -176,8 +182,6 @@ public class EditFilmRollActivity extends AppCompatActivity implements AbstractD
                         android.R.layout.simple_dropdown_item_1line);
         editManufacturer.setAdapter(manufacturer_adapter);
 
-        editBrand.setHelperText("銘柄の自動補完は未実装");
-
         ArrayAdapter<CharSequence> iso_adapter =
                 ArrayAdapter.createFromResource(this, R.array.film_iso, android.R.layout.simple_dropdown_item_1line);
 
@@ -209,6 +213,12 @@ public class EditFilmRollActivity extends AppCompatActivity implements AbstractD
             setResult(RESULT_CANCELED, null);
             finish();
         }
+
+        ArrayAdapter<String> brand_adapter =
+                getSuggestListSubPref("film_brand",
+                        editManufacturer.getText().toString(),
+                        android.R.layout.simple_dropdown_item_1line);
+        editBrand.setAdapter(brand_adapter);
 
         setEventListeners();
 
@@ -280,6 +290,58 @@ public class EditFilmRollActivity extends AppCompatActivity implements AbstractD
         e.apply();
     }
 
+
+    //dead copy from EditCameraActivity
+    protected ArrayAdapter<String> getSuggestListSubPref(String parentkey, String subkey, int resource){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String prefstr = pref.getString(parentkey, "{}");
+        ArrayList<String> strArray = new ArrayList<String>();
+        try {
+            JSONObject obj = new JSONObject(prefstr);
+            JSONArray array = obj.getJSONArray(subkey);
+            if(array == null) return new ArrayAdapter<String>(this, resource, strArray);
+            for(int i = 0; i < array.length(); i++){
+                strArray.add(array.getString(i));
+            }
+        }catch(JSONException e){}
+        return new ArrayAdapter<String>(this, resource, strArray);
+    }
+
+    protected void saveSuggestListSubPref(String parentkey, String subkey, String newValue){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String prefstr = pref.getString(parentkey, "{}");
+        ArrayList<String> strArray = new ArrayList<String>();
+        JSONObject obj = null;
+        try {
+            JSONArray array;
+            obj = new JSONObject(prefstr);
+            if(obj.isNull(subkey)) {
+                array = new JSONArray();
+            }else {
+                array = obj.getJSONArray(subkey);
+            }
+            for(int i = 0; i < array.length(); i++){
+                strArray.add(array.getString(i));
+            }
+        }catch(JSONException e){
+            obj = new JSONObject();
+        }
+
+        if(strArray.indexOf(newValue) >= 0) {
+            strArray.remove(strArray.indexOf(newValue));
+        }
+        strArray.add(0, newValue);
+        JSONArray result = new JSONArray(strArray);
+        SharedPreferences.Editor e = pref.edit();
+        try {
+            obj.put(subkey, result);
+            e.putString(parentkey, obj.toString());
+            e.apply();
+        }catch (JSONException e1){
+
+        }
+    }
+
     @Override
     public void onDialogResult(int requestCode, int resultCode, @Nullable Intent data) {
         switch (requestCode){
@@ -288,6 +350,9 @@ public class EditFilmRollActivity extends AppCompatActivity implements AbstractD
                     Intent resultData = getData();
                     saveSuggestListPref("film_manufacturer",
                             R.array.film_manufacturer, editManufacturer.getText().toString());
+                    saveSuggestListSubPref("film_brand",
+                            editManufacturer.getText().toString(),
+                            editBrand.getText().toString());
                     setResult(RESULT_OK, resultData);
                     finish();
                 }else if(resultCode == DialogInterface.BUTTON_NEGATIVE) {
@@ -363,6 +428,9 @@ public class EditFilmRollActivity extends AppCompatActivity implements AbstractD
                 data = getData();
                 saveSuggestListPref("film_manufacturer",
                         R.array.film_manufacturer, editManufacturer.getText().toString());
+                saveSuggestListSubPref("film_brand",
+                        editManufacturer.getText().toString(),
+                        editBrand.getText().toString());
                 setResult(RESULT_OK, data);
                 finish();
                 return true;

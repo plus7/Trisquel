@@ -1,10 +1,14 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <SwitchPreference
+    <SwitchPreferenceCompat
         android:defaultValue="false"
         android:key="autocomplete_from_previous_shot"
         android:title="@string/pref_title_autocomplete_from_previous_shot"
         android:summary="@string/pref_description_autocomplete_from_previous_shot" />
+    <Preference
+        android:key="reset_autocomplete"
+        android:title="@string/pref_title_reset_autocomplete_history"
+        android:summary="@string/pref_description_reset_autocomplete_history"/>
 
     <!-- NOTE: EditTextPreference accepts EditText attributes. -->
     <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
