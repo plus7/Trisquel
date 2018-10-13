@@ -87,8 +87,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             String featureName = Normalizer.normalize(a.getFeatureName(), Normalizer.Form.NFKC);
                             String address = Normalizer.normalize(a.getAddressLine(0), Normalizer.Form.NFKC);
                             Log.d("getAddressLine", address);
-                            Log.d("getFeatureName", a.getFeatureName());
-                            Log.d("getAdminArea", a.getAdminArea());
+                            if(a.getFeatureName() != null)  Log.d("getFeatureName", a.getFeatureName());
+                            if(a.getAdminArea() != null)    Log.d("getAdminArea", a.getAdminArea());
                             if(a.getLocality() != null)     Log.d("getLocality", a.getLocality());
                             if(a.getSubAdminArea() != null) Log.d("getSubAdminArea", a.getSubAdminArea());
                             if(a.getSubLocality() != null)  Log.d("getSubLocality", a.getSubLocality());
