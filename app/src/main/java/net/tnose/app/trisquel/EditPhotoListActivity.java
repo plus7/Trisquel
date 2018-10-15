@@ -163,6 +163,11 @@ public class EditPhotoListActivity extends AppCompatActivity
                 cm.setPrimaryClip(ClipData.newPlainText("", getFilmRollText()));
                 Toast.makeText(this, getString(R.string.notify_copied), Toast.LENGTH_SHORT).show();
                 return true;
+            case R.id.menu_export_pdf:
+                intent = new Intent(getApplication(), PrintPreviewActivity.class);
+                intent.putExtra("filmroll", mFilmRoll.id);
+                startActivity(intent);
+                return true;
         }
         return false;
     }

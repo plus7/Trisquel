@@ -20,11 +20,13 @@
     <string name="title_activity_edit_photo_list">フィルム</string>
     <string name="title_activity_settings">設定</string>
     <string name="title_activity_dirchooser">ディレクトリを選択</string>
+    <string name="title_activity_print_preview">印刷プレビュー</string>
     <string name="menu_reg_cam">カメラを登録</string>
     <string name="menu_reg_lens">レンズを登録</string>
     <string name="menu_edit_film">フィルム情報を編集</string>
     <string name="menu_save">保存</string>
     <string name="menu_copy_to_clipboard">クリップボードにコピー</string>
+    <string name="menu_print">印刷</string>
     <string name="action_backup_sqlite">データベースをバックアップ</string>
     <string name="title_backup">データベースをバックアップ</string>
     <string name="description_backup">
@@ -49,6 +51,7 @@
     <string name="delete">削除</string>
     <string name="add_photo_above">一つ上に写真情報を追加</string>
     <string name="hint_zoom">ズームの場合ハイフンで区切る（例: 70-300）</string>
+    <string name="label_index">番号</string>
     <string name="label_date">日付</string>
     <string name="label_aperture">絞り値</string>
     <string name="label_f_stops">設定できるF値</string>
@@ -99,6 +102,7 @@
     <string name="msg_reset_autocomplete_done">自動補完の履歴をリセットしました</string>
     <string name="msg_save_or_discard_data">閉じる前に保存しますか？</string>
     <string name="msg_continue_editing_or_discard_data">変更されたデータがあります。編集を継続しますか？</string>
+    <string name="msg_no_printer_support">この端末では印刷をサポートしていません</string>
     <string name="empty_name">(名前なし)</string>
     <!-- Strings related to Settings -->
 

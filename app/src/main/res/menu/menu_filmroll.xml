@@ -10,4 +10,9 @@
         android:id="@+id/menu_copy"
         android:title="@string/menu_copy_to_clipboard"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_export_pdf"
+        android:title="@string/menu_print"
+        app:showAsAction="never" />
 </menu>
