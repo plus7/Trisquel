@@ -28,6 +28,7 @@ import android.widget.Toast;
 
 import net.rdrei.android.dirchooser.DirectoryChooserActivity;
 import net.rdrei.android.dirchooser.DirectoryChooserConfig;
+import net.tnose.app.trisquel.dummy.DummyContent;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -46,6 +47,7 @@ public class MainActivity extends AppCompatActivity
         LensFragment.OnListFragmentInteractionListener,
         FilmRollFragment.OnListFragmentInteractionListener,
         EmptyFragment.OnFragmentInteractionListener,
+        AccessoryFragment.OnListFragmentInteractionListener,
         AbstractDialogFragment.Callback{
 
     public final int REQCODE_EDIT_CAMERA = 1;
@@ -55,15 +57,18 @@ public class MainActivity extends AppCompatActivity
     public final int REQCODE_EDIT_FILMROLL = 5;
     public final int REQCODE_ADD_FILMROLL = 6;
     public final int REQCODE_EDIT_PHOTO_LIST = 7;
-    public final int REQCODE_BACKUP_DIR_CHOSEN = 8;
+    public final int REQCODE_EDIT_ACCESSORY = 8;
+    public final int REQCODE_ADD_ACCESSORY = 9;
+    public final int REQCODE_BACKUP_DIR_CHOSEN = 10;
 
     public final int RETCODE_CAMERA_TYPE = 300;
     public final int RETCODE_OPEN_RELEASE_NOTES = 100;
     public final int RETCODE_DELETE_FILMROLL  = 101;
     public final int RETCODE_DELETE_CAMERA  = 102;
     public final int RETCODE_DELETE_LENS  = 103;
-    public final int RETCODE_BACKUP_DB = 104;
-    public final int RETCODE_SDCARD_PERM = 200;
+    public final int RETCODE_DELETE_ACCESSORY  = 104;
+    public final int RETCODE_BACKUP_DB = 400;
+    public final int RETCODE_SDCARD_PERM = 401;
 
     public final String RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/";
     //public final int REQCODE_ADD_PHOTO_LIST = 8;
@@ -71,8 +76,9 @@ public class MainActivity extends AppCompatActivity
     private FilmRollFragment filmroll_fragment;
     private CameraFragment cam_fragment;
     private LensFragment lens_fragment;
+    private AccessoryFragment accessory_fragment;
     private EmptyFragment empty_fragment;
-    private int currentFragment; //0: filmroll, 1: cam, 2: lens
+    private int currentFragment; //0: filmroll, 1: cam, 2: lens, 3: accessory
 
     final String[] PERMISSIONS = {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -105,6 +111,11 @@ public class MainActivity extends AppCompatActivity
                 f = lens_fragment;
                 setTitle(R.string.title_activity_lens_list);
                 break;
+            case 3:
+                accessory_fragment = new AccessoryFragment();
+                f = accessory_fragment;
+                setTitle(R.string.title_activity_accessory_list);
+                break;
             default:
                 filmroll_fragment = new FilmRollFragment();
                 f = filmroll_fragment;
@@ -122,6 +133,9 @@ public class MainActivity extends AppCompatActivity
                 break;
             case 2:
                 fab.setImageResource(R.drawable.ic_lens_white);
+                break;
+            case 3:
+                fab.setImageResource(R.drawable.ic_extension_white);
                 break;
             default:
                 fab.setImageResource(R.drawable.ic_filmroll_vector_white);
@@ -141,6 +155,10 @@ public class MainActivity extends AppCompatActivity
                     case 2:
                         intent = new Intent(getApplication(), EditLensActivity.class);
                         startActivityForResult(intent, REQCODE_ADD_LENS);
+                        break;
+                    case 3:
+                        intent = new Intent(getApplication(), EditAccessoryActivity.class);
+                        startActivityForResult(intent, REQCODE_ADD_ACCESSORY);
                         break;
                     default:
                         intent = new Intent(getApplication(), EditFilmRollActivity.class);
@@ -395,6 +413,26 @@ public class MainActivity extends AppCompatActivity
                 } else if (resultCode == RESULT_CANCELED) {
                 }
                 break;
+            case REQCODE_ADD_ACCESSORY:
+                if (resultCode == RESULT_OK) {
+                    Bundle bundle = data.getExtras();
+                    Accessory a = new Accessory(-1, Util.dateToStringUTC(new Date()), Util.dateToStringUTC(new Date()),
+                            bundle.getInt("type"), bundle.getString("name"), bundle.getString("mount"),
+                            bundle.getDouble("focal_length_factor"));
+                    accessory_fragment.insertAccessory(a);
+                } else if (resultCode == RESULT_CANCELED) {
+                }
+                break;
+            case REQCODE_EDIT_ACCESSORY:
+                if (resultCode == RESULT_OK) {
+                    Bundle bundle = data.getExtras();
+                    Accessory a = new Accessory( bundle.getInt("id"), bundle.getString("created"), Util.dateToStringUTC(new Date()),
+                            bundle.getInt("type"), bundle.getString("name"), bundle.getString("mount"),
+                            bundle.getDouble("focal_length_factor"));
+                    accessory_fragment.updateAccessory(a);
+                } else if (resultCode == RESULT_CANCELED) {
+                }
+                break;
             case REQCODE_BACKUP_DIR_CHOSEN:
                 if (resultCode == DirectoryChooserActivity.RESULT_CODE_DIR_SELECTED) {
                     Bundle bundle = data.getExtras();
@@ -466,8 +504,14 @@ public class MainActivity extends AppCompatActivity
             setTitle(R.string.title_activity_filmroll_list);
             fab.setImageResource(R.drawable.ic_filmroll_vector_white);
             currentFragment  = 0;
-        } else if (id == R.id.nav_manage) {
-
+        } else if (id == R.id.nav_accessory) {
+            accessory_fragment = new AccessoryFragment();
+            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+            transaction.replace(R.id.container, accessory_fragment);
+            transaction.commit();
+            setTitle(R.string.title_activity_accessory_list);
+            fab.setImageResource(R.drawable.ic_extension_white);
+            currentFragment  = 3;
         } else if (id == R.id.nav_share) {
 
         } else if (id == R.id.nav_send) {
@@ -547,6 +591,39 @@ public class MainActivity extends AppCompatActivity
             startActivityForResult(intent, REQCODE_EDIT_PHOTO_LIST);
         }
     }
+    public void onListFragmentInteraction(Accessory accessory, boolean isLong) {
+        if(isLong){
+            TrisquelDao dao = new TrisquelDao(getApplicationContext());
+            dao.connection();
+            boolean accessoryUsed = dao.getAccessoryUsed(accessory.getId());
+            dao.close();
+            if(accessoryUsed){
+                AbstractDialogFragment fragment = new AlertDialogFragment.Builder().build(99);
+                //TODO: i18n
+                fragment.getArguments().putString("title", "アクセサリを削除できません");
+                fragment.getArguments().putString("message",
+                        accessory.getName() + "は既存のフィルム記録から参照されているため、削除することができません。");
+                fragment.showOn(this, "dialog");
+            }else {
+                AbstractDialogFragment fragment = new YesNoDialogFragment.Builder()
+                        .build(RETCODE_DELETE_ACCESSORY);
+                //TODO: i18n
+                fragment.getArguments().putString("title", "アクセサリの削除");
+                fragment.getArguments().putString("message", accessory.getName() + "を削除しますか？この操作は元に戻せません！");
+                fragment.getArguments().putInt("id", accessory.getId());
+                fragment.showOn(this, "dialog");
+            }
+        }else {
+            Intent intent = new Intent(getApplication(), EditAccessoryActivity.class);
+            intent.putExtra("id", accessory.getId());
+            startActivityForResult(intent, REQCODE_EDIT_ACCESSORY);
+        }
+    }
+
+    public void onListFragmentInteraction(DummyContent.DummyItem item){
+
+    }
+
     public void onFragmentInteraction(Uri uri){
 
     }
@@ -629,6 +706,15 @@ public class MainActivity extends AppCompatActivity
                         int id;
                         id = data.getIntExtra("id",-1);
                         if(id != -1) lens_fragment.deleteLens(id);
+                    }
+                }
+                break;
+            case RETCODE_DELETE_ACCESSORY:
+                if(resultCode == DialogInterface.BUTTON_POSITIVE) {
+                    if (data != null) {
+                        int id;
+                        id = data.getIntExtra("id",-1);
+                        if(id != -1) accessory_fragment.deleteAccessory(id);
                     }
                 }
                 break;

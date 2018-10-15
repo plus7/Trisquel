@@ -137,6 +137,16 @@ public class EditPhotoListActivity extends AppCompatActivity
             if(p.location.length() > 0) sb.append(getString(R.string.label_location) +  ": " + p.location + "\n");
             if (p.latitude != 999 && p.longitude != 999) sb.append(getString(R.string.label_coordinate) + ": " + Double.toString(p.latitude)+", "+Double.toString(p.longitude) + "\n");
             if(p.memo.length() > 0) sb.append(getString(R.string.label_memo) +  ": " + p.memo + "\n");
+            if(p.accessories.size() > 0) {
+                sb.append(getString(R.string.label_accessories) + ": ");
+                boolean first = true;
+                for(int a: p.accessories){
+                    if(!first) sb.append(", ");
+                    sb.append(dao.getAccessory(a).getName());
+                    first = false;
+                }
+                sb.append("\n");
+            }
         }
         dao.close();
         return sb.toString();
@@ -204,7 +214,8 @@ public class EditPhotoListActivity extends AppCompatActivity
                             bundle.getString("location"),
                             bundle.getDouble("latitude"),
                             bundle.getDouble("longitude"),
-                            bundle.getString("memo"));
+                            bundle.getString("memo"),
+                            bundle.getString("accessories"));
                     photo_fragment.insertPhoto(p);
                 }
                 break;
@@ -227,7 +238,8 @@ public class EditPhotoListActivity extends AppCompatActivity
                             bundle.getString("location"),
                             bundle.getDouble("latitude"),
                             bundle.getDouble("longitude"),
-                            bundle.getString("memo"));
+                            bundle.getString("memo"),
+                            bundle.getString("accessories"));
                     photo_fragment.updatePhoto(p);
                 }
                 break;

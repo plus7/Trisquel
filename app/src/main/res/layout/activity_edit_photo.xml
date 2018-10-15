@@ -36,12 +36,27 @@
                 android:hint="@string/label_date"
                 app:met_floatingLabel="normal" />
 
-            <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
-                android:id="@+id/spinner_lens"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/label_lens"
-                app:met_floatingLabel="normal"/>
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
+
+                <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+                    android:id="@+id/spinner_lens"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/label_lens"
+                    app:met_floatingLabel="normal"/>
+
+                <ImageView
+                    android:id="@+id/mount_adapters"
+                    android:layout_width="80dp"
+                    android:layout_height="60dp"
+                    android:layout_weight="1"
+                    app:srcCompat="@drawable/ic_mount_adapter_plane" />
+
+            </LinearLayout>
 
             <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
                 android:id="@+id/spinner_aperture"
@@ -180,6 +195,17 @@
 
             </TableLayout>
 
+            <com.rengwuxian.materialedittext.MaterialEditText
+                android:id="@+id/edit_accessories"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:focusable="false"
+                android:inputType="none"
+                android:longClickable="false"
+                android:hint="@string/label_accessories"
+                app:met_floatingLabel="normal" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -197,7 +223,7 @@
 
                 <ImageView
                     android:id="@+id/get_location"
-                    android:layout_width="100dp"
+                    android:layout_width="80dp"
                     android:layout_height="60dp"
                     android:layout_weight="1"
                     app:srcCompat="@drawable/ic_place_black_24dp" />

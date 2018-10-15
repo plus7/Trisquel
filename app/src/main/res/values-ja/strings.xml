@@ -20,6 +20,8 @@
     <string name="title_activity_edit_photo_list">フィルム</string>
     <string name="title_activity_settings">設定</string>
     <string name="title_activity_dirchooser">ディレクトリを選択</string>
+    <string name="title_activity_add_accessory">アクセサリを追加</string>
+    <string name="title_activity_edit_accessory">アクセサリを編集</string>
     <string name="title_activity_print_preview">印刷プレビュー</string>
     <string name="menu_reg_cam">カメラを登録</string>
     <string name="menu_reg_lens">レンズを登録</string>
@@ -85,10 +87,23 @@
     <string name="label_format">フォーマット</string>
     <string name="label_comma_separated">カンマ区切りで入力</string>
     <string name="label_bulb">バルブ(B)あり</string>
+    <string name="unknown">不明</string>
+    <string name="label_accessories">アクセサリー</string>
+    <string name="label_accessory_type">アクセサリーの種別</string>
+    <string name="label_accessory_filter">フィルタ</string>
+    <string name="label_accessory_tc">テレコンバータ</string>
+    <string name="label_accessory_wc">ワイドコンバータ</string>
+    <string name="label_accessory_ext_tube">接写リング</string>
+    <string name="label_accessory_unknown">その他</string>
+    <string name="label_fl_factor">焦点距離の倍率</string>
+    <string name="label_mount_adapter">マウントアダプタ</string>
+    <string name="error_flfactor_toosmall">1.0より大きい数字を入れてください</string>
+    <string name="error_flfactor_toobig">1.0より小さい数字を入れてください</string>
     <string name="error_nolens">%sマウントのレンズが登録されていません</string>
     <string name="warning_lens_not_registered">レンズが登録されていません</string>
     <string name="warning_cam_not_registered">カメラが登録されていません</string>
     <string name="warning_filmroll_not_registered">フィルムが登録されていません</string>
+    <string name="warning_accessory_not_registered">アクセサリが登録されていません</string>
     <string name="warning_photo_not_registered">写真がありません</string>
     <string name="warning_firstrun">
         本アプリケーションは早期アクセス版です。
@@ -102,6 +117,7 @@
     <string name="msg_reset_autocomplete_done">自動補完の履歴をリセットしました</string>
     <string name="msg_save_or_discard_data">閉じる前に保存しますか？</string>
     <string name="msg_continue_editing_or_discard_data">変更されたデータがあります。編集を継続しますか？</string>
+    <string name="msg_select_mount_adapters">%sマウント用マウントアダプタを選んでください</string>
     <string name="msg_no_printer_support">この端末では印刷をサポートしていません</string>
     <string name="empty_name">(名前なし)</string>
     <!-- Strings related to Settings -->

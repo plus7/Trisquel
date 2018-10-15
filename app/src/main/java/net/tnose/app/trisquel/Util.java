@@ -10,7 +10,7 @@ import java.util.Date;
 import java.util.TimeZone;
 
 public class Util {
-    static int TRISQUEL_VERSION = 1;
+    static int TRISQUEL_VERSION = 2;
 
     /* シャッタースピードはたかだか2桁精度なのでdoubleからきれいに変換できる */
     static String doubleToStringShutterSpeed(double ss){

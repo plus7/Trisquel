@@ -19,6 +19,8 @@
     <string name="title_activity_add_photo">Add photo information</string>
     <string name="title_activity_edit_filmroll">Edit film information</string>
     <string name="title_activity_dirchooser">Choose directory</string>
+    <string name="title_activity_add_accessory">Add Accessory</string>
+    <string name="title_activity_edit_accessory">Edit Accessory</string>
     <string name="title_activity_print_preview">Print preview</string>
     <string name="menu_reg_cam">Register a camera</string>
     <string name="menu_reg_lens">Register a lens</string>
@@ -86,11 +88,24 @@
     <string name="label_format">Format</string>
     <string name="label_comma_separated">Input comma separated values</string>
     <string name="label_bulb">Bulb is available</string>
+    <string name="unknown">Unknown</string>
+    <string name="label_fl_factor">Focal length factor</string>
+    <string name="label_accessories">Accessories</string>
+    <string name="label_accessory_type">Accessory type</string>
+    <string name="label_accessory_filter">Filter</string>
+    <string name="label_accessory_tc">Tele converter</string>
+    <string name="label_accessory_wc">Wide converter</string>
+    <string name="label_accessory_ext_tube">Extension tube</string>
+    <string name="label_accessory_unknown">Other</string>
+    <string name="label_mount_adapter">Mount adapter</string>
+    <string name="error_flfactor_toosmall">Input more than 1.0</string>
+    <string name="error_flfactor_toobig">Input less than 1.0</string>
     <string name="error_nolens">"%s" mount lens is not registered</string>
     <string name="no_data_available">no data available</string>
-    <string name="warning_lens_not_registered">No lenses are registered</string>
-    <string name="warning_cam_not_registered">No cameras are registered</string>
-    <string name="warning_filmroll_not_registered">No film rolls are registered</string>
+    <string name="warning_lens_not_registered">No lenses registered</string>
+    <string name="warning_cam_not_registered">No cameras registered</string>
+    <string name="warning_filmroll_not_registered">No film rolls registered</string>
+    <string name="warning_accessory_not_registered">No accessories registered</string>
     <string name="warning_photo_not_registered">No photos</string>
     <string name="warning_firstrun">
         This application is early access version.
@@ -104,6 +119,7 @@
     <string name="msg_reset_autocomplete_done">Autocomplete history reset.</string>
     <string name="msg_save_or_discard_data">Save changes before closing?</string>
     <string name="msg_continue_editing_or_discard_data">Continue editing or discard unsaved changes?</string>
+    <string name="msg_select_mount_adapters">Select adapters for %s mount</string>
     <string name="msg_no_printer_support">This device does not support printing</string>
     <string name="empty_name">(empty)</string>
 

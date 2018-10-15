@@ -26,6 +26,10 @@ import android.widget.Toast;
 import com.rengwuxian.materialedittext.MaterialEditText;
 import com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -35,6 +39,9 @@ import java.util.List;
 
 public class EditPhotoActivity extends AppCompatActivity implements AbstractDialogFragment.Callback{
     final int REQCODE_GET_LOCATION = 100;
+    final int REQCODE_MOUNT_ADAPTERS = 103;
+    final int REQCODE_DATE = 104;
+    final int REQCODE_ACCESSORY = 105;
     private int evGrainSize = 3;
     private int evWidth = 3;
     private double flWideEnd = 31;
@@ -47,6 +54,7 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
     ArrayAdapter<String> apertureAdapter;
     MaterialBetterSpinner apertureSpinner;
     MaterialEditText editDate;
+    MaterialEditText editAccessories;
     TextView labelFocalLength;
     SeekBar sbFocalLength;
     MaterialBetterSpinner lensSpinner;
@@ -56,7 +64,7 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
     SeekBar sbEV;
     SeekBar sbTTL;
     TextView currentCorrAmount, currentTTLLightMeter;
-    ImageView getLocationButton;
+    ImageView getLocationButton, mountAdapterButton;
 
     private ArrayAdapter<String> ssAdapter;
     private int lensid;
@@ -64,6 +72,7 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
     private int id;
     private int index;
     private double latitude=999, longitude=999;
+    private ArrayList<Integer> selectedAccessories;
     private boolean isDirty;
 
     protected void findViews(){
@@ -80,6 +89,57 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
         currentCorrAmount = findViewById(R.id.label_ev);
         currentTTLLightMeter = findViewById(R.id.label_ttl);
         getLocationButton = findViewById(R.id.get_location);
+        mountAdapterButton = findViewById(R.id.mount_adapters);
+        editAccessories = findViewById(R.id.edit_accessories);
+    }
+
+    protected void updateLensList(int selectedId, TrisquelDao dao){
+        if(filmroll.camera.type == 1){ //問答無用。selectedId等は完全無視
+            lens = dao.getLens(dao.getFixedLensIdByBody(filmroll.camera.id));
+            lensid = lens.id;
+            lenslist = new ArrayList<LensSpec>();
+            lenslist.add(lens);
+            lensSpinner.setEnabled(false);
+            mountAdapterButton.setEnabled(false);
+            mountAdapterButton.setImageResource(R.drawable.ic_mount_adapter_disabled);
+        }else{
+            lenslist = dao.getLensesByMount(filmroll.camera.mount);
+            for(String s: getSuggestListSubPref("mount_adapters", filmroll.camera.mount)){
+                lenslist.addAll(dao.getLensesByMount(s));
+            }
+            if(selectedId > 0) {
+                lens = dao.getLens(selectedId);
+                if (lens != null && !this.filmroll.camera.mount.equals(lens.mount)) {
+                    lenslist.add(0, lens);
+                }
+            }
+        }
+        lensadapter = new LensAdapter(this, android.R.layout.simple_spinner_item, lenslist);
+        lensadapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        lensSpinner.setAdapter(lensadapter);
+        if(lensadapter.getCount()==0){
+            lensSpinner.setError(getString(R.string.error_nolens).replace("%s", filmroll.camera.mount));
+        }
+
+        if(selectedId > 0) {
+            lensSpinner.setPosition(lensadapter.getPosition(selectedId));
+        }else if(filmroll.camera.type == 1){
+            lensSpinner.setPosition(0);
+        }
+    }
+
+    private void setAccessories(TrisquelDao dao, ArrayList<Integer> accessories){
+        selectedAccessories.clear();
+        selectedAccessories.addAll(accessories);
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+        for(int id: accessories) {
+            if(!first) sb.append(", ");
+            Accessory a = dao.getAccessory(id);
+            sb.append(a.getName());
+            first = false;
+        }
+        editAccessories.setText(sb.toString());
     }
 
     protected void loadData(Intent data, TrisquelDao dao, Bundle savedInstanceState){
@@ -116,6 +176,8 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
             editDate.setText(sdf.format(calendar.getTime()));
         }
 
+        updateLensList(lensid, dao);
+        /*
         if(filmroll.camera.type == 1){
             lens = dao.getLens(dao.getFixedLensIdByBody(filmroll.camera.id));
             lensid = lens.id;
@@ -130,6 +192,7 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
                 lenslist.add(0, lens);
             }
         }
+        */
 
         if(lens != null) {
             if (lens.focalLength.indexOf("-") > 0) {
@@ -140,6 +203,8 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
                 flWideEnd = Double.parseDouble(lens.focalLength);
                 flTeleEnd = flWideEnd;
             }
+            refreshApertureAdapter(lens);
+            refreshFocalLength(lens);
         }else{
             flWideEnd = 0;
             flTeleEnd = 0;
@@ -154,9 +219,11 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
 
         if(savedInstanceState != null) {
             setLatLng(savedInstanceState.getDouble("latitude"), savedInstanceState.getDouble("longitude"));
+            setAccessories(dao, savedInstanceState.getIntegerArrayList("selected_accessories"));
         }else{
             if(photo != null){
                 setLatLng(photo.latitude, photo.longitude);
+                setAccessories(dao, photo.accessories);
             }else{
                 setLatLng(999, 999);
             }
@@ -168,6 +235,8 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
         lensSpinner.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                lens = lenslist.get(i);
+                lensid = lens.id;
                 refreshApertureAdapter(lenslist.get(i));
                 refreshFocalLength(lenslist.get(i));
                 invalidateOptionsMenu();
@@ -179,7 +248,7 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
         editDate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                showDialogOnActivity();
+                showDateDialogOnActivity();
             }
         });
 
@@ -197,9 +266,34 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
             @Override
             public void afterTextChanged(Editable s) {
                 isDirty = true;
-
             }
         });
+
+
+        editAccessories.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showAccessoryDialogOnActivity();
+            }
+        });
+
+        editAccessories.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                isDirty = true;
+            }
+        });
+
         apertureSpinner.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -335,6 +429,38 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
                 startActivityForResult(intent, REQCODE_GET_LOCATION);
             }
         });
+        mountAdapterButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AbstractDialogFragment fragment = new CheckListDialogFragment.Builder()
+                        .build(REQCODE_MOUNT_ADAPTERS);
+                TrisquelDao dao = new TrisquelDao(getApplicationContext());
+                dao.connection();
+                ArrayList<String> availableLensMounts = dao.getAvailableMountList();
+                dao.close();
+
+                String mount = filmroll.camera.mount;
+                if(availableLensMounts.indexOf(mount) >= 0) {
+                    availableLensMounts.remove(mount);
+                }
+                String[] availableLensMountsArray = availableLensMounts.toArray(new String[availableLensMounts.size()]);
+
+                ArrayList<String> checkedMounts = getSuggestListSubPref("mount_adapters", mount);
+                ArrayList<Integer> checkedIndices = new ArrayList<>();
+                for(int i = 0; i < checkedMounts.size(); i++){
+                    if(availableLensMounts.indexOf(checkedMounts.get(i)) >= 0){
+                        checkedIndices.add(availableLensMounts.indexOf(checkedMounts.get(i)));
+                    }
+                }
+
+                fragment.getArguments().putStringArray("items", availableLensMountsArray);
+                fragment.getArguments().putIntegerArrayList("checked_indices", checkedIndices);
+                fragment.getArguments().putString("title", getString(R.string.msg_select_mount_adapters).replace("%s", mount));
+                fragment.getArguments().putString("positive", getString(android.R.string.yes));
+                fragment.getArguments().putString("negative", getString(android.R.string.no));
+                fragment.showOn(EditPhotoActivity.this, "dialog");
+            }
+        });
     }
 
     protected boolean canSave(){
@@ -380,7 +506,42 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
         }
         sbFocalLength.setMax((int)(flTeleEnd - flWideEnd)); // API Level 26以降ならsetMinが使えるのだが…
     }
-    
+
+    protected ArrayList<String> getSuggestListSubPref(String parentkey, String subkey){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String prefstr = pref.getString(parentkey, "{}");
+        ArrayList<String> strArray = new ArrayList<String>();
+        try {
+            JSONObject obj = new JSONObject(prefstr);
+            JSONArray array = obj.getJSONArray(subkey);
+            if(array == null) return strArray;
+            for(int i = 0; i < array.length(); i++){
+                strArray.add(array.getString(i));
+            }
+        }catch(JSONException e){}
+        return strArray;
+    }
+
+    protected void saveSuggestListSubPref(String parentkey, String subkey, ArrayList<String> values){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String prefstr = pref.getString(parentkey, "{}");
+        JSONObject obj = null;
+        try {
+            JSONArray array;
+            obj = new JSONObject(prefstr);
+        }catch(JSONException e){
+            obj = new JSONObject();
+        }
+
+        JSONArray result = new JSONArray(values);
+        SharedPreferences.Editor e = pref.edit();
+        try {
+            obj.put(subkey, result);
+            e.putString(parentkey, obj.toString());
+            e.apply();
+        }catch (JSONException e1){}
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -401,6 +562,8 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
                 android.R.layout.simple_dropdown_item_1line);
         apertureSpinner.setEnabled(false);
 
+        selectedAccessories = new ArrayList<Integer>();
+
         lensid = -1;
         lens = null;
         if (data != null) {
@@ -408,18 +571,17 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
         }else {
             this.id = -1;
             lenslist = dao.getAllLenses();
+            lensadapter = new LensAdapter(this, android.R.layout.simple_spinner_item, lenslist);
+            lensadapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            lensSpinner.setAdapter(lensadapter);
+            if(lensadapter.getCount()==0){
+                lensSpinner.setError(getString(R.string.error_nolens).replace("%s", filmroll.camera.mount));
+            }
             Calendar calendar = Calendar.getInstance();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
             editDate.setText(sdf.format(calendar.getTime()));
         }
         dao.close();
-
-        lensadapter = new LensAdapter(this, android.R.layout.simple_spinner_item, lenslist);
-        lensadapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        lensSpinner.setAdapter(lensadapter);
-        if(lensadapter.getCount()==0){
-            lensSpinner.setError(getString(R.string.error_nolens).replace("%s", filmroll.camera.mount));
-        }
 
         String[] ssArray;
         switch(filmroll.camera.shutterSpeedGrainSize){
@@ -445,12 +607,10 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
         ssAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         ssSpinner.setAdapter(ssAdapter);
 
-        if(lensid > 0) {
-            lensSpinner.setPosition(lensadapter.getPosition(lensid));
-            //refreshApertureAdapter(lensadapter.getPosition(lensid));
+        /*if(lensid > 0) {
             refreshApertureAdapter(lens);
             refreshFocalLength(lens);
-        }
+        }*/
 
         if(photo != null){
             if(photo.aperture > 0) apertureSpinner.setText(Util.doubleToStringShutterSpeed(photo.aperture)); //これもごまかし
@@ -496,19 +656,58 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
         outState.putBoolean("isDirty", isDirty);
         outState.putDouble("latitude", latitude);
         outState.putDouble("longitude", longitude);
+        outState.putInt("lensid", lensid);
+        outState.putIntegerArrayList("selected_accessories", selectedAccessories);
         super.onSaveInstanceState(outState);
     }
 
-    void showDialogOnActivity() {
+    void showDateDialogOnActivity() {
         new DatePickerFragment.Builder()
-                .build(100)
+                .build(REQCODE_DATE)
                 .showOn(this, "dialog");
+    }
+
+    void showAccessoryDialogOnActivity() {
+        AbstractDialogFragment fragment = new CheckListDialogFragment.Builder()
+                .build(REQCODE_ACCESSORY);
+        TrisquelDao dao = new TrisquelDao(getApplicationContext());
+        dao.connection();
+        ArrayList<Accessory> accessories = dao.getAccessories();
+        dao.close();
+
+        ArrayList<String> a_str = new ArrayList<>();
+        ArrayList<Integer> chkidx = new ArrayList<>();
+        ArrayList<Integer> tags = new ArrayList<>();
+        for(int i = 0; i < accessories.size(); i++){
+            Accessory a = accessories.get(i);
+            a_str.add(a.getName());
+            if(selectedAccessories.contains(a.getId())){
+                chkidx.add(i);
+            }
+            tags.add(a.getId());
+        }
+
+        fragment.getArguments().putStringArray("items", a_str.toArray(new String[a_str.size()]));
+        fragment.getArguments().putIntegerArrayList("tags", tags);
+        fragment.getArguments().putIntegerArrayList("checked_indices", chkidx);
+        fragment.getArguments().putString("title", "a");
+        fragment.getArguments().putString("positive", getString(android.R.string.yes));
+        fragment.getArguments().putString("negative", getString(android.R.string.no));
+        fragment.showOn(EditPhotoActivity.this, "dialog");
+    }
+
+    private boolean sameArrayList(ArrayList<Integer> list1, ArrayList<Integer> list2){
+        if(list1.size() != list2.size()) return false;
+        for(int i = 0; i < list1.size(); i++){
+            if(!list1.get(i).equals(list2.get(i))) return false;
+        }
+        return true;
     }
 
     @Override
     public void onDialogResult(int requestCode, int resultCode, @Nullable Intent data) {
         switch (requestCode){
-            case 100:
+            case REQCODE_DATE:
                 if(resultCode == DialogInterface.BUTTON_POSITIVE) {
                     if (data != null) {
                         int year = data.getIntExtra(DatePickerFragment.EXTRA_YEAR, 1970);
@@ -539,6 +738,38 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
                 }else if(resultCode == DialogInterface.BUTTON_NEGATIVE) {
                     setResult(RESULT_CANCELED, data);
                     finish();
+                }
+                break;
+            case REQCODE_MOUNT_ADAPTERS:
+                if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                    Bundle bundle = data.getExtras();
+                    saveSuggestListSubPref("mount_adapters",
+                            filmroll.camera.mount,
+                            bundle.getStringArrayList("checked_items"));
+                    TrisquelDao dao = new TrisquelDao(getApplicationContext());
+                    dao.connection();
+                    int id = -1;
+                    if(lensSpinner.getPosition() >= 0){
+                        id = lenslist.get(lensSpinner.getPosition()).id;
+                    }
+                    updateLensList(id, dao);
+                    dao.close();
+                    lensSpinner.clearFocus(); //こうしないとドロップダウンリストが更新されない…気がする。バグか？
+                }
+                break;
+            case REQCODE_ACCESSORY:
+                if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                    if (data != null) {
+                        Bundle bundle = data.getExtras();
+                        ArrayList<Integer> tags = bundle.getIntegerArrayList("checked_tags");
+                        if(!sameArrayList(tags, selectedAccessories)) {
+                            TrisquelDao dao = new TrisquelDao(getApplicationContext());
+                            dao.connection();
+                            setAccessories(dao, tags);
+                            isDirty = true;
+                            dao.close();
+                        }
+                    }
                 }
                 break;
             default:
@@ -586,6 +817,13 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
         data.putExtra("latitude", latitude);
         data.putExtra("longitude", longitude);
         data.putExtra("memo", editMemo.getText().toString());
+
+        StringBuilder sb = new StringBuilder("/");
+        for (Integer accessory: selectedAccessories) {
+            sb.append(accessory);
+            sb.append('/');
+        }
+        data.putExtra("accessories", sb.toString());
         return data;
     }
 
@@ -621,6 +859,8 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
                 sb.append(getString(R.string.label_coordinate) + ": " + Double.toString(latitude)+", "+Double.toString(longitude) + "\n");
             if (editMemo.getText().length() > 0)
                 sb.append(getString(R.string.label_memo) + ": " + editMemo.getText().toString() + "\n");
+            if (editAccessories.getText().length() > 0)
+                sb.append(getString(R.string.label_accessories) + ": " + editAccessories.getText().toString() + "\n");
         }
         return sb.toString();
     }
@@ -733,6 +973,7 @@ public class EditPhotoActivity extends AppCompatActivity implements AbstractDial
                     if(999 != latitude || 999 != longitude) isDirty = true;
                     setLatLng(999, 999);
                 }
+                break;
         }
     }
 }

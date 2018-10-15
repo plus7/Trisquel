@@ -305,6 +305,26 @@ public class TrisquelDao extends DatabaseHelper {
         return lensList;
     }
 
+    public ArrayList<String> getAvailableMountList(){
+        ArrayList<String> mounts = new ArrayList<>();
+
+        Cursor cursor = null;
+        try{
+            cursor = mDb.rawQuery("select distinct mount from lens order by mount;", null);
+            while(cursor.moveToNext()) {
+                String mount = cursor.getString(cursor.getColumnIndex("mount"));
+                if(!mount.isEmpty()) mounts.add(mount);
+            }
+        }
+        finally{
+            if( cursor != null ){
+                cursor.close();
+            }
+        }
+
+        return mounts;
+    }
+
     public int getFixedLensIdByBody(int body){
         Cursor cursor = null;
         try{
@@ -469,6 +489,7 @@ public class TrisquelDao extends DatabaseHelper {
                 double ttl = cursor.getDouble(cursor.getColumnIndex("ttl_light_meter"));
                 String location = cursor.getString(cursor.getColumnIndex("location"));
                 String memo = cursor.getString(cursor.getColumnIndex("memo"));
+                String accessoriesStr = cursor.getString(cursor.getColumnIndex("accessories"));
                 double latitude, longitude;
                 if(cursor.getType(cursor.getColumnIndex("latitude")) == FIELD_TYPE_NULL){
                     latitude = 999;
@@ -481,7 +502,8 @@ public class TrisquelDao extends DatabaseHelper {
                     longitude = cursor.getDouble(cursor.getColumnIndex("longitude"));
                 }
                 photos.add(new Photo(id, filmRollId, index, date, camera, lens, focalLength,
-                        aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo));
+                        aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo,
+                        accessoriesStr));
             }
         }
         finally{
@@ -511,6 +533,7 @@ public class TrisquelDao extends DatabaseHelper {
         val.put( "latitude", p.latitude );
         val.put( "longitude", p.longitude );
         val.put( "memo", p.memo );
+        val.put( "accessories", p.getAccessoriesStr() );
         return mDb.insert( "photo", null, val);
     }
 
@@ -532,6 +555,7 @@ public class TrisquelDao extends DatabaseHelper {
         val.put( "latitude", p.latitude );
         val.put( "longitude", p.longitude );
         val.put( "memo", p.memo );
+        val.put( "accessories", p.getAccessoriesStr() );
         return mDb.update( "photo",
                 val,
                 "_id = ?",
@@ -563,6 +587,7 @@ public class TrisquelDao extends DatabaseHelper {
                 double ttl = cursor.getDouble(cursor.getColumnIndex("ttl_light_meter"));
                 String location = cursor.getString(cursor.getColumnIndex("location"));
                 String memo = cursor.getString(cursor.getColumnIndex("memo"));
+                String accessoriesStr = cursor.getString(cursor.getColumnIndex("accessories"));
                 double latitude, longitude;
                 if(cursor.getType(cursor.getColumnIndex("latitude")) == FIELD_TYPE_NULL){
                     latitude = 999;
@@ -575,7 +600,7 @@ public class TrisquelDao extends DatabaseHelper {
                     longitude = cursor.getDouble(cursor.getColumnIndex("longitude"));
                 }
                 p = new Photo(id, filmroll, index, date, camera, lens, focalLength,
-                        aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo);
+                        aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo, accessoriesStr);
             }
         }
         finally{
@@ -585,5 +610,109 @@ public class TrisquelDao extends DatabaseHelper {
         }
         //nullの場合どうする？
         return p;
+    }
+
+    public ArrayList<Accessory> getAccessories(){
+        ArrayList<Accessory> accessories = new ArrayList<Accessory>();
+
+        Cursor cursor = null;
+        try{
+            cursor = mDb.rawQuery("select * from accessory order by created desc;", null);
+            while(cursor.moveToNext()) {
+                int id = cursor.getInt(cursor.getColumnIndex("_id"));
+                int type = cursor.getInt(cursor.getColumnIndex("type"));
+                String created = cursor.getString(cursor.getColumnIndex("created"));
+                String last_modified = cursor.getString(cursor.getColumnIndex("last_modified"));
+                String name = cursor.getString(cursor.getColumnIndex("name"));
+                String mount = cursor.getString(cursor.getColumnIndex("mount"));
+                double focal_length_factor = cursor.getDouble(cursor.getColumnIndex("focal_length_factor"));
+                accessories.add(new Accessory(id, created, last_modified, type, name, mount, focal_length_factor));
+            }
+        }
+        finally{
+            if( cursor != null ){
+                cursor.close();
+            }
+        }
+
+        return accessories;
+    }
+
+    public long addAccessory(Accessory a){
+        ContentValues val = new ContentValues();
+        val.put( "name", a.getName() );
+        val.put( "type", a.getType() );
+        val.put( "created", Util.dateToStringUTC(a.getCreated()) );
+        val.put( "last_modified", Util.dateToStringUTC(a.getLast_modified()) );
+        val.put( "mount", a.getMount() );
+        val.put( "focal_length_factor", a.getFocal_length_factor());
+        return mDb.insert( "accessory", null, val);
+    }
+
+    public int updateAccessory(Accessory a){
+        String[] selectArgs = new String[]{ Integer.toString(a.getId()) };
+        ContentValues val = new ContentValues();
+        val.put( "name", a.getName() );
+        val.put( "type", a.getType() );
+        val.put( "created", Util.dateToStringUTC(a.getCreated()) );
+        val.put( "last_modified", Util.dateToStringUTC(a.getLast_modified()) );
+        val.put( "mount", a.getMount() );
+        val.put( "focal_length_factor", a.getFocal_length_factor());
+        return mDb.update( "accessory",
+                val,
+                "_id = ?",
+                selectArgs);
+    }
+
+    public void deleteAccessory(int id){
+        String[] selectArgs = new String[]{Integer.toString(id)};
+        mDb.delete("accessory", "_id = ?", selectArgs);
+    }
+
+    public Accessory getAccessory(int id){
+        Accessory a = null;
+        Cursor cursor = null;
+        try{
+            cursor = mDb.rawQuery("select * from accessory where _id = ?;", new String[]{Integer.toString(id)});
+            if(cursor.moveToFirst()){
+                int type = cursor.getInt(cursor.getColumnIndex("type"));
+                String created = cursor.getString(cursor.getColumnIndex("created"));
+                String last_modified = cursor.getString(cursor.getColumnIndex("last_modified"));
+                String name = cursor.getString(cursor.getColumnIndex("name"));
+                String mount = cursor.getString(cursor.getColumnIndex("mount"));
+                double focal_length_factor = cursor.getDouble(cursor.getColumnIndex("focal_length_factor"));
+                a = new Accessory(id, created, last_modified, type, name, mount, focal_length_factor);
+            }
+        }
+        finally{
+            if( cursor != null ){
+                cursor.close();
+            }
+        }
+        //nullの場合どうする？
+        return a;
+    }
+
+    public long getAccessoryUsageCount(int id){
+        //long photos = DatabaseUtils.queryNumEntries(mDb, "photo","camera = ?",new String[]{ Integer.toString(id) });
+        //return filmrolls + photos;
+        return 0;
+    }
+
+    public boolean getAccessoryUsed(int id){
+        Cursor cursor = null;
+        boolean result = false;
+        try {
+            cursor = mDb.rawQuery("select * from photo where accessories like '/" + Integer.toString(id) + "/';", null);
+            while (cursor.moveToNext()) {
+                result = true;
+                break;
+            }
+        }finally{
+            if( cursor != null ){
+                cursor.close();
+            }
+        }
+        return result;
     }
 }

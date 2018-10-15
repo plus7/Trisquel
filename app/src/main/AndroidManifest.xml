@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="net.tnose.app.trisquel"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="net.tnose.app.trisquel">
 
     <!--
          The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
@@ -64,13 +64,15 @@
         -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key"
-            />
+            android:value="@string/google_maps_key" />
 
         <activity
             android:name=".MapsActivity"
-            android:label="@string/title_activity_maps"></activity>
-        <activity android:name="net.rdrei.android.dirchooser.DirectoryChooserActivity" android:label="@string/title_activity_dirchooser"/>
+            android:label="@string/title_activity_maps" />
+        <activity
+            android:name="net.rdrei.android.dirchooser.DirectoryChooserActivity"
+            android:label="@string/title_activity_dirchooser" />
+        <activity android:name=".EditAccessoryActivity" />
         <activity
             android:name=".PrintPreviewActivity"
             android:label="@string/title_activity_print_preview"
