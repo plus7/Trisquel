@@ -119,6 +119,7 @@ class AccessoryFragment : Fragment() {
                     dao.deleteAccessory(id)
                     dao.close()
                     accessoryRecyclerViewAdapter?.notifyItemRemoved(i)
+                    break
                 }
             }
         }

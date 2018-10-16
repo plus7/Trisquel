@@ -118,6 +118,7 @@ class LensFragment : Fragment() {
                     dao.deleteLens(id)
                     dao.close()
                     lensRecyclerViewAdapter!!.notifyItemRemoved(i)
+                    break
                 }
             }
         }

@@ -150,6 +150,7 @@ class FilmRollFragment : Fragment() {
                     dao.close()
                     Log.d("deleteFilmRoll", Integer.toString(id))
                     filmrollRecyclerViewAdapter!!.notifyItemRemoved(i)
+                    break
                 }
             }
         }

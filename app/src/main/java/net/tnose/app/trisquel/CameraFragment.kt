@@ -120,6 +120,7 @@ class CameraFragment : Fragment() {
                     dao.deleteCamera(id)
                     dao.close()
                     cameraRecyclerViewAdapter!!.notifyItemRemoved(i)
+                    break
                 }
             }
         }
