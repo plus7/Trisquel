@@ -665,7 +665,7 @@ class TrisquelDao(context: Context) : DatabaseHelper(context) {
         var cursor: Cursor? = null
         var result = false
         try {
-            cursor = mDb!!.rawQuery("select * from photo where accessories like '/" + Integer.toString(id) + "/';", null)
+            cursor = mDb!!.rawQuery("select * from photo where accessories like '%/" + Integer.toString(id) + "/%';", null)
             while (cursor!!.moveToNext()) {
                 result = true
                 break
