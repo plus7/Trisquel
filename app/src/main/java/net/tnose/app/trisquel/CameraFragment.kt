@@ -8,6 +8,7 @@ import android.support.v7.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import java.util.*
 
 /**
  * A fragment representing a list of Items.
@@ -20,12 +21,12 @@ import android.view.ViewGroup
  * Mandatory empty constructor for the fragment manager to instantiate the
  * fragment (e.g. upon screen orientation changes).
  */
-class AccessoryFragment : Fragment() {
+class CameraFragment : Fragment() {
     // TODO: Customize parameters
     private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
-    private var accessoryRecyclerViewAdapter: MyAccessoryRecyclerViewAdapter? = null
-    private var list:MutableList<Accessory>? = null
+    private var list: ArrayList<CameraSpec>? = null
+    private var cameraRecyclerViewAdapter: MyCameraRecyclerViewAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,39 +36,37 @@ class AccessoryFragment : Fragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
+    override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.fragment_accessory_list, container, false)
-
+        val view = inflater!!.inflate(R.layout.fragment_camera_list, container, false)
         val dao = TrisquelDao(this.context)
         dao.connection()
-        list = dao.accessories
+        list = dao.allCameras
         dao.close()
 
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
             val context = view.getContext()
-            view.setEmptyMessage(getString(R.string.warning_accessory_not_registered))
-            val emptyView : View = container?.findViewById(R.id.empty_view)!!
-            view.setEmptyView(emptyView)
+            view.setEmptyMessage(getString(R.string.warning_cam_not_registered))
+            view.setEmptyView(container!!.findViewById(R.id.empty_view))
             if (mColumnCount <= 1) {
                 view.layoutManager = LinearLayoutManager(context)
             } else {
                 view.layoutManager = GridLayoutManager(context, mColumnCount)
             }
-            this.accessoryRecyclerViewAdapter = MyAccessoryRecyclerViewAdapter(list!!, mListener)
-            view.adapter = accessoryRecyclerViewAdapter
+
+            this.cameraRecyclerViewAdapter = MyCameraRecyclerViewAdapter(list!!, mListener)
+            view.adapter = cameraRecyclerViewAdapter
         }
         return view
     }
 
-
-    override fun onAttach(context: Context) {
+    override fun onAttach(context: Context?) {
         super.onAttach(context)
         if (context is OnListFragmentInteractionListener) {
             mListener = context
         } else {
-            throw RuntimeException(context.toString() + " must implement OnListFragmentInteractionListener")
+            throw RuntimeException(context!!.toString() + " must implement OnListFragmentInteractionListener")
         }
     }
 
@@ -76,53 +75,56 @@ class AccessoryFragment : Fragment() {
         mListener = null
     }
 
-    fun insertAccessory(accessory: Accessory) {
+    fun insertCamera(camera: CameraSpec) {
         if (list != null) {
-            val index = list!!.indexOf(accessory)
+            val index = list!!.indexOf(camera)
             if (-1 == index) {
-                list!!.add(0, accessory)
+                list!!.add(0, camera)
                 val dao = TrisquelDao(this.context)
                 dao.connection()
-                val id = dao.addAccessory(accessory)
+                val id = dao.addCamera(camera)
                 dao.close()
-                accessory.id = id.toInt()
-                accessoryRecyclerViewAdapter?.notifyItemInserted(0)
+                camera.id = id.toInt()
+                cameraRecyclerViewAdapter!!.notifyItemInserted(0)
             }
         }
     }
 
-    fun updateAccessory(accessory: Accessory) {
+    fun updateCamera(camera: CameraSpec) {
         if (list != null) {
             for (i in list!!.indices) {
-                val a = list!!.get(i)
-                if (a.id == accessory.id) {
+                if (list!![i].id == camera.id) {
                     list!!.removeAt(i)
-                    list!!.add(i, accessory)
+                    list!!.add(i, camera)
                     val dao = TrisquelDao(this.context)
                     dao.connection()
-                    dao.updateAccessory(accessory)
+                    dao.updateCamera(camera)
                     dao.close()
-                    accessoryRecyclerViewAdapter?.notifyItemChanged(i)
+                    cameraRecyclerViewAdapter!!.notifyItemChanged(i)
                 }
             }
         }
     }
 
-    fun deleteAccessory(id: Int) {
+    fun deleteCamera(id: Int) {
         if (list != null) {
             for (i in list!!.indices) {
-                val a = list!!.get(i)
-                if (a.id == id) {
+                val c = list!![i]
+                if (c.id == id) {
                     list!!.removeAt(i)
                     val dao = TrisquelDao(this.context)
                     dao.connection()
-                    dao.deleteAccessory(id)
+                    if (c.type == 1) {
+                        dao.deleteLens(dao.getFixedLensIdByBody(id))
+                    }
+                    dao.deleteCamera(id)
                     dao.close()
-                    accessoryRecyclerViewAdapter?.notifyItemRemoved(i)
+                    cameraRecyclerViewAdapter!!.notifyItemRemoved(i)
                 }
             }
         }
     }
+
     /**
      * This interface must be implemented by activities that contain this
      * fragment to allow an interaction in this fragment to be communicated
@@ -134,7 +136,7 @@ class AccessoryFragment : Fragment() {
      */
     interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
-        fun onListFragmentInteraction(accessory: Accessory, isLong: Boolean)
+        fun onListFragmentInteraction(item: CameraSpec, isLong: Boolean)
     }
 
     companion object {
@@ -143,8 +145,8 @@ class AccessoryFragment : Fragment() {
         private val ARG_COLUMN_COUNT = "column-count"
 
         // TODO: Customize parameter initialization
-        fun newInstance(columnCount: Int): AccessoryFragment {
-            val fragment = AccessoryFragment()
+        fun newInstance(columnCount: Int): CameraFragment {
+            val fragment = CameraFragment()
             val args = Bundle()
             args.putInt(ARG_COLUMN_COUNT, columnCount)
             fragment.arguments = args

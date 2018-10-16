@@ -50,7 +50,7 @@
                     app:met_floatingLabel="normal"/>
 
                 <ImageView
-                    android:id="@+id/mount_adapters"
+                    android:id="@+id/btn_mount_adapters"
                     android:layout_width="80dp"
                     android:layout_height="60dp"
                     android:layout_weight="1"
@@ -135,7 +135,7 @@
                         android:orientation="vertical">
 
                         <TextView
-                            android:id="@+id/label_ev"
+                            android:id="@+id/label_ev_corr_amount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -174,7 +174,7 @@
                         android:orientation="vertical">
 
                         <TextView
-                            android:id="@+id/label_ttl"
+                            android:id="@+id/label_ttl_light_meter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -222,7 +222,7 @@
                     app:met_floatingLabel="normal" />
 
                 <ImageView
-                    android:id="@+id/get_location"
+                    android:id="@+id/btn_get_location"
                     android:layout_width="80dp"
                     android:layout_height="60dp"
                     android:layout_weight="1"

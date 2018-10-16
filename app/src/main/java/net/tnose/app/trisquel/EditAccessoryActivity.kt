@@ -314,7 +314,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         return true
     }
 
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
             101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val resultData = getData()

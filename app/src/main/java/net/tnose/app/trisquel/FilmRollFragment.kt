@@ -5,9 +5,11 @@ import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.LinearLayoutManager
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import java.util.*
 
 /**
  * A fragment representing a list of Items.
@@ -20,12 +22,14 @@ import android.view.ViewGroup
  * Mandatory empty constructor for the fragment manager to instantiate the
  * fragment (e.g. upon screen orientation changes).
  */
-class AccessoryFragment : Fragment() {
+class FilmRollFragment : Fragment() {
     // TODO: Customize parameters
     private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
-    private var accessoryRecyclerViewAdapter: MyAccessoryRecyclerViewAdapter? = null
-    private var list:MutableList<Accessory>? = null
+
+    private var mRecyclerView: RecyclerViewEmptySupport? = null
+    private var list: ArrayList<FilmRoll>? = null
+    private var filmrollRecyclerViewAdapter: MyFilmRollRecyclerViewAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,39 +39,42 @@ class AccessoryFragment : Fragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
+    override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.fragment_accessory_list, container, false)
-
+        val view = inflater!!.inflate(R.layout.fragment_filmroll_list, container, false)
         val dao = TrisquelDao(this.context)
         dao.connection()
-        list = dao.accessories
+        list = dao.allFilmRolls
         dao.close()
 
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
             val context = view.getContext()
-            view.setEmptyMessage(getString(R.string.warning_accessory_not_registered))
-            val emptyView : View = container?.findViewById(R.id.empty_view)!!
-            view.setEmptyView(emptyView)
+            mRecyclerView = view
+            mRecyclerView!!.setEmptyMessage(getString(R.string.warning_filmroll_not_registered))
+            mRecyclerView!!.setEmptyView(container!!.findViewById(R.id.empty_view))
             if (mColumnCount <= 1) {
-                view.layoutManager = LinearLayoutManager(context)
+                mRecyclerView!!.layoutManager = LinearLayoutManager(context)
             } else {
-                view.layoutManager = GridLayoutManager(context, mColumnCount)
+                mRecyclerView!!.layoutManager = GridLayoutManager(context, mColumnCount)
             }
-            this.accessoryRecyclerViewAdapter = MyAccessoryRecyclerViewAdapter(list!!, mListener)
-            view.adapter = accessoryRecyclerViewAdapter
+
+            filmrollRecyclerViewAdapter = MyFilmRollRecyclerViewAdapter(list!!, mListener)
         }
         return view
     }
 
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+        mRecyclerView!!.adapter = filmrollRecyclerViewAdapter
+    }
 
-    override fun onAttach(context: Context) {
+    override fun onAttach(context: Context?) {
         super.onAttach(context)
         if (context is OnListFragmentInteractionListener) {
             mListener = context
         } else {
-            throw RuntimeException(context.toString() + " must implement OnListFragmentInteractionListener")
+            throw RuntimeException(context!!.toString() + " must implement OnListFragmentInteractionListener")
         }
     }
 
@@ -76,53 +83,78 @@ class AccessoryFragment : Fragment() {
         mListener = null
     }
 
-    fun insertAccessory(accessory: Accessory) {
+    fun insertFilmRoll(filmroll: FilmRoll) {
         if (list != null) {
-            val index = list!!.indexOf(accessory)
+            val index = list!!.indexOf(filmroll)
             if (-1 == index) {
-                list!!.add(0, accessory)
+                list!!.add(0, filmroll)
                 val dao = TrisquelDao(this.context)
                 dao.connection()
-                val id = dao.addAccessory(accessory)
+                val id = dao.addFilmRoll(filmroll)
+                filmroll.id = id.toInt()
                 dao.close()
-                accessory.id = id.toInt()
-                accessoryRecyclerViewAdapter?.notifyItemInserted(0)
+                Log.d("FilmRollFragment", "notifyItemInserted")
+                filmrollRecyclerViewAdapter!!.notifyItemInserted(0)
             }
         }
     }
 
-    fun updateAccessory(accessory: Accessory) {
+    fun updateFilmRoll(filmroll: FilmRoll) {
         if (list != null) {
             for (i in list!!.indices) {
-                val a = list!!.get(i)
-                if (a.id == accessory.id) {
+                val c = list!![i]
+                if (list!![i].id == filmroll.id) {
                     list!!.removeAt(i)
-                    list!!.add(i, accessory)
+                    list!!.add(i, filmroll)
                     val dao = TrisquelDao(this.context)
                     dao.connection()
-                    dao.updateAccessory(accessory)
+                    dao.updateFilmRoll(filmroll)
+                    val p = dao.getPhotosByFilmRollId(filmroll.id)
+                    filmroll.photos = p
                     dao.close()
-                    accessoryRecyclerViewAdapter?.notifyItemChanged(i)
+                    filmrollRecyclerViewAdapter!!.notifyItemChanged(i)
                 }
             }
         }
     }
 
-    fun deleteAccessory(id: Int) {
+    fun refreshFilmRoll(id: Int) {
         if (list != null) {
             for (i in list!!.indices) {
-                val a = list!!.get(i)
-                if (a.id == id) {
+                val c = list!![i]
+                if (list!![i].id == id) {
                     list!!.removeAt(i)
                     val dao = TrisquelDao(this.context)
                     dao.connection()
-                    dao.deleteAccessory(id)
+                    val f = dao.getFilmRoll(id)
+                    val p = dao.getPhotosByFilmRollId(id)
+                    f!!.photos = p
                     dao.close()
-                    accessoryRecyclerViewAdapter?.notifyItemRemoved(i)
+                    list!!.add(i, f)
+                    Log.d("refreshFilmRoll", Integer.toString(id))
+                    filmrollRecyclerViewAdapter!!.notifyItemChanged(i)
                 }
             }
         }
     }
+
+    fun deleteFilmRoll(id: Int) {
+        if (list != null) {
+            for (i in list!!.indices) {
+                val c = list!![i]
+                if (list!![i].id == id) {
+                    list!!.removeAt(i)
+                    val dao = TrisquelDao(this.context)
+                    dao.connection()
+                    dao.deleteFilmRoll(id)
+                    dao.close()
+                    Log.d("deleteFilmRoll", Integer.toString(id))
+                    filmrollRecyclerViewAdapter!!.notifyItemRemoved(i)
+                }
+            }
+        }
+    }
+
     /**
      * This interface must be implemented by activities that contain this
      * fragment to allow an interaction in this fragment to be communicated
@@ -134,7 +166,7 @@ class AccessoryFragment : Fragment() {
      */
     interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
-        fun onListFragmentInteraction(accessory: Accessory, isLong: Boolean)
+        fun onListFragmentInteraction(item: FilmRoll, isLong: Boolean)
     }
 
     companion object {
@@ -143,8 +175,8 @@ class AccessoryFragment : Fragment() {
         private val ARG_COLUMN_COUNT = "column-count"
 
         // TODO: Customize parameter initialization
-        fun newInstance(columnCount: Int): AccessoryFragment {
-            val fragment = AccessoryFragment()
+        fun newInstance(columnCount: Int): FilmRollFragment {
+            val fragment = FilmRollFragment()
             val args = Bundle()
             args.putInt(ARG_COLUMN_COUNT, columnCount)
             fragment.arguments = args

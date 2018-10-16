@@ -1,22 +1,15 @@
 package net.tnose.app.trisquel
 
 import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.support.design.widget.Snackbar
+import android.print.PrintManager
+import android.support.v4.print.PrintHelper
 import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
-import android.webkit.WebView
 import android.widget.Toast
-import android.support.v4.print.PrintHelper
-import android.print.PrintDocumentAdapter
-import android.print.PrintManager
-import android.util.Log
-
 import kotlinx.android.synthetic.main.activity_print_preview.*
 import kotlinx.android.synthetic.main.content_print_preview.*
 
@@ -38,7 +31,7 @@ class PrintPreviewActivity : AppCompatActivity() {
         dao.connection()
         val filmroll = dao.getFilmRoll(id)
         val photos = dao.getPhotosByFilmRollId(id)
-        filmroll.photos = photos
+        filmroll!!.photos = photos
         name = filmroll.name
         val sb = StringBuilder()
         sb.append("<!doctype><html><head>")
@@ -58,7 +51,7 @@ class PrintPreviewActivity : AppCompatActivity() {
             sb.append("<table>")
             val lens = dao.getLens(p.lensid)
             sb.append("<tr><td>${getString(R.string.label_date)}</td>          <td>${p.date}</td></tr>")
-            sb.append("<tr><td>${getString(R.string.label_lens)}</td>          <td>${lens.manufacturer} ${lens.modelName}</td></tr>")
+            sb.append("<tr><td>${getString(R.string.label_lens)}</td>          <td>${lens!!.manufacturer} ${lens.modelName}</td></tr>")
             sb.append("<tr><td>${getString(R.string.label_aperture)}</td>      <td>${p.aperture}</td></tr>")
             sb.append("<tr><td>${getString(R.string.label_shutter_speed)}</td>  <td>${Util.doubleToStringShutterSpeed(p.shutterSpeed)}</td></tr>")
             sb.append("<tr><td>${getString(R.string.label_ttl_light_meter)}</td><td>${p.ttlLightMeter}</td></tr>")
@@ -70,7 +63,7 @@ class PrintPreviewActivity : AppCompatActivity() {
         sb.append("</body></html>")
         dao.close()
 
-        webview.loadDataWithBaseURL(null, sb.toString(), "text/html", "UTF8", null);
+        webview.loadDataWithBaseURL(null, sb.toString(), "text/html", "UTF8", null)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -82,9 +75,9 @@ class PrintPreviewActivity : AppCompatActivity() {
         if (PrintHelper.systemSupportsPrint()) {
             val adapter = webview.createPrintDocumentAdapter(name)
             val printManager: PrintManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
-            printManager.print(fileName, adapter, null);
+            printManager.print(fileName, adapter, null)
         } else {
-            Toast.makeText(this, getString(R.string.msg_no_printer_support), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.msg_no_printer_support), Toast.LENGTH_SHORT).show()
         }
     }
 
