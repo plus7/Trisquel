@@ -30,36 +30,31 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, CameraFragment.OnListFragmentInteractionListener, LensFragment.OnListFragmentInteractionListener, FilmRollFragment.OnListFragmentInteractionListener, EmptyFragment.OnFragmentInteractionListener, AccessoryFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {
+    companion object {
+        const val REQCODE_EDIT_CAMERA = 1
+        const val REQCODE_ADD_CAMERA = 2
+        const val REQCODE_EDIT_LENS = 3
+        const val REQCODE_ADD_LENS = 4
+        const val REQCODE_EDIT_FILMROLL = 5
+        const val REQCODE_ADD_FILMROLL = 6
+        const val REQCODE_EDIT_PHOTO_LIST = 7
+        const val REQCODE_EDIT_ACCESSORY = 8
+        const val REQCODE_ADD_ACCESSORY = 9
+        const val REQCODE_BACKUP_DIR_CHOSEN = 10
 
-    val REQCODE_EDIT_CAMERA = 1
-    val REQCODE_ADD_CAMERA = 2
-    val REQCODE_EDIT_LENS = 3
-    val REQCODE_ADD_LENS = 4
-    val REQCODE_EDIT_FILMROLL = 5
-    val REQCODE_ADD_FILMROLL = 6
-    val REQCODE_EDIT_PHOTO_LIST = 7
-    val REQCODE_EDIT_ACCESSORY = 8
-    val REQCODE_ADD_ACCESSORY = 9
-    val REQCODE_BACKUP_DIR_CHOSEN = 10
+        const val RETCODE_CAMERA_TYPE = 300
+        const val RETCODE_OPEN_RELEASE_NOTES = 100
+        const val RETCODE_DELETE_FILMROLL = 101
+        const val RETCODE_DELETE_CAMERA = 102
+        const val RETCODE_DELETE_LENS = 103
+        const val RETCODE_DELETE_ACCESSORY = 104
+        const val RETCODE_BACKUP_DB = 400
+        const val RETCODE_SDCARD_PERM = 401
 
-    val RETCODE_CAMERA_TYPE = 300
-    val RETCODE_OPEN_RELEASE_NOTES = 100
-    val RETCODE_DELETE_FILMROLL = 101
-    val RETCODE_DELETE_CAMERA = 102
-    val RETCODE_DELETE_LENS = 103
-    val RETCODE_DELETE_ACCESSORY = 104
-    val RETCODE_BACKUP_DB = 400
-    val RETCODE_SDCARD_PERM = 401
+        const val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
+    }
 
-    val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
-    //public final int REQCODE_ADD_PHOTO_LIST = 8;
-
-    private var filmroll_fragment: FilmRollFragment? = null
-    private var cam_fragment: CameraFragment? = null
-    private var lens_fragment: LensFragment? = null
-    private var accessory_fragment: AccessoryFragment? = null
-    private val empty_fragment: EmptyFragment? = null
-    private var currentFragment: Int = 0 //0: filmroll, 1: cam, 2: lens, 3: accessory
+    private lateinit var currentFragment: Fragment
 
     internal val PERMISSIONS = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
 
@@ -69,63 +64,59 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-        if (savedInstanceState != null) {
-            currentFragment = savedInstanceState.getInt("current_fragment")
+        val currentFragmentId = if (savedInstanceState != null) {
+            savedInstanceState.getInt("current_fragment")
         } else {
-            currentFragment = 0
+            0
         }
 
         val f: Fragment
         val transaction = supportFragmentManager.beginTransaction()
-        when (currentFragment) {
+        when (currentFragmentId) {
             1 -> {
-                cam_fragment = CameraFragment()
-                f = cam_fragment!!
+                currentFragment = CameraFragment()
                 setTitle(R.string.title_activity_cam_list)
             }
             2 -> {
-                lens_fragment = LensFragment()
-                f = lens_fragment!!
+                currentFragment = LensFragment()
                 setTitle(R.string.title_activity_lens_list)
             }
             3 -> {
-                accessory_fragment = AccessoryFragment()
-                f = accessory_fragment!!
+                currentFragment = AccessoryFragment()
                 setTitle(R.string.title_activity_accessory_list)
             }
             else -> {
-                filmroll_fragment = FilmRollFragment()
-                f = filmroll_fragment!!
+                currentFragment = FilmRollFragment()
                 setTitle(R.string.title_activity_filmroll_list)
             }
         }
         //addではなくreplaceでないとonCreateが再び呼ばれたときに変になる（以前作ったfragmentの残骸が残って表示される）
         //この辺の処理は画面回転なども考えるとよろしくないが先送りする
-        transaction.replace(R.id.container, f)
+        transaction.replace(R.id.container, currentFragment)
         transaction.commit()
 
         val fab = findViewById<FloatingActionButton>(R.id.fab)
         when (currentFragment) {
-            1 -> fab.setImageResource(R.drawable.ic_menu_camera_white)
-            2 -> fab.setImageResource(R.drawable.ic_lens_white)
-            3 -> fab.setImageResource(R.drawable.ic_extension_white)
+            is CameraFragment -> fab.setImageResource(R.drawable.ic_menu_camera_white)
+            is LensFragment -> fab.setImageResource(R.drawable.ic_lens_white)
+            is AccessoryFragment -> fab.setImageResource(R.drawable.ic_extension_white)
             else -> fab.setImageResource(R.drawable.ic_filmroll_vector_white)
         }
         fab.setOnClickListener {
             val intent: Intent
             when (currentFragment) {
-                1 -> {
+                is CameraFragment -> {
                     val fragment = SelectDialogFragment.Builder()
                             .build(RETCODE_CAMERA_TYPE)
                     fragment.arguments.putInt("id", -1) //dummy value
                     fragment.arguments.putStringArray("items", arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)))
                     fragment.showOn(this@MainActivity, "dialog")
                 }
-                2 -> {
+                is LensFragment -> {
                     intent = Intent(application, EditLensActivity::class.java)
                     startActivityForResult(intent, REQCODE_ADD_LENS)
                 }
-                3 -> {
+                is AccessoryFragment -> {
                     intent = Intent(application, EditAccessoryActivity::class.java)
                     startActivityForResult(intent, REQCODE_ADD_ACCESSORY)
                 }
@@ -171,7 +162,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putInt("current_fragment", currentFragment)
+        outState.putInt("current_fragment", when(currentFragment){
+            is CameraFragment -> 1
+            is LensFragment -> 2
+            is AccessoryFragment -> 3
+            else -> 0
+        })
     }
 
     override fun onBackPressed() {
@@ -214,7 +210,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
         super.onActivityResult(requestCode, resultCode, data)
-
+        val frag : Fragment = currentFragment
         when (requestCode) {
             REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
@@ -232,7 +228,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         "",
                         bundle.getInt("ev_grain_size"),
                         bundle.getInt("ev_width"))
-                cam_fragment!!.insertCamera(c)
+                if(frag is CameraFragment) frag.insertCamera(c)
                 if (c.type == 1) {
                     val l = LensSpec(
                             -1,
@@ -268,7 +264,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         "",
                         bundle.getInt("ev_grain_size"),
                         bundle.getInt("ev_width"))
-                cam_fragment!!.updateCamera(c)
+                if(frag is CameraFragment) frag.updateCamera(c)
                 if (c.type == 1) {
                     val dao = TrisquelDao(this)
                     dao.connection()
@@ -299,7 +295,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         bundle.getString("f_steps")!!
                 )
                 Log.d("new lens", l.toString())
-                lens_fragment!!.insertLens(l)
+                if(frag is LensFragment) frag.insertLens(l)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_EDIT_LENS -> if (resultCode == Activity.RESULT_OK) {
@@ -316,7 +312,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         bundle.getString("f_steps")!!
                 )
                 //Log.d("new lens", l.toString());
-                lens_fragment!!.updateLens(l)
+                if(frag is LensFragment) frag.updateLens(l)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_ADD_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
@@ -334,7 +330,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         bundle.getInt("iso"),
                         36
                 )
-                filmroll_fragment!!.insertFilmRoll(f)
+                if(frag is FilmRollFragment) frag.insertFilmRoll(f)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_EDIT_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
@@ -354,12 +350,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         bundle.getInt("iso"),
                         36
                 )
-                filmroll_fragment!!.updateFilmRoll(f)
+                if(frag is FilmRollFragment) frag.updateFilmRoll(f)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_EDIT_PHOTO_LIST -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                filmroll_fragment!!.refreshFilmRoll(bundle!!.getInt("filmroll"))
+                if(frag is FilmRollFragment) frag.refreshFilmRoll(bundle!!.getInt("filmroll"))
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_ADD_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
@@ -367,7 +363,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val a = Accessory(-1, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()),
                         bundle!!.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
                         bundle.getDouble("focal_length_factor"))
-                accessory_fragment!!.insertAccessory(a)
+                if(frag is AccessoryFragment) frag.insertAccessory(a)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_EDIT_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
@@ -375,7 +371,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val a = Accessory(bundle!!.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()),
                         bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
                         bundle.getDouble("focal_length_factor"))
-                accessory_fragment!!.updateAccessory(a)
+                if(frag is AccessoryFragment) frag.updateAccessory(a)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_BACKUP_DIR_CHOSEN -> if (resultCode == DirectoryChooserActivity.RESULT_CODE_DIR_SELECTED) {
@@ -423,37 +419,33 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         val fab = findViewById<FloatingActionButton>(R.id.fab)
         if (id == R.id.nav_camera) {
-            cam_fragment = CameraFragment()
+            currentFragment = CameraFragment()
             val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, cam_fragment)
+            transaction.replace(R.id.container, currentFragment)
             transaction.commit()
             setTitle(R.string.title_activity_cam_list)
             fab.setImageResource(R.drawable.ic_menu_camera_white)
-            currentFragment = 1
         } else if (id == R.id.nav_lens) {
-            lens_fragment = LensFragment()
+            currentFragment = LensFragment()
             val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, lens_fragment)
+            transaction.replace(R.id.container, currentFragment)
             transaction.commit()
             setTitle(R.string.title_activity_lens_list)
             fab.setImageResource(R.drawable.ic_lens_white)
-            currentFragment = 2
         } else if (id == R.id.nav_filmrolls) {
-            filmroll_fragment = FilmRollFragment()
+            currentFragment = FilmRollFragment()
             val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, filmroll_fragment)
+            transaction.replace(R.id.container, currentFragment)
             transaction.commit()
             setTitle(R.string.title_activity_filmroll_list)
             fab.setImageResource(R.drawable.ic_filmroll_vector_white)
-            currentFragment = 0
         } else if (id == R.id.nav_accessory) {
-            accessory_fragment = AccessoryFragment()
+            currentFragment = AccessoryFragment()
             val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, accessory_fragment)
+            transaction.replace(R.id.container, currentFragment)
             transaction.commit()
             setTitle(R.string.title_activity_accessory_list)
             fab.setImageResource(R.drawable.ic_extension_white)
-            currentFragment = 3
         } else if (id == R.id.nav_share) {
 
         } else if (id == R.id.nav_send) {
@@ -615,6 +607,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
+        val frag: Fragment = currentFragment
         when (requestCode) {
             RETCODE_OPEN_RELEASE_NOTES -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val uri = Uri.parse(RELEASE_NOTES_URL)
@@ -625,41 +618,34 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 checkPermAndExportDB()
             }
             RETCODE_DELETE_FILMROLL -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (data != null) {
-                    val id: Int
-                    id = data.getIntExtra("id", -1)
-                    if (id != -1) filmroll_fragment!!.deleteFilmRoll(id)
+                val id = data.getIntExtra("id", -1)
+                if (id != -1){
+                    if(frag is FilmRollFragment) frag.deleteFilmRoll(id)
                 }
             }
             RETCODE_DELETE_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (data != null) {
-                    val id: Int
-                    id = data.getIntExtra("id", -1)
-                    if (id != -1) cam_fragment!!.deleteCamera(id)
+                val id = data.getIntExtra("id", -1)
+                if (id != -1 && frag is CameraFragment) {
+                    frag.deleteCamera(id)
                 }
             }
             RETCODE_DELETE_LENS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (data != null) {
-                    val id: Int
-                    id = data.getIntExtra("id", -1)
-                    if (id != -1) lens_fragment!!.deleteLens(id)
+                val id = data.getIntExtra("id", -1)
+                if (id != -1 && frag is LensFragment) {
+                    frag.deleteLens(id)
                 }
             }
             RETCODE_DELETE_ACCESSORY -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (data != null) {
-                    val id: Int
-                    id = data.getIntExtra("id", -1)
-                    if (id != -1) accessory_fragment!!.deleteAccessory(id)
+                val id = data.getIntExtra("id", -1)
+                if (id != -1 && frag is AccessoryFragment) {
+                    frag.deleteAccessory(id)
                 }
             }
             RETCODE_CAMERA_TYPE -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (data != null) {
-                    val which: Int
-                    which = data.getIntExtra("which", 0)
-                    val intent = Intent(application, EditCameraActivity::class.java)
-                    intent.putExtra("type", which)
-                    startActivityForResult(intent, REQCODE_ADD_CAMERA)
-                }
+                val which = data.getIntExtra("which", 0)
+                val intent = Intent(application, EditCameraActivity::class.java)
+                intent.putExtra("type", which)
+                startActivityForResult(intent, REQCODE_ADD_CAMERA)
             }
         }
     }
