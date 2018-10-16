@@ -63,10 +63,10 @@ class Accessory {
     }
 
     companion object {
-        val ACCESSORY_UNKNOWN = 0
-        val ACCESSORY_FILTER = 1
-        val ACCESSORY_TELE_CONVERTER = 2
-        val ACCESSORY_WIDE_CONVERTER = 3
-        val ACCESSORY_EXT_TUBE = 4
+        const val ACCESSORY_UNKNOWN = 0
+        const val ACCESSORY_FILTER = 1
+        const val ACCESSORY_TELE_CONVERTER = 2
+        const val ACCESSORY_WIDE_CONVERTER = 3
+        const val ACCESSORY_EXT_TUBE = 4
     }
 }

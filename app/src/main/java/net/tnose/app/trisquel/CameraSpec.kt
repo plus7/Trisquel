@@ -38,8 +38,9 @@ class CameraSpec {
         this.fastestShutterSpeed = fastestShutterSpeed
         this.slowestShutterSpeed = slowestShutterSpeed
         this.bulbAvailable = bulbAvailable
-        if (shutterSpeedSteps.length > 0) {
-            val sssAsArray = shutterSpeedSteps.split(", ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        if (shutterSpeedSteps.isNotEmpty()) {
+            // ","のあとにスペースがあるのは旧仕様。他も同様
+            val sssAsArray = shutterSpeedSteps.split(", ?".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
             val list = ArrayList<Double>()
             for (speed in sssAsArray) {
                 list.add(java.lang.Double.parseDouble(speed))
@@ -66,7 +67,7 @@ class CameraSpec {
         this.slowestShutterSpeed = slowestShutterSpeed
         this.bulbAvailable = bulbAvailable
         if (shutterSpeedSteps.length > 0) {
-            val sssAsArray = shutterSpeedSteps.split(", ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+            val sssAsArray = shutterSpeedSteps.split(", ?".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
             val list = ArrayList<Double>()
             for (speed in sssAsArray) {
                 try {

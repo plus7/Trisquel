@@ -31,8 +31,8 @@ class LensSpec {
         this.manufacturer = manufacturer
         this.modelName = modelName
         this.focalLength = focalLength
-        if (fSteps.length > 0) {
-            val fsAsArray = fSteps.split(", ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        if (fSteps.isNotEmpty()) {
+            val fsAsArray = fSteps.split(", ?".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
             val list = ArrayList<Double>()
             for (speed in fsAsArray) {
                 list.add(java.lang.Double.parseDouble(speed))
@@ -51,11 +51,11 @@ class LensSpec {
         this.manufacturer = manufacturer
         this.modelName = modelName
         this.focalLength = focalLength
-        if (fSteps.length > 0) {
-            val fsAsArray = fSteps.split(", ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        if (fSteps.isNotEmpty()) {
+            val fsAsArray = fSteps.split(", ?".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
             val list = ArrayList<Double>()
             for (speed in fsAsArray) {
-                list.add(java.lang.Double.parseDouble(speed.replace("[", "").replace("]", "")))
+                list.add(java.lang.Double.parseDouble(speed))
             }
             this.fSteps = list.toTypedArray()
         }

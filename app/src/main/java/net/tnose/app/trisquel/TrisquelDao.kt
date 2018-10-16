@@ -14,7 +14,7 @@ import android.util.Log
 import java.util.*
 
 class TrisquelDao(context: Context) : DatabaseHelper(context) {
-    protected var mContext: Context? = null
+    protected val mContext = context
     protected var mDb: SQLiteDatabase? = null
 
     val allCameras: ArrayList<CameraSpec>
@@ -175,17 +175,13 @@ class TrisquelDao(context: Context) : DatabaseHelper(context) {
             return accessories
         }
 
-    init {
-        mContext = context
-    }
-
     fun connection() {
-        val helper = DatabaseHelper(mContext!!)
+        val helper = DatabaseHelper(mContext)
         mDb = helper.open()
     }
 
     override fun close() {
-        mDb!!.close()
+        mDb?.close()
         mDb = null
     }
 
@@ -203,15 +199,7 @@ class TrisquelDao(context: Context) : DatabaseHelper(context) {
         cval.put("fastest_ss", camera.fastestShutterSpeed)
         cval.put("slowest_ss", camera.slowestShutterSpeed)
         cval.put("bulb_available", if (camera.bulbAvailable) 1 else 0)
-        if (camera.shutterSpeedSteps != null) {
-            cval.put("shutter_speeds",
-                    Arrays.toString(camera.shutterSpeedSteps)
-                            .replace("[", "")
-                            .replace("]", "") // Dirty code...
-            )
-        } else {
-            cval.put("shutter_speeds", "")
-        }
+        cval.put("shutter_speeds", camera.shutterSpeedSteps.joinToString(","))
         cval.put("ev_grain_size", camera.evGrainSize)
         cval.put("ev_width", camera.evWidth)
         return mDb!!.insert("camera", null, cval)
@@ -236,10 +224,7 @@ class TrisquelDao(context: Context) : DatabaseHelper(context) {
         cval.put("fastest_ss", camera.fastestShutterSpeed)
         cval.put("slowest_ss", camera.slowestShutterSpeed)
         cval.put("bulb_available", camera.bulbAvailable)
-        cval.put("shutter_speeds",
-                Arrays.toString(camera.shutterSpeedSteps)
-                        .replace("\\[", "")
-                        .replace("\\]", ""))
+        cval.put("shutter_speeds", camera.shutterSpeedSteps.joinToString(","))
         cval.put("ev_grain_size", camera.evGrainSize)
         cval.put("ev_width", camera.evWidth)
 
@@ -299,11 +284,7 @@ class TrisquelDao(context: Context) : DatabaseHelper(context) {
         cval.put("manufacturer", lens.manufacturer)
         cval.put("model_name", lens.modelName)
         cval.put("focal_length", lens.focalLength)
-        cval.put("f_steps",
-                Arrays.toString(lens.fSteps)
-                        .replace("[", "")
-                        .replace("]", "") // Dirty code...
-        )
+        cval.put("f_steps", lens.fSteps.joinToString(","))
         return mDb!!.insert("lens", null, cval)
     }
 
@@ -322,11 +303,7 @@ class TrisquelDao(context: Context) : DatabaseHelper(context) {
         cval.put("manufacturer", lens.manufacturer)
         cval.put("model_name", lens.modelName)
         cval.put("focal_length", lens.focalLength)
-        cval.put("f_steps",
-                Arrays.toString(lens.fSteps)
-                        .replace("[", "")
-                        .replace("]", "") // Dirty code...
-        )
+        cval.put("f_steps", lens.fSteps.joinToString(","))
         return mDb!!.update("lens",
                 cval,
                 "_id = ?",
