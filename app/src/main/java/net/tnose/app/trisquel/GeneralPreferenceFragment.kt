@@ -18,7 +18,7 @@ class GeneralPreferenceFragment : PreferenceFragmentCompat(), AbstractDialogFrag
     val REQCODE_DELETE_SUGGEST = 100
 
     protected var mListener: OnFragmentInteractionListener? = null
-    override fun onCreatePreferences(bundle: Bundle, s: String) {
+    override fun onCreatePreferences(bundle: Bundle?, s: String?) {
         addPreferencesFromResource(R.xml.pref_general)
         setHasOptionsMenu(false)
         val pref = findPreference("reset_autocomplete")
