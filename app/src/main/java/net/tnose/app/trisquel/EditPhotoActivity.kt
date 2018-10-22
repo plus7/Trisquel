@@ -679,7 +679,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         fragment.arguments.putStringArray("items", a_str.toTypedArray())
         fragment.arguments.putIntegerArrayList("tags", tags)
         fragment.arguments.putIntegerArrayList("checked_indices", chkidx)
-        fragment.arguments.putString("title", "a")
+        fragment.arguments.putString("title", getString(R.string.title_dialog_select_accessories))
         fragment.arguments.putString("positive", getString(android.R.string.yes))
         fragment.arguments.putString("negative", getString(android.R.string.no))
         fragment.showOn(this@EditPhotoActivity, "dialog")
