@@ -96,12 +96,12 @@ class MapsActivity : FragmentActivity(), OnMapReadyCallback {
         }
         val cb = findViewById<Button>(R.id.btnCancel)
         cb.setOnClickListener {
-            setResult(Activity.RESULT_CANCELED, null)
+            setResult(Activity.RESULT_CANCELED, Intent())
             finish()
         }
         val del = findViewById<Button>(R.id.btnDelete)
         del.setOnClickListener {
-            setResult(RESULT_DELETE, null)
+            setResult(RESULT_DELETE, Intent())
             finish()
         }
     }

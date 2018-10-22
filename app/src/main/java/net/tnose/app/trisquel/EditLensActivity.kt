@@ -372,7 +372,7 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     override fun onBackPressed() {
         Log.d("onBackPressed", "EditLensActivity")
         if (!isDirty) {
-            setResult(Activity.RESULT_CANCELED, null)
+            setResult(Activity.RESULT_CANCELED, Intent())
             super.onBackPressed()
         } else {
             if (canSave()) {

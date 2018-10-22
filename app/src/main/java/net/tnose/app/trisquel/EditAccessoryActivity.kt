@@ -395,7 +395,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
 
     override fun onBackPressed() {
         if (!isDirty) {
-            setResult(Activity.RESULT_CANCELED, null)
+            setResult(Activity.RESULT_CANCELED, Intent())
             super.onBackPressed()
         } else {
             askSave()

@@ -204,7 +204,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
         if (cameralist!!.size == 0) {
             Toast.makeText(this, getString(R.string.error_please_reg_cam), Toast.LENGTH_LONG).show()
-            setResult(Activity.RESULT_CANCELED, null)
+            setResult(Activity.RESULT_CANCELED, Intent())
             finish()
         }
 
@@ -410,7 +410,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     override fun onBackPressed() {
         Log.d("onBackPressed", "EditFilmRollActivity")
         if (!isDirty) {
-            setResult(Activity.RESULT_CANCELED, null)
+            setResult(Activity.RESULT_CANCELED, Intent())
             super.onBackPressed()
         } else {
             if (canSave()) {

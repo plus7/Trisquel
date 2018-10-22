@@ -580,7 +580,7 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
     override fun onBackPressed() {
         Log.d("onBackPressed", "EditCameraActivity")
         if (!isDirty) {
-            setResult(Activity.RESULT_CANCELED, null)
+            setResult(Activity.RESULT_CANCELED, Intent())
             super.onBackPressed()
         } else {
             if (canSave()) {
