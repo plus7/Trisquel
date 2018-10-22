@@ -313,21 +313,21 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
 
 
         spEvGrain!!.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (userIsInteracting) isDirty = true
             }
 
-            override fun onNothingSelected(parent: AdapterView<*>) {
+            override fun onNothingSelected(parent: AdapterView<*>?) {
                 if (userIsInteracting) isDirty = true
             }
         }
 
         spEvWidth!!.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (userIsInteracting) isDirty = true
             }
 
-            override fun onNothingSelected(parent: AdapterView<*>) {
+            override fun onNothingSelected(parent: AdapterView<*>?) {
                 if (userIsInteracting) isDirty = true
             }
         }
@@ -449,7 +449,8 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putString("FStepsString", fsAdapter!!.fStepsString)
+        if(fsAdapter != null)
+            outState.putString("FStepsString", fsAdapter!!.fStepsString)
         outState.putBoolean("isDirty", isDirty)
         super.onSaveInstanceState(outState)
     }
