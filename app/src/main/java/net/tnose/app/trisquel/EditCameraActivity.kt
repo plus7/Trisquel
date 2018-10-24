@@ -443,7 +443,6 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         outState.putString("mount", edit_mount!!.text.toString())
         outState.putString("manufacturer", edit_manufacturer!!.text.toString())
         outState.putString("model_name", edit_model!!.text.toString())
-        outState.putString("mount", edit_mount!!.text.toString())
         outState.putInt("format_position", spinner_format!!.position)
         outState.putInt("ss_grain_size", ssGrainSize)
         outState.putString("fastest_ss", spinner_fastest_ss!!.text.toString())
