@@ -258,6 +258,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     }
 
     protected fun saveSuggestListPref(prefkey: String, defRscId: Int, newValue: String) {
+        if(newValue.isEmpty()) return
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val prefstr = pref.getString(prefkey, "[]")
         val strArray = ArrayList<String>()
