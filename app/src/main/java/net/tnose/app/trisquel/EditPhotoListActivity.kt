@@ -11,8 +11,8 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
+import kotlinx.android.synthetic.main.content_edit_photo_list.*
 import java.util.*
 
 class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {
@@ -23,9 +23,6 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     private var toolbar: Toolbar? = null
     private var mFilmRoll: FilmRoll? = null
     private var photo_fragment: PhotoFragment? = null
-    private var namelabel: TextView? = null
-    private var cameralabel: TextView? = null
-    private var brandlabel: TextView? = null
 
     private val filmRollText: String
         get() {
@@ -70,12 +67,6 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             return sb.toString()
         }
 
-    protected fun findViews() {
-        namelabel = findViewById(R.id.label_name)
-        cameralabel = findViewById(R.id.label_camera)
-        brandlabel = findViewById(R.id.label_filmbrand)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_photo_list)
@@ -85,13 +76,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         val actionBar = supportActionBar
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
-        var id = -1
         val data = intent
-        if (data != null) {
-            id = data.getIntExtra("id", -1)
-        }
-
-        findViews()
+        val id = data.getIntExtra("id", -1)
 
         val dao = TrisquelDao(applicationContext)
         dao.connection()
@@ -99,16 +85,16 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         dao.close()
 
         if (mFilmRoll!!.name.isEmpty()) {
-            namelabel!!.setText(R.string.empty_name)
-            namelabel!!.setTypeface(Typeface.SANS_SERIF, Typeface.ITALIC)
+            label_name!!.setText(R.string.empty_name)
+            label_name!!.setTypeface(Typeface.SANS_SERIF, Typeface.ITALIC)
             setTitle(R.string.empty_name)
         } else {
-            namelabel!!.text = mFilmRoll!!.name
-            namelabel!!.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL)
+            label_name!!.text = mFilmRoll!!.name
+            label_name!!.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL)
             title = mFilmRoll!!.name
         }
-        cameralabel!!.text = mFilmRoll!!.camera.manufacturer + " " + mFilmRoll!!.camera.modelName
-        brandlabel!!.text = mFilmRoll!!.manufacturer + " " + mFilmRoll!!.brand
+        label_camera!!.text = mFilmRoll!!.camera.manufacturer + " " + mFilmRoll!!.camera.modelName
+        label_filmbrand!!.text = mFilmRoll!!.manufacturer + " " + mFilmRoll!!.brand
         toolbar!!.subtitle = mFilmRoll!!.camera.manufacturer + " " + mFilmRoll!!.camera.modelName + " / " +
                 mFilmRoll!!.manufacturer + " " + mFilmRoll!!.brand
 
@@ -243,16 +229,16 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 )
 
                 if (f.name.isEmpty()) {
-                    namelabel!!.setText(R.string.empty_name)
-                    namelabel!!.setTypeface(Typeface.SANS_SERIF, Typeface.ITALIC)
+                    label_name!!.setText(R.string.empty_name)
+                    label_name!!.setTypeface(Typeface.SANS_SERIF, Typeface.ITALIC)
                     setTitle(R.string.empty_name)
                 } else {
-                    namelabel!!.text = f.name
-                    namelabel!!.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL)
+                    label_name!!.text = f.name
+                    label_name!!.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL)
                     title = f.name
                 }
-                cameralabel!!.text = f.camera.manufacturer + " " + f.camera.modelName
-                brandlabel!!.text = f.manufacturer + " " + f.brand
+                label_camera!!.text = f.camera.manufacturer + " " + f.camera.modelName
+                label_filmbrand!!.text = f.manufacturer + " " + f.brand
                 toolbar!!.subtitle = f.camera.manufacturer + " " + f.camera.modelName + " / " +
                         f.manufacturer + " " + f.brand
                 //TODO:

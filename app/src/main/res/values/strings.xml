@@ -11,6 +11,7 @@
     <string name="title_activity_accessory_list">Accessory list</string>
     <string name="title_activity_reg_cam">Register Camera</string>
     <string name="title_activity_reg_lens">Register Lens</string>
+    <string name="title_activity_reg_cam_and_lens">Register Camera and Lens</string>
     <string name="title_activity_reg_filmroll">Add Filmroll</string>
     <string name="title_activity_edit_cam">Edit Camera</string>
     <string name="title_activity_edit_cam_and_lens">Edit Camera and Lens</string>

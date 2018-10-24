@@ -15,8 +15,7 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import com.rengwuxian.materialedittext.MaterialEditText
-import com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+import kotlinx.android.synthetic.main.activity_edit_film_roll.*
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -28,62 +27,60 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     private var created: String? = null
     private var cameralist: ArrayList<CameraSpec>? = null
     private var cadapter: CameraAdapter? = null
-    private var editBrand: ImmediateAutoCompleteTextView? = null
-    private var editManufacturer: ImmediateAutoCompleteTextView? = null
-    private var editIso: ImmediateAutoCompleteTextView? = null
-    private var cameraSpinner: MaterialBetterSpinner? = null
-    private var editName: MaterialEditText? = null
+    private var isResumed: Boolean = false
     private var isDirty: Boolean = false
 
     val data: Intent
         get() {
             val data = Intent()
             data.putExtra("id", id)
-            data.putExtra("name", editName!!.text.toString())
+            data.putExtra("name", edit_name!!.text.toString())
             data.putExtra("created", created)
-            data.putExtra("camera", cameralist!![cameraSpinner!!.position].id)
-            data.putExtra("manufacturer", editManufacturer!!.text.toString())
-            data.putExtra("brand", editBrand!!.text.toString())
+            data.putExtra("camera", cameralist!![spinner_camera!!.position].id)
+            data.putExtra("manufacturer", edit_manufacturer!!.text.toString())
+            data.putExtra("brand", edit_brand!!.text.toString())
             var iso: Int
             try {
-                iso = Integer.parseInt(editIso!!.text.toString())
+                iso = Integer.parseInt(edit_iso!!.text.toString())
             } catch (e: NumberFormatException) {
                 iso = 0
             }
-
             data.putExtra("iso", iso)
             return data
         }
 
-    protected fun findViews() {
-        cameraSpinner = findViewById(R.id.spinner_camera)
-        editManufacturer = findViewById(R.id.edit_manufacturer)
-        editBrand = findViewById(R.id.edit_brand)
-        editIso = findViewById(R.id.edit_iso)
-        editName = findViewById(R.id.edit_name)
-    }
-
-    protected fun loadData(data: Intent, dao: TrisquelDao) {
+    protected fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?) {
         val id = data.getIntExtra("id", -1)
         this.id = id
-        if (id <= 0) return
-        setTitle(R.string.title_activity_edit_filmroll)
-        val f = dao.getFilmRoll(id)
-        this.created = Util.dateToStringUTC(f!!.created)
+        if(id < 0)
+            setTitle(R.string.title_activity_reg_filmroll)
+        else
+            setTitle(R.string.title_activity_edit_filmroll)
 
-        editName!!.setText(f.name)
-
-        if (f.camera.id > 0) {
-            cameraSpinner!!.position = cadapter!!.getPosition(f.camera.id)
+        if(id >= 0 && savedInstanceState == null) { //既存データを開きたて
+            val f = dao.getFilmRoll(id)
+            this.created = Util.dateToStringUTC(f!!.created)
+            edit_name!!.setText(f.name)
+            if (f.camera.id > 0)
+                spinner_camera!!.position = cadapter!!.getPosition(f.camera.id)
+            edit_manufacturer!!.setText(f.manufacturer)
+            edit_brand!!.setText(f.brand)
+            if (f.iso > 0)
+                edit_iso!!.setText(Integer.toString(f.iso))
+        }else if(savedInstanceState != null){ //復帰データあり
+            this.created = savedInstanceState.getString("created")
+            edit_name!!.setText(savedInstanceState.getString("name"))
+            spinner_camera!!.position = savedInstanceState.getInt("camera_position")
+            edit_manufacturer!!.setText(savedInstanceState.getString("manufacturer"))
+            edit_brand!!.setText(savedInstanceState.getString("brand"))
+            edit_iso!!.setText(savedInstanceState.getString("iso"))
+        }else{ //新規データ開きたて
+            //do nothing
         }
-
-        editManufacturer!!.setText(f.manufacturer)
-        editBrand!!.setText(f.brand)
-        if (f.iso > 0) editIso!!.setText(Integer.toString(f.iso))
     }
 
     protected fun setEventListeners() {
-        editName!!.addTextChangedListener(object : TextWatcher {
+        edit_name!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -94,17 +91,17 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
-        val oldListener = cameraSpinner!!.onItemClickListener// これやらないとgetPositionがおかしくなる
-        cameraSpinner!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+        val oldListener = spinner_camera!!.onItemClickListener// これやらないとgetPositionがおかしくなる
+        spinner_camera!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             invalidateOptionsMenu()
-            isDirty = true
+            if(isResumed) isDirty = true
             oldListener.onItemClick(parent, view, position, id)
         }
 
-        editManufacturer!!.addTextChangedListener(object : TextWatcher {
+        edit_manufacturer!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -115,15 +112,15 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
                 val brand_adapter = getSuggestListSubPref("film_brand",
-                        editManufacturer!!.text.toString(),
+                        edit_manufacturer!!.text.toString(),
                         android.R.layout.simple_dropdown_item_1line)
-                editBrand!!.setAdapter(brand_adapter)
+                edit_brand!!.setAdapter(brand_adapter)
             }
         })
 
-        editBrand!!.addTextChangedListener(object : TextWatcher {
+        edit_brand!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -134,11 +131,11 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
-        editIso!!.addTextChangedListener(object : TextWatcher {
+        edit_iso!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -149,13 +146,18 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
     }
 
     protected fun canSave(): Boolean {
-        return editName!!.text.toString().length > 0 && cameraSpinner!!.position >= 0
+        return edit_name!!.text.toString().length > 0 && spinner_camera!!.position >= 0
+    }
+
+    override fun onResume() {
+        super.onResume()
+        isResumed = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -165,41 +167,35 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         val actionBar = supportActionBar
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
-        findViews()
-
         val dao = TrisquelDao(applicationContext)
         dao.connection()
         cameralist = dao.allCameras
 
         cadapter = CameraAdapter(this, android.R.layout.simple_spinner_item, cameralist!!)
         cadapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        cameraSpinner!!.setAdapter<CameraAdapter>(cadapter)
+        spinner_camera!!.setAdapter<CameraAdapter>(cadapter)
 
         val manufacturer_adapter = getSuggestListPref("film_manufacturer",
                 R.array.film_manufacturer,
                 android.R.layout.simple_dropdown_item_1line)
-        editManufacturer!!.setAdapter(manufacturer_adapter)
+        edit_manufacturer!!.setAdapter(manufacturer_adapter)
 
         val iso_adapter = ArrayAdapter.createFromResource(this, R.array.film_iso, android.R.layout.simple_dropdown_item_1line)
 
-        editIso!!.setAdapter(iso_adapter)
-        editIso!!.onFocusChangeListener = View.OnFocusChangeListener { view, b ->
-            if (b && editIso!!.text.toString().isEmpty()) {
+        edit_iso!!.setAdapter(iso_adapter)
+        edit_iso!!.onFocusChangeListener = View.OnFocusChangeListener { view, b ->
+            if (b && edit_iso!!.text.toString().isEmpty()) {
                 val zoom = Pattern.compile(".*?(\\d++).*")
-                val m = zoom.matcher(editBrand!!.text.toString())
+                val m = zoom.matcher(edit_brand!!.text.toString())
                 if (m.find()) {
                     val suggestedISO = m.group(1)
-                    editIso!!.setText(suggestedISO)
+                    edit_iso!!.setText(suggestedISO)
                 }
             }
         }
 
         val data = intent
-        if (data != null) {
-            loadData(data, dao)
-        } else {
-            this.id = -1
-        }
+        loadData(data, dao, savedInstanceState)
         dao.close()
 
         if (cameralist!!.size == 0) {
@@ -209,9 +205,9 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         }
 
         val brand_adapter = getSuggestListSubPref("film_brand",
-                editManufacturer!!.text.toString(),
+                edit_manufacturer!!.text.toString(),
                 android.R.layout.simple_dropdown_item_1line)
-        editBrand!!.setAdapter(brand_adapter)
+        edit_brand!!.setAdapter(brand_adapter)
 
         setEventListeners()
 
@@ -224,6 +220,12 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("isDirty", isDirty)
+        outState.putInt("camera_position", spinner_camera!!.position)
+        outState.putString("created", this.created)
+        outState.putString("name", edit_name!!.text.toString())
+        outState.putString("manufacturer", edit_manufacturer!!.text.toString())
+        outState.putString("brand", edit_brand!!.text.toString())
+        outState.putString("iso", edit_iso!!.text.toString())
         super.onSaveInstanceState(outState)
     }
 
@@ -339,22 +341,22 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
             101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val resultData = data
+                val resultData = this.data
                 saveSuggestListPref("film_manufacturer",
-                        R.array.film_manufacturer, editManufacturer!!.text.toString())
+                        R.array.film_manufacturer, edit_manufacturer!!.text.toString())
                 saveSuggestListSubPref("film_brand",
-                        editManufacturer!!.text.toString(),
-                        editBrand!!.text.toString())
+                        edit_manufacturer!!.text.toString(),
+                        edit_brand!!.text.toString())
                 setResult(Activity.RESULT_OK, resultData)
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, data)
+                setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
             102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 /* do nothing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, data)
+                setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
         }
@@ -395,10 +397,10 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             }
             R.id.menu_save -> {
                 saveSuggestListPref("film_manufacturer",
-                        R.array.film_manufacturer, editManufacturer!!.text.toString())
+                        R.array.film_manufacturer, edit_manufacturer!!.text.toString())
                 saveSuggestListSubPref("film_brand",
-                        editManufacturer!!.text.toString(),
-                        editBrand!!.text.toString())
+                        edit_manufacturer!!.text.toString(),
+                        edit_brand!!.text.toString())
                 setResult(Activity.RESULT_OK, data)
                 finish()
                 return true

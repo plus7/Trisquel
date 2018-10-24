@@ -59,6 +59,24 @@ class Util {
             }
         }
 
+        internal fun safeStr2Dobule(s : String) : Double{
+            try {
+                return s.toDouble()
+            }catch (e: NumberFormatException){
+                return 0.0
+            }
+        }
+
+        internal fun getFocalLengthRangeFromStr(s: String): Pair<Double, Double>{
+            if (s.indexOf("-") > 0) {
+                val range = s.split("-".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                return Pair(Util.safeStr2Dobule(range[0]), Util.safeStr2Dobule(range[1]))
+            } else {
+                val focalLength = Util.safeStr2Dobule(s)
+                return Pair(focalLength, focalLength)
+            }
+        }
+
         internal fun stringIsZoom(focalLength: String): Boolean {
             return focalLength.indexOf("-") >= 0
         }

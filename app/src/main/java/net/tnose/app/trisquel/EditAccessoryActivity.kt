@@ -14,28 +14,17 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import com.rengwuxian.materialedittext.MaterialEditText
-import com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+import kotlinx.android.synthetic.main.activity_edit_accessory.*
 import org.json.JSONArray
 import org.json.JSONException
 
 class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callback  {
-    var id: Int = -1
-    var created: String = ""
-    //var type: Int = 0
-    var name: String = ""
-    var mount: String = ""
-    var focal_length_factor: Double = 0.0
-
-    var spAccessoryType: MaterialBetterSpinner? = null
-        get() = findViewById(R.id.spinner_accessory_type)
-    var editName: MaterialEditText? = null
-        get() = findViewById(R.id.edit_name)
-    var spMount: ImmediateAutoCompleteTextView? = null
-        get() = findViewById(R.id.spinner_mount)
-    var editFlFactor: MaterialEditText? = null
-        get() = findViewById(R.id.edit_fl_factor)
-    var isDirty: Boolean = false
+    private var id: Int = -1
+    private var created: String = ""
+    private var name: String = ""
+    private var mount: String = ""
+    private var isResumed: Boolean = false
+    private var isDirty: Boolean = false
 
     fun setAdapters(){
         val typeArray = ArrayList<String>()
@@ -46,96 +35,112 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         typeArray.add(getString(R.string.label_accessory_unknown))
 
         val adapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, typeArray)
-        spAccessoryType?.setAdapter(adapter)
+        spinner_accessory_type?.setAdapter(adapter)
 
-        spMount?.setAdapter(getSuggestListPref("camera_mounts", R.array.camera_mounts, android.R.layout.simple_spinner_item))
+        spinner_mount?.setAdapter(getSuggestListPref("camera_mounts", R.array.camera_mounts, android.R.layout.simple_spinner_item))
     }
 
-    fun loadData(data: Intent, dao: TrisquelDao){
+    fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?){
         val id = data.getIntExtra("id", -1)
         this.id = id
+        // savedInstanceStateに関係ない部分
         if(id < 0)
             setTitle(R.string.title_activity_add_accessory)
         else
             setTitle(R.string.title_activity_edit_accessory)
 
-        //val type = data.getIntExtra("type", 0)
-        //this.type = type
-
-        if(id >= 0) {
+        if(id >= 0 && savedInstanceState == null) { //既存データを開きたて
             val a = dao.getAccessory(id)
-            this.created = Util.dateToStringUTC(a!!.created) //なんか変な仕組みな気がしてきたぞ
-            editName?.setText(a.name)
+            this.created = Util.dateToStringUTC(a!!.created)
 
+            edit_name!!.setText(a.name)
             when(a.type){
                 Accessory.ACCESSORY_TELE_CONVERTER,
                 Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                    spMount?.setText(a.mount)
-                    editFlFactor?.setText(a.focal_length_factor.toString())
+                    spinner_mount?.setText(a.mount)
+                    edit_fl_factor?.setText(a.focal_length_factor.toString())
                 }
                 Accessory.ACCESSORY_EXT_TUBE -> {
-                    spMount?.setText(a.mount)
+                    spinner_mount?.setText(a.mount)
                 }
             }
-            spAccessoryType?.position = (a.type + 4) % 5
+            spinner_accessory_type?.position = (a.type + 4) % 5
             refreshUIforType(a.type)
-        }else{
+        }else if(savedInstanceState != null){ //復帰データあり
+            this.created = savedInstanceState.getString("created")
+
+            edit_name!!.setText(savedInstanceState.getString("name"))
+
+            val type = savedInstanceState.getInt("type")
+            spinner_accessory_type?.position = (type + 4) % 5
+
+            when(type){
+                Accessory.ACCESSORY_TELE_CONVERTER,
+                Accessory.ACCESSORY_WIDE_CONVERTER -> {
+                    spinner_mount?.setText(savedInstanceState.getString("mount"))
+                    edit_fl_factor?.setText(savedInstanceState.getDouble("focal_length_factor").toString())
+                }
+                Accessory.ACCESSORY_EXT_TUBE -> {
+                    spinner_mount?.setText(savedInstanceState.getString("mount"))
+                }
+            }
+            refreshUIforType(type)
+        }else{  //新規開きたて
             refreshUIforType(Accessory.ACCESSORY_UNKNOWN)
         }
-
     }
 
     fun refreshUIforType(type: Int){
         when(type){
             Accessory.ACCESSORY_FILTER, Accessory.ACCESSORY_UNKNOWN, -1 -> {
-                spMount?.visibility = View.GONE
-                editFlFactor?.visibility = View.GONE
+                spinner_mount?.visibility = View.GONE
+                edit_fl_factor?.visibility = View.GONE
             }
             Accessory.ACCESSORY_TELE_CONVERTER,
             Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                spMount?.visibility = View.VISIBLE
-                editFlFactor?.visibility = View.VISIBLE
+                spinner_mount?.visibility = View.VISIBLE
+                edit_fl_factor?.visibility = View.VISIBLE
             }
             Accessory.ACCESSORY_EXT_TUBE -> {
-                spMount?.visibility = View.VISIBLE
-                editFlFactor?.visibility = View.GONE
+                spinner_mount?.visibility = View.VISIBLE
+                edit_fl_factor?.visibility = View.GONE
             }
         }
         invalidateFocalLengthFactor()
     }
 
     fun invalidateFocalLengthFactor(){
-        val factor = safeStr2Dobule(editFlFactor?.text.toString())
+        val factor = Util.safeStr2Dobule(edit_fl_factor?.text.toString())
         when(getCurrentType()){
             Accessory.ACCESSORY_TELE_CONVERTER -> {
                 if(factor <= 1.0){
-                    editFlFactor?.error = getString(R.string.error_flfactor_toosmall)
+                    edit_fl_factor?.error = getString(R.string.error_flfactor_toosmall)
                 }else{
-                    editFlFactor?.error = null
+                    edit_fl_factor?.error = null
                 }
             }
             Accessory.ACCESSORY_WIDE_CONVERTER -> {
                 if(factor >= 1.0 || factor == 0.0){
-                    editFlFactor?.error = getString(R.string.error_flfactor_toobig)
+                    edit_fl_factor?.error = getString(R.string.error_flfactor_toobig)
                 }else{
-                    editFlFactor?.error = null
+                    edit_fl_factor?.error = null
                 }
             }
         }
     }
 
     fun setEventListeners(){
-        val oldListenerAT = spAccessoryType?.onItemClickListener
-        spAccessoryType?.onItemClickListener = object : AdapterView.OnItemClickListener{
+        val oldListenerAT = spinner_accessory_type?.onItemClickListener
+        spinner_accessory_type?.onItemClickListener = object : AdapterView.OnItemClickListener{
             override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long){
                 oldListenerAT?.onItemClick(parent, view, position, id)
-                isDirty = true
+                if(isResumed) isDirty = true
                 refreshUIforType((position+1) % 5)
                 invalidateOptionsMenu()
             }
         }
 
-        editName?.addTextChangedListener(object : TextWatcher{
+        edit_name?.addTextChangedListener(object : TextWatcher{
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -145,21 +150,21 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
             }
 
             override fun afterTextChanged(s: Editable) {
-                isDirty = true
+                if(isResumed) isDirty = true
                 invalidateOptionsMenu()
             }
         })
 
-        val oldListenerM = spMount?.onItemClickListener
-        spMount?.onItemClickListener = object : AdapterView.OnItemClickListener{
+        val oldListenerM = spinner_mount?.onItemClickListener
+        spinner_mount?.onItemClickListener = object : AdapterView.OnItemClickListener{
             override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long){
                 oldListenerM?.onItemClick(parent, view, position, id)
-                isDirty = true
+                if(isResumed) isDirty = true
                 invalidateOptionsMenu()
             }
         }
 
-        spMount?.addTextChangedListener(object : TextWatcher{
+        spinner_mount?.addTextChangedListener(object : TextWatcher{
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -169,12 +174,12 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
             }
 
             override fun afterTextChanged(s: Editable) {
-                isDirty = true
+                if(isResumed) isDirty = true
                 invalidateOptionsMenu()
             }
         })
 
-        editFlFactor?.addTextChangedListener(object : TextWatcher{
+        edit_fl_factor?.addTextChangedListener(object : TextWatcher{
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -184,7 +189,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
             }
 
             override fun afterTextChanged(s: Editable) {
-                isDirty = true
+                if(isResumed) isDirty = true
                 when(getCurrentType()){
                     Accessory.ACCESSORY_TELE_CONVERTER,
                     Accessory.ACCESSORY_WIDE_CONVERTER -> invalidateFocalLengthFactor()
@@ -195,7 +200,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
     }
 
     fun getCurrentType(): Int{
-        return (spAccessoryType!!.position+1) % 5
+        return (spinner_accessory_type!!.position+1) % 5
     }
 
     protected fun getSuggestListPref(prefkey: String, defRscId: Int, resource: Int): ArrayAdapter<String> {
@@ -243,22 +248,14 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         e.apply()
     }
 
-    private fun safeStr2Dobule(s : String) : Double{
-        try {
-            return s.toDouble()
-        }catch (e: NumberFormatException){
-            return 0.0
-        }
-    }
-
     private fun canSave(): Boolean{
-        val baseCond = (spAccessoryType!!.position >= 0) and (editName!!.text.length > 0)
-        val flFactor = safeStr2Dobule(editFlFactor!!.text.toString())
-        val additionalCond = when (spAccessoryType!!.position){
+        val baseCond = (spinner_accessory_type!!.position >= 0) and (edit_name!!.text.length > 0)
+        val flFactor = Util.safeStr2Dobule(edit_fl_factor!!.text.toString())
+        val additionalCond = when (spinner_accessory_type!!.position){
             0 -> true
-            1 -> (spMount!!.text.length > 0) and (flFactor > 1.0)
-            2 -> (spMount!!.text.length > 0) and (flFactor < 1.0) and (flFactor > 0.0)
-            3 -> (spMount!!.text.length > 0)
+            1 -> (spinner_mount!!.text.length > 0) and (flFactor > 1.0)
+            2 -> (spinner_mount!!.text.length > 0) and (flFactor < 1.0) and (flFactor > 0.0)
+            3 -> (spinner_mount!!.text.length > 0)
             4 -> true
             else -> false
         }
@@ -271,20 +268,25 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         data.putExtra("id", this.id)
         data.putExtra("type", getCurrentType())
         data.putExtra("created", this.created)
-        data.putExtra("name", editName?.text.toString())
+        data.putExtra("name", edit_name?.text.toString())
 
         when(getCurrentType()){
             Accessory.ACCESSORY_TELE_CONVERTER,
             Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                data.putExtra("mount", spMount?.text.toString())
-                data.putExtra("focal_length_factor", safeStr2Dobule(editFlFactor?.text.toString()))
+                data.putExtra("mount", spinner_mount?.text.toString())
+                data.putExtra("focal_length_factor", Util.safeStr2Dobule(edit_fl_factor?.text.toString()))
             }
             Accessory.ACCESSORY_EXT_TUBE -> {
-                data.putExtra("mount", spMount?.text.toString())
+                data.putExtra("mount", spinner_mount?.text.toString())
             }
         }
 
         return data
+    }
+
+    override fun onResume() {
+        super.onResume()
+        isResumed = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -297,15 +299,30 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         val dao = TrisquelDao(applicationContext)
         dao.connection()
         val data = intent
-        if (data != null) {
-            loadData(data, dao)
-        }else{
-            setTitle(R.string.title_activity_add_accessory)
-            refreshUIforType(Accessory.ACCESSORY_UNKNOWN)
-        }
+        loadData(data, dao, savedInstanceState)
         dao.close()
 
         setEventListeners()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("isDirty", isDirty)
+        outState.putInt("type", getCurrentType())
+        outState.putString("created", this.created)
+        outState.putString("name", edit_name!!.text.toString())
+
+        when(getCurrentType()) {
+            Accessory.ACCESSORY_TELE_CONVERTER,
+            Accessory.ACCESSORY_WIDE_CONVERTER -> {
+                outState.putString("mount", spinner_mount!!.text.toString())
+                outState.putDouble("focal_length_factor", Util.safeStr2Dobule(edit_fl_factor?.text.toString()))
+            }
+            Accessory.ACCESSORY_EXT_TUBE -> {
+                outState.putString("mount", spinner_mount.text.toString())
+            }
+        }
+
+        super.onSaveInstanceState(outState)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -323,17 +340,17 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
                     Accessory.ACCESSORY_EXT_TUBE,
                     Accessory.ACCESSORY_WIDE_CONVERTER,
                     Accessory.ACCESSORY_TELE_CONVERTER -> saveSuggestListPref("camera_mounts", R.array.camera_mounts,
-                            arrayOf(spMount?.text.toString()))
+                            arrayOf(spinner_mount?.text.toString()))
                 }
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, data)
+                setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
             102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 /* do nothing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, data)
+                setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
         }
@@ -384,7 +401,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
                     Accessory.ACCESSORY_EXT_TUBE,
                     Accessory.ACCESSORY_WIDE_CONVERTER,
                     Accessory.ACCESSORY_TELE_CONVERTER -> saveSuggestListPref("camera_mounts", R.array.camera_mounts,
-                            arrayOf(spMount?.text.toString()))
+                            arrayOf(spinner_mount?.text.toString()))
                 }
                 finish()
                 return true

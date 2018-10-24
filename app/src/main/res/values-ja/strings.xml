@@ -12,6 +12,7 @@
     <string name="title_activity_accessory_list">アクセサリ一覧</string>
     <string name="title_activity_reg_cam">カメラを登録</string>
     <string name="title_activity_reg_lens">レンズを登録</string>
+    <string name="title_activity_reg_cam_and_lens">カメラとレンズを登録</string>
     <string name="title_activity_reg_filmroll">フィルムを追加</string>
     <string name="title_activity_edit_lens">レンズを編集</string>
     <string name="title_activity_edit_photo">写真情報を編集</string>

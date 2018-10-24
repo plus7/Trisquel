@@ -15,10 +15,8 @@ class LensSpec {
     var manufacturer: String
     var modelName: String
     var focalLength: String
-    val minFocalLength: Double
-        get() = 0.0
-    val maxFocalLength: Double
-        get() = 0.0
+    val focalLengthRange: Pair<Double, Double>
+        get() = Util.getFocalLengthRangeFromStr(focalLength)
     var fSteps: Array<Double> = emptyArray()
 
     constructor(id: Int, mount: String, body: Int, manufacturer: String,

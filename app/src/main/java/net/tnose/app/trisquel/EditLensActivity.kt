@@ -14,8 +14,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.GridView
-import com.rengwuxian.materialedittext.MaterialEditText
+import kotlinx.android.synthetic.main.activity_edit_lens.*
 import org.json.JSONArray
 import org.json.JSONException
 import java.util.*
@@ -24,25 +23,21 @@ import java.util.regex.Pattern
 class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var id: Int = 0
     private var created: String? = null
-    private var editMount: ImmediateAutoCompleteTextView? = null
-    private var editManufacturer: ImmediateAutoCompleteTextView? = null
-    private var editModelName: MaterialEditText? = null
-    private var editFocalLength: MaterialEditText? = null
-    private var fStopGridView: GridView? = null
     private var fsAdapter: FStepAdapter? = null
+    private var isResumed: Boolean = false
     private var isDirty: Boolean = false
 
     private val focalLengthOk: Boolean
         get() {
-            if (!editFocalLength!!.text.toString().isEmpty()) {
+            if (!edit_focal_length!!.text.toString().isEmpty()) {
                 val zoom = Pattern.compile("(\\d++)-(\\d++)")
-                var m = zoom.matcher(editFocalLength!!.text.toString())
+                var m = zoom.matcher(edit_focal_length!!.text.toString())
                 if (m.find()) {
                     return true
                 }
 
                 val prime = Pattern.compile("(\\d++)")
-                m = prime.matcher(editFocalLength!!.text.toString())
+                m = prime.matcher(edit_focal_length!!.text.toString())
                 if (m.find()) {
                     return true
                 }
@@ -61,56 +56,52 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             val data = Intent()
             data.putExtra("id", id)
             data.putExtra("created", created)
-            data.putExtra("mount", editMount!!.text.toString())
-            data.putExtra("manufacturer", editManufacturer!!.text.toString())
-            data.putExtra("model_name", editModelName!!.text.toString())
-            data.putExtra("focal_length", editFocalLength!!.text.toString())
+            data.putExtra("mount", edit_mount!!.text.toString())
+            data.putExtra("manufacturer", edit_manufacturer!!.text.toString())
+            data.putExtra("model_name", edit_model!!.text.toString())
+            data.putExtra("focal_length", edit_focal_length!!.text.toString())
             data.putExtra("f_steps", fStepsString)
             return data
         }
 
-    protected fun findViews() {
-        editManufacturer = findViewById(R.id.edit_manufacturer)
-        editMount = findViewById(R.id.edit_mount)
-        editFocalLength = findViewById(R.id.edit_focal_length)
-        editModelName = findViewById(R.id.edit_model)
-        fStopGridView = findViewById(R.id.fstop_gridview)
-    }
-
     protected fun loadData(data: Intent, savedInstanceState: Bundle?) {
         val id = data.getIntExtra("id", -1)
         this.id = id
-        fsAdapter = FStepAdapter(this)
-        if (id <= 0) {
-            if (savedInstanceState != null) {
-                fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString"))
-            }
-            fStopGridView!!.adapter = fsAdapter
-            return
-        }
-        setTitle(R.string.title_activity_edit_lens)
+
         val dao = TrisquelDao(applicationContext)
         dao.connection()
         val l = dao.getLens(id)
         dao.close()
 
-        this.created = Util.dateToStringUTC(l!!.created)
+        if(id < 0)
+            setTitle(R.string.title_activity_reg_lens)
+        else
+            setTitle(R.string.title_activity_edit_lens)
 
-        editManufacturer!!.setText(l.manufacturer)
-        editMount!!.setText(l.mount)
-        editModelName!!.setText(l.modelName)
-        editFocalLength!!.setText(l.focalLength)
+        fsAdapter = FStepAdapter(this)
 
-        if (savedInstanceState != null) {
-            fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString"))
-        } else {
+        if(id >= 0 && savedInstanceState == null) { //既存データを開きたて
+            this.created = Util.dateToStringUTC(l!!.created)
+            edit_manufacturer!!.setText(l.manufacturer)
+            edit_mount!!.setText(l.mount)
+            edit_model!!.setText(l.modelName)
+            edit_focal_length!!.setText(l.focalLength)
             fsAdapter!!.setCheckedState(l.fSteps)
+        }else if(savedInstanceState != null){ //復帰データあり
+            this.created = savedInstanceState.getString("created")
+            edit_manufacturer!!.setText(savedInstanceState.getString("manufacturer"))
+            edit_mount!!.setText(savedInstanceState.getString("mount"))
+            edit_model!!.setText(savedInstanceState.getString("model_name"))
+            edit_focal_length!!.setText(savedInstanceState.getString("focal_length"))
+            fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString"))
+        }else{ //未入力開きたて
+            this.created = ""
         }
-        fStopGridView!!.adapter = fsAdapter
+        fstop_gridview!!.adapter = fsAdapter
     }
 
     protected fun setEventListeners() {
-        editMount!!.addTextChangedListener(object : TextWatcher {
+        edit_mount!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -121,13 +112,13 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
-        editMount!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id -> invalidateOptionsMenu() }
+        edit_mount!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id -> invalidateOptionsMenu() }
 
-        editManufacturer!!.addTextChangedListener(object : TextWatcher {
+        edit_manufacturer!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -138,11 +129,11 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
-        editModelName!!.addTextChangedListener(object : TextWatcher {
+        edit_model!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -153,11 +144,11 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
-        editFocalLength!!.addTextChangedListener(object : TextWatcher {
+        edit_focal_length!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -168,38 +159,43 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
-        editFocalLength!!.onFocusChangeListener = View.OnFocusChangeListener { view, b ->
-            if (b && editFocalLength!!.text.toString().isEmpty()) {
+        edit_focal_length!!.onFocusChangeListener = View.OnFocusChangeListener { view, b ->
+            if (b && edit_focal_length!!.text.toString().isEmpty()) {
                 val zoom = Pattern.compile(".*?(\\d++)-(\\d++)mm.*")
-                var m = zoom.matcher(editModelName!!.text.toString())
+                var m = zoom.matcher(edit_model!!.text.toString())
                 if (m.find()) {
                     val suggestedWideFocalLength = m.group(1)
                     val suggestedTeleFocalLength = m.group(2)
-                    editFocalLength!!.setText("$suggestedWideFocalLength-$suggestedTeleFocalLength")
+                    edit_focal_length!!.setText("$suggestedWideFocalLength-$suggestedTeleFocalLength")
                 } else {
                     val prime = Pattern.compile(".*?(\\d++)mm.*")
-                    m = prime.matcher(editModelName!!.text.toString())
+                    m = prime.matcher(edit_model!!.text.toString())
                     if (m.find()) {
                         val suggestedFocalLength = m.group(1)
-                        editFocalLength!!.setText(suggestedFocalLength)
+                        edit_focal_length!!.setText(suggestedFocalLength)
                     }
                 }
             }
         }
 
-        fStopGridView!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+        fstop_gridview!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             invalidateOptionsMenu()
-            isDirty = true
+            if(isResumed) isDirty = true
         }
     }
 
     protected fun canSave(): Boolean {
         //マウントとモデル名とF値リストは必須。
-        return editMount!!.text.length > 0 && editModelName!!.text.length > 0 && focalLengthOk
+        return edit_mount!!.text.length > 0 && edit_model!!.text.length > 0 && focalLengthOk
+    }
+
+    override fun onResume() {
+        super.onResume()
+        isResumed = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -209,27 +205,20 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val actionBar = supportActionBar
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
-        findViews()
-
         val manufacturer_adapter = getSuggestListPref("lens_manufacturer",
                 R.array.lens_manufacturer,
                 android.R.layout.simple_dropdown_item_1line)
-        editManufacturer!!.setAdapter(manufacturer_adapter)
+        edit_manufacturer!!.setAdapter(manufacturer_adapter)
 
         val mount_adapter = getSuggestListPref("camera_mounts",
                 R.array.camera_mounts,
                 android.R.layout.simple_dropdown_item_1line)
-        editMount!!.setAdapter(mount_adapter)
+        edit_mount!!.setAdapter(mount_adapter)
 
-        editFocalLength!!.setHelperText(getString(R.string.hint_zoom))
+        edit_focal_length!!.setHelperText(getString(R.string.hint_zoom))
 
         val data = intent
-        if (data != null) {
-            loadData(data, savedInstanceState)
-        } else {
-            this.id = -1
-        }
-
+        loadData(data, savedInstanceState)
         setEventListeners()
 
         if (savedInstanceState != null) {
@@ -241,6 +230,11 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("FStepsString", fStepsString)
+        outState.putString("created", created)
+        outState.putString("manufacturer", edit_manufacturer!!.text.toString())
+        outState.putString("mount", edit_mount!!.text.toString())
+        outState.putString("model_name", edit_model!!.text.toString())
+        outState.putString("focal_length", edit_focal_length!!.text.toString())
         outState.putBoolean("isDirty", isDirty)
         super.onSaveInstanceState(outState)
     }
@@ -297,21 +291,21 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
             101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val resultData = data
+                val resultData = this.data
                 setResult(Activity.RESULT_OK, resultData)
                 saveSuggestListPref("lens_manufacturer",
-                        R.array.lens_manufacturer, editManufacturer!!.text.toString())
+                        R.array.lens_manufacturer, edit_manufacturer!!.text.toString())
                 saveSuggestListPref("camera_mounts",
-                        R.array.camera_mounts, editMount!!.text.toString())
+                        R.array.camera_mounts, edit_mount!!.text.toString())
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, data)
+                setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
             102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 /* do nothing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, data)
+                setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
         }
@@ -353,9 +347,9 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             R.id.menu_save -> {
                 setResult(Activity.RESULT_OK, data)
                 saveSuggestListPref("lens_manufacturer",
-                        R.array.lens_manufacturer, editManufacturer!!.text.toString())
+                        R.array.lens_manufacturer, edit_manufacturer!!.text.toString())
                 saveSuggestListPref("camera_mounts",
-                        R.array.camera_mounts, editMount!!.text.toString())
+                        R.array.camera_mounts, edit_mount!!.text.toString())
                 finish()
                 return true
             }

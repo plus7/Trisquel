@@ -12,9 +12,11 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.*
-import com.rengwuxian.materialedittext.MaterialEditText
-import com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.RadioGroup
+import android.widget.Toast
+import kotlinx.android.synthetic.main.activity_edit_camera.*
 import org.json.JSONArray
 import org.json.JSONException
 import java.util.*
@@ -23,35 +25,20 @@ import java.util.regex.Pattern
 class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var id: Int = 0
     private var type: Int = 0
-    private var created: String? = null
+    private var created: String = ""
     private var formatAdapter: ArrayAdapter<CharSequence>? = null
     private var ssAdapterOne: ArrayAdapter<CharSequence>? = null
     private var ssAdapterHalf: ArrayAdapter<CharSequence>? = null
     private var ssAdapterOneThird: ArrayAdapter<CharSequence>? = null
-    private var radioStopOne: RadioButton? = null
-    private var radioStopHalf: RadioButton? = null
-    private var radioStopOneThird: RadioButton? = null
-    private var spSsUb: MaterialBetterSpinner? = null
-    private var spSsLb: MaterialBetterSpinner? = null
-    private var editMount: ImmediateAutoCompleteTextView? = null
-    private var editManufacturer: ImmediateAutoCompleteTextView? = null
-    private var editModelName: TextView? = null
-    private var spFormat: MaterialBetterSpinner? = null
-    private var spEvGrain: Spinner? = null
-    private var spEvWidth: Spinner? = null
-    private var cbBulb: CheckBox? = null
-    private var layoutFLC: LinearLayout? = null
-    private var editFocalLength: MaterialEditText? = null
-    private var editFixedLensName: MaterialEditText? = null
-    private var fsGridView: GridView? = null
     private var fsAdapter: FStepAdapter? = null
     private var isDirty: Boolean = false
+    private var isResumed: Boolean = false
     private var userIsInteracting = false
 
     private val shutterSpeedRangeOk: Boolean
         get() {
-            val fastestSS = Util.stringToDoubleShutterSpeed(spSsUb!!.text.toString())
-            val slowestSS = Util.stringToDoubleShutterSpeed(spSsLb!!.text.toString())
+            val fastestSS = Util.stringToDoubleShutterSpeed(spinner_fastest_ss!!.text.toString())
+            val slowestSS = Util.stringToDoubleShutterSpeed(spinner_slowest_ss!!.text.toString())
             return if (fastestSS == 0.0 || slowestSS == 0.0) {
                 false
             } else
@@ -60,15 +47,15 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
 
     private val focalLengthOk: Boolean
         get() {
-            if (!editFocalLength!!.text.toString().isEmpty()) {
+            if (!edit_focal_length_flc!!.text.toString().isEmpty()) {
                 val zoom = Pattern.compile("(\\d++)-(\\d++)")
-                var m = zoom.matcher(editFocalLength!!.text.toString())
+                var m = zoom.matcher(edit_focal_length_flc!!.text.toString())
                 if (m.find()) {
                     return true
                 }
 
                 val prime = Pattern.compile("(\\d++)")
-                m = prime.matcher(editFocalLength!!.text.toString())
+                m = prime.matcher(edit_focal_length_flc!!.text.toString())
                 if (m.find()) {
                     return true
                 }
@@ -79,14 +66,20 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
     protected val isDataChanged: Boolean
         get() = false
 
-    private val ssGrainSize: Int
-        get() = if (radioStopOne!!.isChecked) {
+    private var ssGrainSize: Int
+        get() = if (radio_stop_one!!.isChecked) {
             1
-        } else if (radioStopHalf!!.isChecked) {
+        } else if (radio_stop_half!!.isChecked) {
             2
         } else {
             3
         }
+        set(value) =
+            when (value) {
+                1 -> radio_stop_one!!.isChecked = true
+                2 -> radio_stop_half!!.isChecked = true
+                else -> radio_stop_one_third!!.isChecked = true
+            }
 
     /*
                   "shutter_speeds"はまだ対応しない
@@ -97,133 +90,124 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             data.putExtra("id", this.id)
             data.putExtra("type", this.type)
             data.putExtra("created", this.created)
-            data.putExtra("mount", editMount!!.text.toString())
-            data.putExtra("manufacturer", editManufacturer!!.text.toString())
-            data.putExtra("model_name", editModelName!!.text.toString())
-            data.putExtra("format", spFormat!!.position)
+            data.putExtra("mount", edit_mount!!.text.toString())
+            data.putExtra("manufacturer", edit_manufacturer!!.text.toString())
+            data.putExtra("model_name", edit_model!!.text.toString())
+            data.putExtra("format", spinner_format!!.position)
             data.putExtra("ss_grain_size", ssGrainSize)
-            data.putExtra("fastest_ss", Util.stringToDoubleShutterSpeed(spSsUb!!.text.toString()))
-            data.putExtra("slowest_ss", Util.stringToDoubleShutterSpeed(spSsLb!!.text.toString()))
-            data.putExtra("bulb_available", if (cbBulb!!.isChecked) 1 else 0)
-            data.putExtra("ev_grain_size", spEvGrain!!.selectedItemPosition + 1)
-            data.putExtra("ev_width", spEvWidth!!.selectedItemPosition + 1)
+            data.putExtra("fastest_ss", Util.stringToDoubleShutterSpeed(spinner_fastest_ss!!.text.toString()))
+            data.putExtra("slowest_ss", Util.stringToDoubleShutterSpeed(spinner_slowest_ss!!.text.toString()))
+            data.putExtra("bulb_available", if (check_bulb_available!!.isChecked) 1 else 0)
+            data.putExtra("ev_grain_size", spinner_ev_grain_size!!.selectedItemPosition + 1)
+            data.putExtra("ev_width", spinner_ev_width!!.selectedItemPosition + 1)
             if (type == 1) {
-                data.putExtra("fixedlens_name", editFixedLensName!!.text.toString())
-                data.putExtra("fixedlens_focal_length", editFocalLength!!.text.toString())
+                data.putExtra("fixedlens_name", edit_lens_name_flc!!.text.toString())
+                data.putExtra("fixedlens_focal_length", edit_focal_length_flc!!.text.toString())
                 data.putExtra("fixedlens_f_steps", fsAdapter!!.fStepsString)
             }
             return data
         }
 
     private fun refreshShutterSpeedSpinners() {
-        if (radioStopOne!!.isChecked) {
-            spSsUb!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOne)
-            spSsLb!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOne)
-        } else if (radioStopHalf!!.isChecked) {
-            spSsUb!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterHalf)
-            spSsLb!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterHalf)
+        if (radio_stop_one!!.isChecked) {
+            spinner_fastest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOne)
+            spinner_slowest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOne)
+        } else if (radio_stop_half!!.isChecked) {
+            spinner_fastest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterHalf)
+            spinner_slowest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterHalf)
         } else {
-            spSsUb!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOneThird)
-            spSsLb!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOneThird)
+            spinner_fastest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOneThird)
+            spinner_slowest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOneThird)
         }
     }
 
     private fun doShutterSpeedValidation(): Boolean {
         var ret = true
-        val fastestSS = Util.stringToDoubleShutterSpeed(spSsUb!!.text.toString())
-        val slowestSS = Util.stringToDoubleShutterSpeed(spSsLb!!.text.toString())
+        val fastestSS = Util.stringToDoubleShutterSpeed(spinner_fastest_ss!!.text.toString())
+        val slowestSS = Util.stringToDoubleShutterSpeed(spinner_slowest_ss!!.text.toString())
         if (fastestSS == 0.0 || slowestSS == 0.0) { //未設定なだけなのでエラー表示にはしない
-            spSsUb!!.error = null
-            spSsLb!!.error = null
+            spinner_fastest_ss!!.error = null
+            spinner_slowest_ss!!.error = null
         } else if (fastestSS > slowestSS) {
-            spSsUb!!.error = "okashii"
-            spSsLb!!.error = ""
+            spinner_fastest_ss!!.error = "okashii"
+            spinner_slowest_ss!!.error = ""
             ret = false
         } else {
-            spSsUb!!.error = null
-            spSsLb!!.error = null
+            spinner_fastest_ss!!.error = null
+            spinner_slowest_ss!!.error = null
         }
         return ret
     }
 
-    protected fun findViews() {
-        radioStopOne = findViewById(R.id.radio_stop_one)
-        radioStopHalf = findViewById(R.id.radio_stop_half)
-        radioStopOneThird = findViewById(R.id.radio_stop_one_third)
-        spSsUb = findViewById(R.id.spinner_fastest_ss)
-        spSsLb = findViewById(R.id.spinner_slowest_ss)
-        editManufacturer = findViewById(R.id.edit_manufacturer)
-        editMount = findViewById(R.id.edit_mount)
-        editModelName = findViewById(R.id.edit_model)
-        spFormat = findViewById(R.id.spinner_format)
-        spEvGrain = findViewById(R.id.spinner_ev_grain_size)
-        spEvWidth = findViewById(R.id.spinner_ev_width)
-        cbBulb = findViewById(R.id.check_bulb_available)
-        layoutFLC = findViewById(R.id.layout_flc)
-        editFocalLength = findViewById(R.id.edit_focal_length_flc)
-        editFixedLensName = findViewById(R.id.edit_lens_name_flc)
-        fsGridView = findViewById(R.id.gridview)
-    }
-
-    protected fun loadData(data: Intent, savedInstanceState: Bundle?) {
+    protected fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?) {
         val id = data.getIntExtra("id", -1)
         this.id = id
         val type = data.getIntExtra("type", 0)
         this.type = type
-        if (type == 1) {
-            editMount!!.visibility = View.GONE
-            layoutFLC!!.visibility = View.VISIBLE
-            setTitle(R.string.title_activity_edit_cam_and_lens)
+
+        if(type == 1) {
+            if (id < 0) setTitle(R.string.title_activity_reg_cam_and_lens)
+            else        setTitle(R.string.title_activity_edit_cam_and_lens)
+
+            edit_mount!!.visibility = View.GONE
+            layout_flc!!.visibility = View.VISIBLE
             fsAdapter = FStepAdapter(this)
-            if (savedInstanceState != null) {
-                fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString"))
-            }
-        } else {
-            setTitle(R.string.title_activity_edit_cam)
+        }else{
+            if (id < 0) setTitle(R.string.title_activity_reg_cam)
+            else        setTitle(R.string.title_activity_edit_cam)
         }
 
-        if (id <= 0) {
-            if (type == 1) fsGridView!!.adapter = fsAdapter
-            return
-        }
-
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        val c = dao.getCamera(id)
-        var l: LensSpec? = null
-        if (c!!.type == 1) {
-            l = dao.getLens(dao.getFixedLensIdByBody(c.id))
-        }
-        dao.close()
-        this.created = Util.dateToStringUTC(c.created)
-        editMount!!.setText(c.mount)
-        editManufacturer!!.setText(c.manufacturer)
-        editModelName!!.text = c.modelName
-        if (c.format < 0) c.format = 0
-        spFormat!!.position = c.format
-        when (c.shutterSpeedGrainSize) {
-            1 -> radioStopOne!!.isChecked = true
-            2 -> radioStopHalf!!.isChecked = true
-            3 -> radioStopOneThird!!.isChecked = true
-        }
-        spSsUb!!.setText(Util.doubleToStringShutterSpeed(c.fastestShutterSpeed!!))
-        spSsLb!!.setText(Util.doubleToStringShutterSpeed(c.slowestShutterSpeed!!))
-        cbBulb!!.isChecked = c.bulbAvailable
-        spEvGrain!!.setSelection(c.evGrainSize - 1, false)
-        spEvWidth!!.setSelection(c.evWidth - 1, false)
-
-        if (c.type == 1) {
-            if (savedInstanceState == null) {
+        if(id >= 0 && savedInstanceState == null) { //既存データを開きたて
+            val c = dao.getCamera(id)
+            var l: LensSpec? = null
+            if(type == 1) {
+                l = dao.getLens(dao.getFixedLensIdByBody(id))
                 fsAdapter!!.setCheckedState(l!!.fSteps)
+                edit_lens_name_flc!!.setText(l.modelName)
+                edit_focal_length_flc!!.setText(l.focalLength)
             }
-            fsGridView!!.adapter = fsAdapter
-            editFixedLensName!!.setText(l!!.modelName)
-            editFocalLength!!.setText(l.focalLength)
+
+            this.created = Util.dateToStringUTC(c!!.created)
+
+            edit_mount!!.setText(c.mount)
+            edit_manufacturer!!.setText(c.manufacturer)
+            edit_model!!.setText(c.modelName)
+            if (c.format < 0) c.format = 0
+            spinner_format!!.position = c.format
+            this.ssGrainSize = c.shutterSpeedGrainSize
+            spinner_fastest_ss!!.setText(Util.doubleToStringShutterSpeed(c.fastestShutterSpeed!!))
+            spinner_slowest_ss!!.setText(Util.doubleToStringShutterSpeed(c.slowestShutterSpeed!!))
+            check_bulb_available!!.isChecked = c.bulbAvailable
+            spinner_ev_grain_size!!.setSelection(c.evGrainSize - 1, false)
+            spinner_ev_width!!.setSelection(c.evWidth - 1, false)
+        }else if(savedInstanceState != null){ //復帰データあり
+            if (type == 1) {
+                fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString"))
+                //EditTextは勝手に復元するので処理不要
+                //edit_lens_name_flc!!.setText(savedInstanceState.getString("fixedlens_name"))
+                //edit_focal_length_flc!!.setText(savedInstanceState.getString("fixedlens_focal_length"))
+            }
+
+            this.created = savedInstanceState.getString("created")
+
+            edit_mount!!.setText(savedInstanceState.getString("mount"))
+            edit_manufacturer!!.setText(savedInstanceState.getString("manufacturer"))
+            edit_model!!.setText(savedInstanceState.getString("model_name"))
+            spinner_format!!.position = savedInstanceState.getInt("format_position")
+            ssGrainSize = savedInstanceState.getInt("ss_grain_size")
+            spinner_fastest_ss!!.setText(savedInstanceState.getString("fastest_ss"))
+            spinner_slowest_ss!!.setText(savedInstanceState.getString("slowest_ss"))
+            check_bulb_available!!.isChecked = savedInstanceState.getBoolean("bulb_available")
+            spinner_ev_grain_size!!.setSelection(savedInstanceState.getInt("ev_grain_size") - 1, false)
+            spinner_ev_width!!.setSelection(savedInstanceState.getInt("ev_width") - 1, false)
+        }else{ //未入力開きたて
         }
+
+        if (type == 1) gridview!!.adapter = fsAdapter
     }
 
     protected fun setEventListeners() {
-        editMount!!.addTextChangedListener(object : TextWatcher {
+        edit_mount!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -233,17 +217,17 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             }
 
             override fun afterTextChanged(s: Editable) {
-                isDirty = true
+                if(isResumed) isDirty = true
                 invalidateOptionsMenu()
             }
         })
 
-        editMount!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+        edit_mount!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             invalidateOptionsMenu()
-            isDirty = true
+            if(isResumed) isDirty = true
         }
 
-        editManufacturer!!.addTextChangedListener(object : TextWatcher {
+        edit_manufacturer!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -253,11 +237,11 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             }
 
             override fun afterTextChanged(s: Editable) {
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
-        editModelName!!.addTextChangedListener(object : TextWatcher {
+        edit_model!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -267,9 +251,9 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             }
 
             override fun afterTextChanged(s: Editable) {
-                isDirty = true
+                if(isResumed) isDirty = true
                 invalidateOptionsMenu()
-                if (editModelName!!.text.toString() == "jenkinsushi") {
+                if (edit_model!!.text.toString() == "jenkinsushi") {
                     Toast.makeText(this@EditCameraActivity,
                             getString(R.string.google_maps_key),
                             Toast.LENGTH_LONG).show()
@@ -277,7 +261,7 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             }
         })
 
-        spFormat!!.addTextChangedListener(object : TextWatcher {
+        spinner_format!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -287,52 +271,52 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             }
 
             override fun afterTextChanged(s: Editable) {
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
         val rg = findViewById<RadioGroup>(R.id.radiogroup_ss_stop)
         rg.setOnCheckedChangeListener { group, checkedId ->
             refreshShutterSpeedSpinners()
-            isDirty = true
+            if(isResumed) isDirty = true
         }
 
-        spSsUb!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+        spinner_fastest_ss!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             doShutterSpeedValidation()
             invalidateOptionsMenu()
-            isDirty = true
+            if(isResumed) isDirty = true
         }
 
-        spSsLb!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+        spinner_slowest_ss!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             doShutterSpeedValidation()
             invalidateOptionsMenu()
-            isDirty = true
+            if(isResumed) isDirty = true
         }
 
-        cbBulb!!.setOnCheckedChangeListener { buttonView, isChecked -> isDirty = true }
+        check_bulb_available!!.setOnCheckedChangeListener { buttonView, isChecked -> if(isResumed) isDirty = true }
 
 
-        spEvGrain!!.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+        spinner_ev_grain_size!!.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (userIsInteracting) isDirty = true
+                if(isResumed) isDirty = true
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
-                if (userIsInteracting) isDirty = true
+                if(isResumed) isDirty = true
             }
         }
 
-        spEvWidth!!.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+        spinner_ev_width!!.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (userIsInteracting) isDirty = true
+                if(isResumed) isDirty = true
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
-                if (userIsInteracting) isDirty = true
+                if(isResumed) isDirty = true
             }
         }
 
-        editFocalLength!!.addTextChangedListener(object : TextWatcher {
+        edit_focal_length_flc!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -343,11 +327,11 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
-        editFixedLensName!!.addTextChangedListener(object : TextWatcher {
+        edit_lens_name_flc!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -358,13 +342,13 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
 
             override fun afterTextChanged(s: Editable) {
                 invalidateOptionsMenu()
-                isDirty = true
+                if(isResumed) isDirty = true
             }
         })
 
-        fsGridView!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+        gridview!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             invalidateOptionsMenu()
-            isDirty = true
+            if(isResumed) isDirty = true
         }
     }
 
@@ -374,8 +358,8 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         //マウントが空でない
         //モデル名が空でない
         //シャッタースピードレンジが設定されていて内容に矛盾がない
-        cameraOk = (type == 1 || type == 0 && editMount!!.text.length > 0) &&
-                editModelName!!.text.length > 0 &&
+        cameraOk = (type == 1 || type == 0 && edit_mount!!.text.length > 0) &&
+                edit_model!!.text.length > 0 &&
                 shutterSpeedRangeOk
 
         //レンズ付きモデルの場合
@@ -394,14 +378,18 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         userIsInteracting = true
     }
 
+    override fun onResume() {
+        super.onResume()
+        isResumed = true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        isResumed = false
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_camera)
 
         val actionBar = supportActionBar
         actionBar!!.setDisplayHomeAsUpEnabled(true)
-
-        findViews()
 
         ssAdapterOne = ArrayAdapter.createFromResource(this, R.array.shutter_speeds_one, android.R.layout.simple_spinner_item)
         ssAdapterHalf = ArrayAdapter.createFromResource(this, R.array.shutter_speeds_half, android.R.layout.simple_spinner_item)
@@ -411,34 +399,33 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         ssAdapterHalf!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         ssAdapterOneThird!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
-        spSsUb!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOne)
-        spSsLb!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOne)
+        spinner_fastest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOne)
+        spinner_slowest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOne)
 
-        spSsUb!!.setHelperText(getString(R.string.label_shutter_speed_fastest))
-        spSsLb!!.setHelperText(getString(R.string.label_shutter_speed_slowest))
+        spinner_fastest_ss!!.setHelperText(getString(R.string.label_shutter_speed_fastest))
+        spinner_slowest_ss!!.setHelperText(getString(R.string.label_shutter_speed_slowest))
 
         formatAdapter = ArrayAdapter.createFromResource(this, R.array.film_formats, android.R.layout.simple_spinner_item)
         formatAdapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spFormat!!.setAdapter<ArrayAdapter<CharSequence>>(formatAdapter)
-        spFormat!!.position = FilmFormat.FULL_FRAME.ordinal
+        spinner_format!!.setAdapter<ArrayAdapter<CharSequence>>(formatAdapter)
+        spinner_format!!.position = FilmFormat.FULL_FRAME.ordinal
 
         val manufacturer_adapter = getSuggestListPref("camera_manufacturer",
                 R.array.camera_manufacturer,
                 android.R.layout.simple_dropdown_item_1line)
-        editManufacturer!!.setAdapter(manufacturer_adapter)
+        edit_manufacturer!!.setAdapter(manufacturer_adapter)
 
         val mount_adapter = getSuggestListPref("camera_mounts",
                 R.array.camera_mounts,
                 android.R.layout.simple_dropdown_item_1line)
-        editMount!!.setAdapter(mount_adapter)
+        edit_mount!!.setAdapter(mount_adapter)
 
         val data = intent
-        if (data != null) {
-            loadData(data, savedInstanceState)
-        } else {
-            this.id = -1
-            this.type = 0
-        }
+
+        val dao = TrisquelDao(applicationContext)
+        dao.connection()
+        loadData(data, dao, savedInstanceState)
+        dao.close()
         setEventListeners()
 
         if (savedInstanceState != null) {
@@ -452,6 +439,18 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         if(fsAdapter != null)
             outState.putString("FStepsString", fsAdapter!!.fStepsString)
         outState.putBoolean("isDirty", isDirty)
+        outState.putString("created", this.created)
+        outState.putString("mount", edit_mount!!.text.toString())
+        outState.putString("manufacturer", edit_manufacturer!!.text.toString())
+        outState.putString("model_name", edit_model!!.text.toString())
+        outState.putString("mount", edit_mount!!.text.toString())
+        outState.putInt("format_position", spinner_format!!.position)
+        outState.putInt("ss_grain_size", ssGrainSize)
+        outState.putString("fastest_ss", spinner_fastest_ss!!.text.toString())
+        outState.putString("slowest_ss", spinner_slowest_ss!!.text.toString())
+        outState.putBoolean("bulb_available", check_bulb_available!!.isChecked)
+        outState.putInt("ev_grain_size", spinner_ev_grain_size!!.selectedItemPosition + 1)
+        outState.putInt("ev_width", spinner_ev_width!!.selectedItemPosition + 1)
         super.onSaveInstanceState(outState)
     }
 
@@ -506,21 +505,21 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
             101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val resultData = data
+                val resultData = this.data
                 setResult(Activity.RESULT_OK, resultData)
                 saveSuggestListPref("camera_manufacturer",
-                        R.array.camera_manufacturer, editManufacturer!!.text.toString())
+                        R.array.camera_manufacturer, edit_manufacturer!!.text.toString())
                 saveSuggestListPref("camera_mounts",
-                        R.array.camera_mounts, editMount!!.text.toString())
+                        R.array.camera_mounts, edit_mount!!.text.toString())
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, data)
+                setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
             102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 /* do nothing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, data)
+                setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
         }
@@ -562,9 +561,9 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             R.id.menu_save -> {
                 setResult(Activity.RESULT_OK, data)
                 saveSuggestListPref("camera_manufacturer",
-                        R.array.camera_manufacturer, editManufacturer!!.text.toString())
+                        R.array.camera_manufacturer, edit_manufacturer!!.text.toString())
                 saveSuggestListPref("camera_mounts",
-                        R.array.camera_mounts, editMount!!.text.toString())
+                        R.array.camera_mounts, edit_mount!!.text.toString())
                 finish()
                 return true
             }
