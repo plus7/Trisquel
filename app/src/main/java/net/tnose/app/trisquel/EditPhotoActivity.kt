@@ -211,8 +211,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             seek_ttl_light_meter.progress = ((evWidth + photo!!.ttlLightMeter) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
             label_ttl_light_meter.text = toHumanReadableCompensationAmount((photo!!.ttlLightMeter * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
 
+            refreshFocalLength(lens)
             if(lens != null){
-                refreshFocalLength(lens)
                 seek_focal_length.progress = (photo!!.focalLength - lens!!.focalLengthRange.first).toInt()
                 label_focal_length.text = photo!!.focalLength.toString() + "mm"
             }
@@ -235,8 +235,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             seek_ttl_light_meter.progress = ((evWidth + ttl_light_meter) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
             label_ttl_light_meter.text = toHumanReadableCompensationAmount((ttl_light_meter * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
 
+            refreshFocalLength(lens)
             if(lens != null) {
-                refreshFocalLength(lens)
                 val focalLength = savedInstanceState.getDouble("focal_length")
                 seek_focal_length.progress = (focalLength - lens!!.focalLengthRange.first).toInt()
                 label_focal_length.text = focalLength.toString() + "mm"
@@ -246,27 +246,29 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             label_ev_corr_amount.text = toHumanReadableCompensationAmount(0)
             seek_ttl_light_meter.progress = evWidth * evGrainSize
             label_ttl_light_meter.text = toHumanReadableCompensationAmount(0)
-
-            val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-            val autocomplete = pref.getBoolean("autocomplete_from_previous_shot", false)
-            if (autocomplete) {
-                val ps = dao.getPhotosByFilmRollId(filmrollid)
-                if (this.index > 0) {
-                    lensid = ps[this.index - 1].lensid
-                } else if (this.index < 0 && ps.size > 0) {
-                    lensid = ps[ps.size - 1].lensid
+            if(filmroll!!.camera.type == 1){
+                lensid = dao.getFixedLensIdByBody(filmroll!!.camera.id)
+            }else {
+                val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+                val autocomplete = pref.getBoolean("autocomplete_from_previous_shot", false)
+                if (autocomplete) {
+                    val ps = dao.getPhotosByFilmRollId(filmrollid)
+                    if (this.index > 0) {
+                        lensid = ps[this.index - 1].lensid
+                    } else if (this.index < 0 && ps.size > 0) {
+                        lensid = ps[ps.size - 1].lensid
+                    } else {
+                        lensid = -1
+                    }
                 } else {
                     lensid = -1
                 }
-            } else {
-                lensid = -1
             }
 
             lens = dao.getLens(lensid)
-            if(lens != null) {
-                refreshFocalLength(lens)
-                seek_focal_length.progress = 0
-            }
+
+            refreshFocalLength(lens)
+            seek_focal_length.progress = 0
 
             val calendar = Calendar.getInstance()
             val sdf = SimpleDateFormat("yyyy/MM/dd")
