@@ -99,6 +99,8 @@
     <string name="label_fl_factor">焦点距離の倍率</string>
     <string name="label_mount_adapter">マウントアダプタ</string>
     <string name="title_dialog_select_accessories">アクセサリを選択</string>
+    <string name="msg_cannot_remove_item">%s は既存のフィルム記録から参照されているため、削除することができません。</string>
+    <string name="msg_confirm_remove_item">本当に %s を削除しますか？この操作は元に戻せません！</string>
     <string name="error_flfactor_toosmall">1.0より大きい数字を入れてください</string>
     <string name="error_flfactor_toobig">1.0より小さい数字を入れてください</string>
     <string name="error_nolens">%sマウントのレンズが登録されていません</string>

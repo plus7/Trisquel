@@ -464,18 +464,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             dao.connection()
             val usedCount = dao.getCameraUsageCount(camera.id)
             dao.close()
-            //TODO: i18n
             if (usedCount > 0) {
                 val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments.putString("title", "カメラを削除できません")
-                fragment.arguments.putString("message",
-                        camera.modelName + "は既存のフィルム記録から参照されているため、削除することができません。")
+                fragment.arguments.putString("message", getString(R.string.msg_cannot_remove_item).format(camera.modelName))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(RETCODE_DELETE_CAMERA)
-                fragment.arguments.putString("title", "カメラの削除")
-                fragment.arguments.putString("message", camera.modelName + "を削除しますか？この操作は元に戻せません！")
+                fragment.arguments.putString("message", getString(R.string.msg_confirm_remove_item).format(camera.modelName))
                 fragment.arguments.putInt("id", camera.id)
                 fragment.showOn(this, "dialog")
             }
@@ -495,18 +491,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             dao.connection()
             val usedCount = dao.getLensUsageCount(lens.id)
             dao.close()
-            //TODO: i18n
             if (usedCount > 0) {
                 val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments.putString("title", "レンズを削除できません")
-                fragment.arguments.putString("message",
-                        lens.modelName + "は既存の写真記録から参照されているため、削除することができません。")
+                fragment.arguments.putString("message", getString(R.string.msg_cannot_remove_item).format(lens.modelName))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(RETCODE_DELETE_LENS)
-                fragment.arguments.putString("title", "レンズの削除")
-                fragment.arguments.putString("message", lens.modelName + "を削除しますか？この操作は元に戻せません！")
+                fragment.arguments.putString("message", getString(R.string.msg_confirm_remove_item).format(lens.modelName))
                 fragment.arguments.putInt("id", lens.id)
                 fragment.showOn(this, "dialog")
             }
@@ -521,9 +513,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (isLong) {
             val fragment = YesNoDialogFragment.Builder()
                     .build(RETCODE_DELETE_FILMROLL)
-            //TODO: i18n
-            fragment.arguments.putString("title", "フィルムの削除")
-            fragment.arguments.putString("message", filmRoll.name + "を削除しますか？この操作は元に戻せません！")
+            fragment.arguments.putString("message", getString(R.string.msg_confirm_remove_item).format(filmRoll.name))
             fragment.arguments.putInt("id", filmRoll.id)
             fragment.showOn(this, "dialog")
         } else {
@@ -541,17 +531,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             dao.close()
             if (accessoryUsed) {
                 val fragment = AlertDialogFragment.Builder().build(99)
-                //TODO: i18n
-                fragment.arguments.putString("title", "アクセサリを削除できません")
-                fragment.arguments.putString("message",
-                        accessory.name + "は既存のフィルム記録から参照されているため、削除することができません。")
+                fragment.arguments.putString("message", getString(R.string.msg_cannot_remove_item).format(accessory.name))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(RETCODE_DELETE_ACCESSORY)
-                //TODO: i18n
-                fragment.arguments.putString("title", "アクセサリの削除")
-                fragment.arguments.putString("message", accessory.name + "を削除しますか？この操作は元に戻せません！")
+                fragment.arguments.putString("message", getString(R.string.msg_confirm_remove_item).format(accessory.name))
                 fragment.arguments.putInt("id", accessory.id)
                 fragment.showOn(this, "dialog")
             }
