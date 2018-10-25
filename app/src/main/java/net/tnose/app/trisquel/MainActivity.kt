@@ -208,8 +208,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if(data == null) return
         val frag : Fragment = currentFragment
         when (requestCode) {
             REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {

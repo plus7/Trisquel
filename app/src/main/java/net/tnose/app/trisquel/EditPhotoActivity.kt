@@ -800,11 +800,11 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
         when (requestCode) {
-            REQCODE_GET_LOCATION -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_GET_LOCATION -> if (resultCode == Activity.RESULT_OK && data != null) {
                 val bundle = data.extras
                 val newlat: Double
                 val newlog: Double

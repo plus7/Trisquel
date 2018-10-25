@@ -164,8 +164,9 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         super.onBackPressed()
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if(data == null) return
 
         when (requestCode) {
             REQCODE_ADD_PHOTO -> if (resultCode == Activity.RESULT_OK) {
