@@ -35,15 +35,13 @@ class PhotoFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (arguments != null) {
-            mColumnCount = arguments.getInt(ARG_COLUMN_COUNT)
-            mFilmRollId = arguments.getInt(ARG_FILMROLL_ID)
-        }
+        mColumnCount = arguments?.getInt(ARG_COLUMN_COUNT) ?: 1
+        mFilmRollId = arguments?.getInt(ARG_FILMROLL_ID) ?: -1
     }
 
-    override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?,
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        val view = inflater!!.inflate(R.layout.fragment_photo_list, container, false)
+        val view = inflater.inflate(R.layout.fragment_photo_list, container, false)
 
         val dao = TrisquelDao(this.context)
         dao.connection()

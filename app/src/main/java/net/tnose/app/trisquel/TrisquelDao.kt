@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import java.util.*
 
-class TrisquelDao(context: Context) : DatabaseHelper(context) {
+class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     protected val mContext = context
     protected var mDb: SQLiteDatabase? = null
 

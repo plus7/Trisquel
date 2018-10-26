@@ -254,8 +254,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         if (isLong) {
             val fragment = SelectDialogFragment.Builder()
                     .build(200)
-            fragment.arguments.putInt("id", item.id)
-            fragment.arguments.putStringArray("items", arrayOf(getString(R.string.delete), getString(R.string.add_photo_above)))
+            fragment.arguments?.putInt("id", item.id)
+            fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.delete), getString(R.string.add_photo_above)))
             fragment.showOn(this, "dialog")
         } else {
             val intent = Intent(application, EditPhotoActivity::class.java)

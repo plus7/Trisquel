@@ -543,16 +543,16 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
                     if (canSave()) {
                         val fragment = YesNoDialogFragment.Builder()
                                 .build(101)
-                        fragment.arguments.putString("message", getString(R.string.msg_save_or_discard_data))
-                        fragment.arguments.putString("positive", getString(R.string.save))
-                        fragment.arguments.putString("negative", getString(R.string.discard))
+                        fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
+                        fragment.arguments?.putString("positive", getString(R.string.save))
+                        fragment.arguments?.putString("negative", getString(R.string.discard))
                         fragment.showOn(this, "dialog")
                     } else {
                         val fragment = YesNoDialogFragment.Builder()
                                 .build(102)
-                        fragment.arguments.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                        fragment.arguments.putString("positive", getString(R.string.continue_editing))
-                        fragment.arguments.putString("negative", getString(R.string.discard))
+                        fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
+                        fragment.arguments?.putString("positive", getString(R.string.continue_editing))
+                        fragment.arguments?.putString("negative", getString(R.string.discard))
                         fragment.showOn(this, "dialog")
                     }
                 }
@@ -586,16 +586,16 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             if (canSave()) {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(101)
-                fragment.arguments.putString("message", getString(R.string.msg_save_or_discard_data))
-                fragment.arguments.putString("positive", getString(R.string.save))
-                fragment.arguments.putString("negative", getString(R.string.discard))
+                fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
+                fragment.arguments?.putString("positive", getString(R.string.save))
+                fragment.arguments?.putString("negative", getString(R.string.discard))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(102)
-                fragment.arguments.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                fragment.arguments.putString("positive", getString(R.string.continue_editing))
-                fragment.arguments.putString("negative", getString(R.string.discard))
+                fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
+                fragment.arguments?.putString("positive", getString(R.string.continue_editing))
+                fragment.arguments?.putString("negative", getString(R.string.discard))
                 fragment.showOn(this, "dialog")
             }
         }

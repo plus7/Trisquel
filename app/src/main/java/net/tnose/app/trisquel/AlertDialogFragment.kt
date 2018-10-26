@@ -6,9 +6,9 @@ import android.support.v7.app.AlertDialog
 
 class AlertDialogFragment : AbstractDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return AlertDialog.Builder(activity)
-                .setTitle(arguments.getString("title", ""))
-                .setMessage(arguments.getString("message", ""))
+        return AlertDialog.Builder(activity!!)
+                .setTitle(arguments?.getString("title", ""))
+                .setMessage(arguments?.getString("message", ""))
                 .setPositiveButton(android.R.string.yes
                 ) { dialog, which -> }
                 .setCancelable(true)

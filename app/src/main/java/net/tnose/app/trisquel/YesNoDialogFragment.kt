@@ -8,19 +8,19 @@ import android.support.v7.app.AlertDialog
 
 class YesNoDialogFragment : AbstractDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return AlertDialog.Builder(activity)
-                .setTitle(arguments.getString("title", ""))
-                .setMessage(arguments.getString("message", ""))
-                .setPositiveButton(arguments.getString("positive", getString(android.R.string.yes))
+        return AlertDialog.Builder(context!!)
+                .setTitle(arguments?.getString("title", ""))
+                .setMessage(arguments?.getString("message", ""))
+                .setPositiveButton(arguments?.getString("positive", getString(android.R.string.yes))
                 ) { dialog, which ->
                     val data = Intent()
-                    data.putExtra("id", arguments.getInt("id"))
+                    data.putExtra("id", arguments?.getInt("id"))
                     notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
                 }
-                .setNegativeButton(arguments.getString("negative", getString(android.R.string.cancel))
+                .setNegativeButton(arguments?.getString("negative", getString(android.R.string.cancel))
                 ) { dialog, which ->
                     val data = Intent()
-                    data.putExtra("id", arguments.getInt("id"))
+                    data.putExtra("id", arguments?.getInt("id"))
                     notifyDialogResult(DialogInterface.BUTTON_NEGATIVE, data)
                 }
                 .setCancelable(true)

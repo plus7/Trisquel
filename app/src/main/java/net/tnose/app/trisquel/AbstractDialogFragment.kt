@@ -81,8 +81,8 @@ abstract class AbstractDialogFragment : DialogFragment() {
         checkArguments(arguments)
 
         val args = arguments
-        requestCode = args.getInt(ARG_REQUEST_CODE)
-        callbackHostSpec = args.getSerializable(ARG_CALLBACK_HOST) as HostType
+        requestCode = args?.getInt(ARG_REQUEST_CODE) ?: 0
+        callbackHostSpec = args?.getSerializable(ARG_CALLBACK_HOST) as HostType
     }
 
 
@@ -214,11 +214,11 @@ abstract class AbstractDialogFragment : DialogFragment() {
             val dialog = build()
             val args = if (dialog.arguments != null) dialog.arguments else Bundle()
 
-            args.putInt(ARG_REQUEST_CODE, requestCode)
+            args?.putInt(ARG_REQUEST_CODE, requestCode)
 
             // デフォルトのホスト種別を設定する.
             // 明示的な設定は、ダイアログの表示メソッドで更新する.
-            args.putSerializable(ARG_CALLBACK_HOST, HostType.UNSPECIFIED)
+            args?.putSerializable(ARG_CALLBACK_HOST, HostType.UNSPECIFIED)
 
             dialog.arguments = args
             dialog.isCancelable = cancelable
@@ -274,7 +274,7 @@ abstract class AbstractDialogFragment : DialogFragment() {
         Log.d("getArguments", arguments.toString())
         checkArguments(arguments)
 
-        arguments.putSerializable(ARG_CALLBACK_HOST, HostType.ACTIVITY)
+        arguments?.putSerializable(ARG_CALLBACK_HOST, HostType.ACTIVITY)
 
         val hostCompat = host as AppCompatActivity
         val manager = hostCompat.supportFragmentManager
@@ -295,9 +295,9 @@ abstract class AbstractDialogFragment : DialogFragment() {
     fun showOn(host: Fragment, tag: String) {
         checkArguments(arguments)
 
-        arguments.putSerializable(ARG_CALLBACK_HOST, HostType.TARGET_FRAGMENT)
+        arguments?.putSerializable(ARG_CALLBACK_HOST, HostType.TARGET_FRAGMENT)
 
-        setTargetFragment(host, arguments.getInt(ARG_REQUEST_CODE))
+        setTargetFragment(host, arguments?.getInt(ARG_REQUEST_CODE) ?: 0)
 
         val manager = host.fragmentManager
         super.show(manager, tag)
@@ -317,7 +317,7 @@ abstract class AbstractDialogFragment : DialogFragment() {
     fun showChildOn(host: Fragment, tag: String) {
         checkArguments(arguments)
 
-        arguments.putSerializable(ARG_CALLBACK_HOST, HostType.PARENT_FRAGMENT)
+        arguments?.putSerializable(ARG_CALLBACK_HOST, HostType.PARENT_FRAGMENT)
 
         val manager = host.childFragmentManager
         super.show(manager, tag)

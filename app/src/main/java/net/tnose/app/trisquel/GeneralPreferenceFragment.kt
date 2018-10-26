@@ -25,7 +25,7 @@ class GeneralPreferenceFragment : PreferenceFragmentCompat(), AbstractDialogFrag
         pref.onPreferenceClickListener = Preference.OnPreferenceClickListener {
             val fragment = YesNoDialogFragment.Builder()
                     .build(REQCODE_DELETE_SUGGEST)
-            fragment.arguments.putString("message", getString(R.string.msg_reset_autocomplete))
+            fragment.arguments?.putString("message", getString(R.string.msg_reset_autocomplete))
             fragment.showChildOn(this@GeneralPreferenceFragment, "dialog")
             false
         }

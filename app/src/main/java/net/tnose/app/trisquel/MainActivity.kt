@@ -108,8 +108,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 is CameraFragment -> {
                     val fragment = SelectDialogFragment.Builder()
                             .build(RETCODE_CAMERA_TYPE)
-                    fragment.arguments.putInt("id", -1) //dummy value
-                    fragment.arguments.putStringArray("items", arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)))
+                    fragment.arguments?.putInt("id", -1) //dummy value
+                    fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)))
                     fragment.showOn(this@MainActivity, "dialog")
                 }
                 is LensFragment -> {
@@ -145,14 +145,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (lastVersion < Util.TRISQUEL_VERSION) {
             val fragment = YesNoDialogFragment.Builder()
                     .build(RETCODE_OPEN_RELEASE_NOTES)
-            fragment.arguments.putString("title", "Trisquel")
+            fragment.arguments?.putString("title", "Trisquel")
             if (lastVersion != 0) {
-                fragment.arguments.putString("message", getString(R.string.warning_newversion))
+                fragment.arguments?.putString("message", getString(R.string.warning_newversion))
             } else {
-                fragment.arguments.putString("message", getString(R.string.warning_firstrun))
+                fragment.arguments?.putString("message", getString(R.string.warning_firstrun))
             }
-            fragment.arguments.putString("positive", getString(R.string.show_release_notes))
-            fragment.arguments.putString("negative", getString(R.string.close))
+            fragment.arguments?.putString("positive", getString(R.string.show_release_notes))
+            fragment.arguments?.putString("negative", getString(R.string.close))
             fragment.showOn(this, "dialog")
         }
         val e = pref.edit()
@@ -199,9 +199,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         } else if (id == R.id.action_backup_sqlite) {
             val fragment = YesNoDialogFragment.Builder()
                     .build(RETCODE_BACKUP_DB)
-            fragment.arguments.putString("title", getString(R.string.title_backup))
-            fragment.arguments.putString("message", getString(R.string.description_backup))
-            fragment.arguments.putString("positive", getString(R.string.continue_))
+            fragment.arguments?.putString("title", getString(R.string.title_backup))
+            fragment.arguments?.putString("message", getString(R.string.description_backup))
+            fragment.arguments?.putString("positive", getString(R.string.continue_))
             fragment.showOn(this, "dialog")
         }
 
@@ -466,13 +466,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             dao.close()
             if (usedCount > 0) {
                 val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments.putString("message", getString(R.string.msg_cannot_remove_item).format(camera.modelName))
+                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(camera.modelName))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(RETCODE_DELETE_CAMERA)
-                fragment.arguments.putString("message", getString(R.string.msg_confirm_remove_item).format(camera.modelName))
-                fragment.arguments.putInt("id", camera.id)
+                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(camera.modelName))
+                fragment.arguments?.putInt("id", camera.id)
                 fragment.showOn(this, "dialog")
             }
         } else {
@@ -493,13 +493,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             dao.close()
             if (usedCount > 0) {
                 val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments.putString("message", getString(R.string.msg_cannot_remove_item).format(lens.modelName))
+                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(lens.modelName))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(RETCODE_DELETE_LENS)
-                fragment.arguments.putString("message", getString(R.string.msg_confirm_remove_item).format(lens.modelName))
-                fragment.arguments.putInt("id", lens.id)
+                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(lens.modelName))
+                fragment.arguments?.putInt("id", lens.id)
                 fragment.showOn(this, "dialog")
             }
         } else {
@@ -513,8 +513,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (isLong) {
             val fragment = YesNoDialogFragment.Builder()
                     .build(RETCODE_DELETE_FILMROLL)
-            fragment.arguments.putString("message", getString(R.string.msg_confirm_remove_item).format(filmRoll.name))
-            fragment.arguments.putInt("id", filmRoll.id)
+            fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(filmRoll.name))
+            fragment.arguments?.putInt("id", filmRoll.id)
             fragment.showOn(this, "dialog")
         } else {
             val intent = Intent(application, EditPhotoListActivity::class.java)
@@ -531,13 +531,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             dao.close()
             if (accessoryUsed) {
                 val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments.putString("message", getString(R.string.msg_cannot_remove_item).format(accessory.name))
+                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(accessory.name))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(RETCODE_DELETE_ACCESSORY)
-                fragment.arguments.putString("message", getString(R.string.msg_confirm_remove_item).format(accessory.name))
-                fragment.arguments.putInt("id", accessory.id)
+                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(accessory.name))
+                fragment.arguments?.putInt("id", accessory.id)
                 fragment.showOn(this, "dialog")
             }
         } else {

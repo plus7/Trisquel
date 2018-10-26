@@ -14,12 +14,12 @@ class SelectDialogFragment : AbstractDialogFragment() {
     //final String[] items = {"item_0", "item_1", "item_2"};
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val items = arguments.getStringArray("items")
-        return AlertDialog.Builder(activity)
+        val items = arguments?.getStringArray("items")
+        return AlertDialog.Builder(context!!)
                 //.setTitle(getArguments().getString("title",""))
                 .setItems(items) { dialog, which ->
                     val data = Intent()
-                    data.putExtra("id", arguments.getInt("id"))
+                    data.putExtra("id", arguments?.getInt("id"))
                     data.putExtra("which", which)
                     notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
                 }

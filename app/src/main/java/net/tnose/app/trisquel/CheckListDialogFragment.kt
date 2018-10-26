@@ -13,31 +13,31 @@ import java.util.*
 
 class CheckListDialogFragment : AbstractDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val items = arguments.getStringArray("items")
-        val checked_indices = arguments.getIntegerArrayList("checked_indices")
+        val items = arguments?.getStringArray("items") ?: arrayOf()
+        val checked_indices = arguments?.getIntegerArrayList("checked_indices") ?: arrayListOf()
 
-        val checkedItems = BooleanArray(items!!.size)
-        for (i in checked_indices!!.indices) {
+        val checkedItems = BooleanArray(items.size)
+        for (i in checked_indices.indices) {
             checkedItems[checked_indices[i]] = true
         }
 
-        return AlertDialog.Builder(activity)
-                .setTitle(arguments.getString("title", ""))
+        return AlertDialog.Builder(context!!)
+                .setTitle(arguments?.getString("title", "") ?: "")
                 .setMultiChoiceItems(items, checkedItems) { dialog, which, isChecked -> checkedItems[which] = isChecked }
-                .setPositiveButton(arguments.getString("positive", getString(android.R.string.yes))
+                .setPositiveButton(arguments?.getString("positive", getString(android.R.string.yes))
                 ) { dialog, which ->
                     val data = Intent()
-                    data.putExtra("id", arguments.getInt("id"))
-                    data.putExtra("items", arguments.getStringArray("items"))
+                    data.putExtra("id", arguments?.getInt("id"))
+                    data.putExtra("items", arguments?.getStringArray("items"))
                     val strArray = ArrayList<String>()
                     val idxArray = ArrayList<Int>()
                     val tagArray = ArrayList<Int>()
                     for (i in checkedItems.indices) {
                         if (checkedItems[i]) {
-                            strArray.add(arguments.getStringArray("items")!![i])
+                            strArray.add(arguments?.getStringArray("items")!![i])
                             idxArray.add(i)
-                            if (arguments.getIntegerArrayList("tags") != null) {
-                                tagArray.add(arguments.getIntegerArrayList("tags")!![i])
+                            if (arguments?.getIntegerArrayList("tags") != null) {
+                                tagArray.add(arguments?.getIntegerArrayList("tags")!![i])
                             }
                         }
                     }
