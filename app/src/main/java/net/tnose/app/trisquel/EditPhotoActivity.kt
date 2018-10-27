@@ -575,17 +575,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
         imageButton.setOnClickListener {
-            /*
-            val intentGallery = Intent(Intent.ACTION_OPEN_DOCUMENT)
-            intentGallery.addCategory(Intent.CATEGORY_OPENABLE)
-            intentGallery.setType("image/ *")
-            val intent = Intent.createChooser(intentGallery, "画像の選択")
-            intent.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(intentGallery))
-            startActivityForResult(intent, 1000)
-            */
-
-            ImagePicker.create(this) // Activity or Fragment
-	        .start()
+            ImagePicker.create(this).folderMode(true).start()
         }
 
         val typedValue = TypedValue()
