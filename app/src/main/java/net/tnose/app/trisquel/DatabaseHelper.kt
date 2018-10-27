@@ -77,7 +77,8 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                         + "latitude real,"
                         + "longitude real,"
                         + "memo text not null,"
-                        + "accessories text not null"
+                        + "accessories text not null,"
+                        + "suppimgs text not null"
                         + ");"
         )
 
@@ -90,6 +91,15 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                         + "name text not null,"
                         + "mount text not null,"
                         + "focal_length_factor real"
+                        + ");"
+        )
+
+        db.execSQL(
+                "create table suppimg ("
+                        + "_id  integer primary key autoincrement not null,"
+                        + "photo_id integer,"
+                        + "path text not null,"
+                        + "_index integer"
                         + ");"
         )
     }
@@ -168,6 +178,10 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                             + ");"
             )
         }
+
+        if (oldVersion <= 12) {
+            db.execSQL("alter table photo add column suppimgs text not null default '' ;")
+        }
     }
 
     fun open(): SQLiteDatabase {
@@ -177,7 +191,7 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
     companion object {
         internal val DATABASE_NAME = "trisquel.db"
 
-        internal val DATABASE_VERSION = 12
+        internal val DATABASE_VERSION = 13
     }
 }
 

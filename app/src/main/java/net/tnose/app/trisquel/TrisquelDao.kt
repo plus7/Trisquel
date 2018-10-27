@@ -11,7 +11,6 @@ import android.database.Cursor.FIELD_TYPE_NULL
 import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
-import java.util.*
 
 class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     protected val mContext = context
@@ -474,9 +473,10 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
                 } else {
                     longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
                 }
+                val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
                 photos.add(Photo(id, filmRollId, index, date, camera, lens, focalLength,
                         aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo,
-                        accessoriesStr))
+                        accessoriesStr, supplementalImgStr))
             }
         } finally {
             cursor?.close()
@@ -504,6 +504,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("longitude", p.longitude)
         cval.put("memo", p.memo)
         cval.put("accessories", p.accessoriesStr)
+        cval.put("suppimgs", p.supplementalImagesStr)
         return mDb!!.insert("photo", null, cval)
     }
 
@@ -526,6 +527,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("longitude", p.longitude)
         cval.put("memo", p.memo)
         cval.put("accessories", p.accessoriesStr)
+        cval.put("suppimgs", p.supplementalImagesStr)
         return mDb!!.update("photo",
                 cval,
                 "_id = ?",
@@ -570,8 +572,10 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
                 } else {
                     longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
                 }
+                val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
                 p = Photo(id, filmroll, index, date, camera, lens, focalLength,
-                        aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo, accessoriesStr)
+                        aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo, accessoriesStr,
+                        supplementalImgStr)
             }
         } finally {
             cursor?.close()

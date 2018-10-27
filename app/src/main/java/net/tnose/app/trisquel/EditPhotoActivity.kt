@@ -4,8 +4,8 @@ import android.app.Activity
 import android.content.*
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.os.ParcelFileDescriptor
 import android.preference.PreferenceManager
+import android.support.v4.content.FileProvider
 import android.support.v7.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
@@ -14,15 +14,14 @@ import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.SeekBar
-import android.widget.Toast
+import android.view.ViewGroup
+import android.widget.*
 import com.esafirm.imagepicker.features.ImagePicker
 import kotlinx.android.synthetic.main.activity_edit_photo.*
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.File
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
@@ -34,7 +33,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_ACCESSORY = 105
     private var evGrainSize = 3
     private var evWidth = 3
-    private var focalLengthRange = Pair(43.0, 43.0)
+    private var focalLengthRange = Pair(43.0, 43.0) // FA limited 43mm こそ真の標準レンズ！！！
 
     private var filmroll: FilmRoll? = null
     private var photo: Photo? = null
@@ -50,6 +49,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var latitude = 999.0
     private var longitude = 999.0
     private var selectedAccessories: ArrayList<Int> = ArrayList()
+    private var supplementalImages: ArrayList<String> = ArrayList()
     private var isResumed: Boolean = false
     private var isDirty: Boolean = false
 
@@ -70,6 +70,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             data.putExtra("latitude", latitude)
             data.putExtra("longitude", longitude)
             data.putExtra("memo", edit_memo.text.toString())
+            data.putExtra("suppimgs", JSONArray(supplementalImages).toString())
 
             val sb = StringBuilder("/")
             for (accessory in selectedAccessories) {
@@ -220,6 +221,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 seek_focal_length.progress = (photo!!.focalLength - lens!!.focalLengthRange.first).toInt()
                 label_focal_length.text = photo!!.focalLength.toString() + "mm"
             }
+
+            for(s in photo!!.supplementalImages){
+                appendSupplementalImage(s)
+            }
         }else if(savedInstanceState != null){ //復帰データあり
             lensid = savedInstanceState.getInt("lensid")
             lens = dao.getLens(lensid)
@@ -244,6 +249,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 val focalLength = savedInstanceState.getDouble("focal_length")
                 seek_focal_length.progress = (focalLength - lens!!.focalLengthRange.first).toInt()
                 label_focal_length.text = focalLength.toString() + "mm"
+            }
+
+            for(s in savedInstanceState.getStringArrayList("suppimgs")){
+                appendSupplementalImage(s)
             }
         }else{ //未入力開きたて
             seek_exp_compensation.progress = evWidth * evGrainSize
@@ -565,6 +574,26 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val actionBar = supportActionBar
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
+        imageButton.setOnClickListener {
+            /*
+            val intentGallery = Intent(Intent.ACTION_OPEN_DOCUMENT)
+            intentGallery.addCategory(Intent.CATEGORY_OPENABLE)
+            intentGallery.setType("image/ *")
+            val intent = Intent.createChooser(intentGallery, "画像の選択")
+            intent.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(intentGallery))
+            startActivityForResult(intent, 1000)
+            */
+
+            ImagePicker.create(this) // Activity or Fragment
+	        .start()
+        }
+
+        val typedValue = TypedValue()
+        val theme = applicationContext.theme
+        theme.resolveAttribute(R.attr.editTextColor, typedValue, true)
+        val color = typedValue.data
+        label_images.setTextColor(color and 0x00ffffff or 0x44000000)
+
         edit_location.helperTextColor = R.color.common_google_signin_btn_text_light_default
 
         apertureAdapter = ArrayAdapter(this, /* これでいいのか？ */
@@ -600,6 +629,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         outState.putDouble("ttl_light_meter", ttlLightMeter)
         outState.putString("location", edit_location.text.toString())
         outState.putString("memo", edit_memo.text.toString())
+        outState.putStringArrayList("suppimgs", supplementalImages)
         super.onSaveInstanceState(outState)
     }
 
@@ -803,6 +833,48 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
     }
 
+    private fun appendSupplementalImage(path: String){
+        if(path in this.supplementalImages) return
+        try {
+            var bmp = BitmapFactory.decodeFile(path)
+            supplementalImages.add(path)
+            val imageView = CustomImageView(this)
+            val scale = resources.displayMetrics.density
+            val (w, h) = if(bmp == null) Pair(150, 150) else Pair(bmp.width, bmp.height)
+            val lp = LinearLayout.LayoutParams((150 * scale * w / h).toInt(), (150 * scale).toInt())
+            lp.setMargins(0,0, 16, 0)
+            image_container.addView(imageView, image_container.childCount - 1, lp)
+            imageView.path = path
+            imageView.setOnCloseClickListener(object: View.OnClickListener{
+                override fun onClick(view: View?): Unit {
+                    if(view is CustomImageView) {
+                        Log.v("debug", "closed" + view.path)
+                        this@EditPhotoActivity.supplementalImages.remove(view.path)
+                        val vg = view.parent as ViewGroup
+                        vg.removeView(view)
+                    }
+                }
+            })
+            imageView.setOnClickListener(object: View.OnClickListener{
+                override fun onClick(view: View?): Unit {
+                    if(view is CustomImageView){
+                        Log.v("debug", "clicked" + view.path)
+                        val intent = Intent()
+                        val file = File(view.path)
+                        // android.os.FileUriExposedException回避
+                        val photoURI = FileProvider.getUriForFile(this@EditPhotoActivity, this@EditPhotoActivity.applicationContext.packageName + ".net.tnose.app.trisquel.provider", file)
+                        intent.action = android.content.Intent.ACTION_VIEW
+                        intent.setDataAndType(photoURI, "image/*")
+                        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        startActivity(intent)
+                    }
+                }
+            })
+        }catch (e: Exception){
+            e.printStackTrace()
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -819,6 +891,12 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             } else if (resultCode == MapsActivity.RESULT_DELETE) {
                 if (999.0 != latitude || 999.0 != longitude) if(isResumed) isDirty = true
                 setLatLng(999.0, 999.0)
+            }
+            else -> if(ImagePicker.shouldHandle(requestCode, resultCode, data)){
+                val images = ImagePicker.getImages(data)
+                for(i in images){
+                    appendSupplementalImage(i.path)
+                }
             }
         }
     }

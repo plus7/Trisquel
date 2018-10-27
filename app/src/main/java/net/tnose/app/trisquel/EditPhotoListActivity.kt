@@ -187,7 +187,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                         bundle.getDouble("latitude"),
                         bundle.getDouble("longitude"),
                         bundle.getString("memo")!!,
-                        bundle.getString("accessories")!!)
+                        bundle.getString("accessories")!!,
+                        bundle.getString("suppimgs")!!)
                 photo_fragment!!.insertPhoto(p)
             }
             REQCODE_EDIT_PHOTO -> if (resultCode == Activity.RESULT_OK) {
@@ -209,7 +210,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                         bundle.getDouble("latitude"),
                         bundle.getDouble("longitude"),
                         bundle.getString("memo")!!,
-                        bundle.getString("accessories")!!)
+                        bundle.getString("accessories")!!,
+                        bundle.getString("suppimgs")!!)
                 photo_fragment!!.updatePhoto(p)
             }
             REQCODE_EDIT_FILMROLL -> if (resultCode == Activity.RESULT_OK) {

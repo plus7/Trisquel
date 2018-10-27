@@ -15,11 +15,12 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:layout_marginEnd="8dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
             android:orientation="vertical"
+            android:paddingBottom="8dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -31,9 +32,9 @@
                 android:layout_height="wrap_content"
                 android:ems="10"
                 android:focusable="false"
+                android:hint="@string/label_date"
                 android:inputType="none"
                 android:longClickable="false"
-                android:hint="@string/label_date"
                 app:met_floatingLabel="normal" />
 
             <LinearLayout
@@ -47,7 +48,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="@string/label_lens"
-                    app:met_floatingLabel="normal"/>
+                    app:met_floatingLabel="normal" />
 
                 <ImageView
                     android:id="@+id/btn_mount_adapters"
@@ -63,7 +64,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/label_aperture"
-                app:met_floatingLabel="normal"/>
+                app:met_floatingLabel="normal" />
 
             <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
                 android:id="@+id/spinner_ss"
@@ -201,9 +202,9 @@
                 android:layout_height="wrap_content"
                 android:ems="10"
                 android:focusable="false"
+                android:hint="@string/label_accessories"
                 android:inputType="none"
                 android:longClickable="false"
-                android:hint="@string/label_accessories"
                 app:met_floatingLabel="normal" />
 
             <LinearLayout
@@ -236,9 +237,44 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:ems="10"
-                android:inputType="textMultiLine"
                 android:hint="@string/label_memo"
+                android:inputType="textMultiLine"
                 app:met_floatingLabel="normal" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/label_images"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_supplementary_images"
+                    android:textSize="12sp" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <LinearLayout
+                        android:id="@+id/image_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageButton
+                            android:id="@+id/imageButton"
+                            style="@style/ImageSelectionButton"
+                            android:layout_width="150dp"
+                            android:layout_height="150dp"
+                            app:srcCompat="@drawable/ic_add_image_gray" />
+
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+            </LinearLayout>
 
         </LinearLayout>
     </android.support.v4.widget.NestedScrollView>
