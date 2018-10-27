@@ -903,6 +903,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 for(i in images){
                     appendSupplementalImage(i.path)
                 }
+                if(isResumed) isDirty = true
             }
         }
     }
