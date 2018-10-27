@@ -35,7 +35,16 @@ class CustomImageView @JvmOverloads constructor(context: Context, attrs: Attribu
         set(value: String){
             mPath = value
             try {
-                var bmp = BitmapFactory.decodeFile(path)
+                var bmp: Bitmap?
+                val options = BitmapFactory.Options()
+                options.inJustDecodeBounds = true
+                bmp = BitmapFactory.decodeFile(path, options)
+                var (bmp_x, bmp_y) = Pair(options.outWidth, options.outHeight)
+                val scale = resources.displayMetrics.density
+                val inSampleSize = kotlin.math.max((bmp_y / (150 * scale)).toInt(), 1) // 横に極めて長い嫌がらせ画像が来たら無理だけど手抜き
+                options.inJustDecodeBounds = false
+                options.inSampleSize = inSampleSize
+                bmp = BitmapFactory.decodeFile(path, options)
                 if(bmp == null){
                     val drawable = ContextCompat.getDrawable(context, R.drawable.ic_error_circle)
                     bmp = Bitmap.createBitmap(

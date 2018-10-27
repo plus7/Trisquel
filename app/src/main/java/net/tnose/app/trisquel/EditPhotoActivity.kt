@@ -836,11 +836,17 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private fun appendSupplementalImage(path: String){
         if(path in this.supplementalImages) return
         try {
-            var bmp = BitmapFactory.decodeFile(path)
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            var bmp = BitmapFactory.decodeFile(path, options)
             supplementalImages.add(path)
             val imageView = CustomImageView(this)
+            val (w, h) =
+                    if(options.outWidth > 0 && options.outHeight > 0)
+                        Pair(options.outWidth, options.outHeight)
+                    else
+                        Pair(150, 150)
             val scale = resources.displayMetrics.density
-            val (w, h) = if(bmp == null) Pair(150, 150) else Pair(bmp.width, bmp.height)
             val lp = LinearLayout.LayoutParams((150 * scale * w / h).toInt(), (150 * scale).toInt())
             lp.setMargins(0,0, 16, 0)
             image_container.addView(imageView, image_container.childCount - 1, lp)
