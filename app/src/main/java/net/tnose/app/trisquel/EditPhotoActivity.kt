@@ -3,6 +3,7 @@ package net.tnose.app.trisquel
 import android.app.Activity
 import android.content.*
 import android.graphics.BitmapFactory
+import android.media.ExifInterface
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.support.v4.content.FileProvider
@@ -829,13 +830,30 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             val options = BitmapFactory.Options()
             options.inJustDecodeBounds = true
             var bmp = BitmapFactory.decodeFile(path, options)
-            supplementalImages.add(path)
-            val imageView = CustomImageView(this)
-            val (w, h) =
+            var (w, h) =
                     if(options.outWidth > 0 && options.outHeight > 0)
                         Pair(options.outWidth, options.outHeight)
                     else
                         Pair(150, 150)
+
+            // 枠を回転させるかどうか考える
+            val exifInterface = ExifInterface(path)
+            val orientation = exifInterface.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_UNDEFINED)
+            when(orientation){
+                ExifInterface.ORIENTATION_ROTATE_90,
+                ExifInterface.ORIENTATION_TRANSVERSE,
+                ExifInterface.ORIENTATION_TRANSPOSE,
+                ExifInterface.ORIENTATION_ROTATE_270 ->{
+                    val tmp = h
+                    h = w
+                    w = tmp
+                }
+            }
+
+            supplementalImages.add(path)
+            val imageView = CustomImageView(this)
             val scale = resources.displayMetrics.density
             val lp = LinearLayout.LayoutParams((150 * scale * w / h).toInt(), (150 * scale).toInt())
             lp.setMargins(0,0, 16, 0)
@@ -844,7 +862,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             imageView.setOnCloseClickListener(object: View.OnClickListener{
                 override fun onClick(view: View?): Unit {
                     if(view is CustomImageView) {
-                        Log.v("debug", "closed" + view.path)
                         this@EditPhotoActivity.supplementalImages.remove(view.path)
                         val vg = view.parent as ViewGroup
                         vg.removeView(view)
