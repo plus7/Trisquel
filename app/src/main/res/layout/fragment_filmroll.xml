@@ -58,6 +58,14 @@
             android:layout_marginBottom="@dimen/text_margin"
             android:layout_marginRight="@dimen/text_margin"
             android:layout_weight="1" />
+
     </LinearLayout>
+
+    <View
+        android:id="@+id/divider3"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_weight="0"
+        android:background="?android:attr/listDivider" />
 
 </LinearLayout>
