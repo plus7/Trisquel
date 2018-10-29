@@ -39,7 +39,7 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>, //privat
             Glide.with(view.context)
                     .load(file)
                     .apply(RequestOptions()
-                            .placeholder(R.drawable.ic_add_image_gray)
+                            .placeholder(R.drawable.general_image_gray)
                             .centerCrop()
                             .error(R.drawable.ic_error_circle)
                     )
