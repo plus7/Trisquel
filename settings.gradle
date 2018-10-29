@@ -1,7 +1,9 @@
-include ':app', ':library1', ':library1-material', ':dirchooser'
+include ':app', ':library1', ':library1-material', ':dirchooser', ':imagepicker'
 
 project(':library1').projectDir = new File(settingsDir, '../BetterSpinner/library')
 
 project(':library1-material').projectDir = new File(settingsDir, '../BetterSpinner/library-material')
 
 project(':dirchooser').projectDir = new File(settingsDir, '../Android-DirectoryChooser/library')
+
+project(':imagepicker').projectDir = new File(settingsDir, '../Matisse/matisse')

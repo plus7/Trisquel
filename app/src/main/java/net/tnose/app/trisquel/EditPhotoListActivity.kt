@@ -13,7 +13,9 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.LinearLayout
 import android.widget.Toast
-import com.esafirm.imagepicker.features.ImagePicker
+import com.zhihu.matisse.Matisse
+import com.zhihu.matisse.MimeType
+import com.zhihu.matisse.internal.entity.CaptureStrategy
 import kotlinx.android.synthetic.main.content_edit_photo_list.*
 import java.io.File
 import java.util.*
@@ -22,8 +24,9 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     internal val REQCODE_ADD_PHOTO = 100
     internal val REQCODE_EDIT_PHOTO = 101
     internal val REQCODE_EDIT_FILMROLL = 102
-    internal val REQCODE_EDIT_PHOTOINDEX = 103
-    internal val REQCODE_SELECT_INDEX_SHIFT_RULE = 104
+    internal val REQCODE_SELECT_THUMBNAIL = 103
+    internal val REQCODE_EDIT_PHOTOINDEX = 104
+    internal val REQCODE_SELECT_INDEX_SHIFT_RULE = 105
 
     private var toolbar: Toolbar? = null
     private var mFilmRoll: FilmRoll? = null
@@ -273,11 +276,11 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 dao.close()
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
-            else -> if(ImagePicker.shouldHandle(requestCode, resultCode, data)){
-                val images = ImagePicker.getImages(data)
+            REQCODE_SELECT_THUMBNAIL -> if (resultCode == RESULT_OK) {
+                val paths = Matisse.obtainPathResult(data)
                 val p = thumbnailEditingPhoto
-                if(images.size > 0 && p != null){
-                    p.supplementalImages.add(images[0].path)
+                if(paths.size > 0 && p != null){
+                    p.supplementalImages.add(paths[0])
                     photo_fragment!!.updatePhoto(p)
                     thumbnailEditingPhoto = null
                 }
@@ -304,12 +307,20 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     override fun onThumbnailClick(item: Photo) {
         if(item.supplementalImages.size == 0) {
             thumbnailEditingPhoto = item
-            ImagePicker.create(this).folderMode(true).limit(1).start()
+            Matisse.from(this)
+                    .choose(MimeType.ofImage())
+                    .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
+                    .capture(true)
+                    .countable(true)
+                    .maxSelectable(1)
+                    .thumbnailScale(0.85f)
+                    .imageEngine(Glide4Engine())
+                    .forResult(REQCODE_SELECT_THUMBNAIL)
         }else {
             val intent = Intent()
             val file = File(item.supplementalImages[0])
             // android.os.FileUriExposedException回避
-            val photoURI = FileProvider.getUriForFile(this@EditPhotoListActivity, this@EditPhotoListActivity.applicationContext.packageName + ".net.tnose.app.trisquel.provider", file)
+            val photoURI = FileProvider.getUriForFile(this@EditPhotoListActivity, this@EditPhotoListActivity.applicationContext.packageName + ".provider", file)
             intent.action = android.content.Intent.ACTION_VIEW
             intent.setDataAndType(photoURI, "image/*")
             intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -318,6 +329,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     }
 
     override fun onIndexClick(item: Photo) {
+        return
         val fragment = SimpleInputDialogFragment.Builder()
                 .build(REQCODE_EDIT_PHOTOINDEX)
         fragment.arguments?.putInt("id", item.id)

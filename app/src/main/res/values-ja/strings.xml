@@ -211,4 +211,9 @@
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <plurals name="error_over_count">
+        <item quantity="other">選べるファイルは%1$d個までです</item>
+    </plurals>
+
 </resources>

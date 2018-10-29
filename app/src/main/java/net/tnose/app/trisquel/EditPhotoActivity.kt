@@ -17,7 +17,9 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import com.esafirm.imagepicker.features.ImagePicker
+import com.zhihu.matisse.Matisse
+import com.zhihu.matisse.MimeType
+import com.zhihu.matisse.internal.entity.CaptureStrategy
 import kotlinx.android.synthetic.main.activity_edit_photo.*
 import org.json.JSONArray
 import org.json.JSONException
@@ -32,6 +34,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_MOUNT_ADAPTERS = 103
     internal val REQCODE_DATE = 104
     internal val REQCODE_ACCESSORY = 105
+    internal val REQCODE_IMAGES = 106
     private var evGrainSize = 3
     private var evWidth = 3
     private var focalLengthRange = Pair(43.0, 43.0) // FA limited 43mm こそ真の標準レンズ！！！
@@ -576,7 +579,15 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
         imageButton.setOnClickListener {
-            ImagePicker.create(this).folderMode(true).start()
+            Matisse.from(this)
+                    .choose(MimeType.ofImage())
+                    .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
+                    .capture(true)
+                    .countable(true)
+                    .maxSelectable(40)
+                    .thumbnailScale(0.85f)
+                    .imageEngine(Glide4Engine())
+                    .forResult(REQCODE_IMAGES)
         }
 
         val typedValue = TypedValue()
@@ -905,10 +916,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 if (999.0 != latitude || 999.0 != longitude) if(isResumed) isDirty = true
                 setLatLng(999.0, 999.0)
             }
-            else -> if(ImagePicker.shouldHandle(requestCode, resultCode, data)){
-                val images = ImagePicker.getImages(data)
-                for(i in images){
-                    appendSupplementalImage(i.path)
+            REQCODE_IMAGES -> if (resultCode == RESULT_OK) {
+                val paths = Matisse.obtainPathResult(data)
+                for(p in paths){
+                    appendSupplementalImage(p)
                 }
                 if(isResumed) isDirty = true
             }

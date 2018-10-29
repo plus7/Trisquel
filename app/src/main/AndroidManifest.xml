@@ -79,7 +79,7 @@
             android:theme="@style/AppTheme.NoActionBar"></activity>
         <provider
             android:name="android.support.v4.content.FileProvider"
-            android:authorities="${applicationId}.net.tnose.app.trisquel.provider"
+            android:authorities="${applicationId}.provider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
