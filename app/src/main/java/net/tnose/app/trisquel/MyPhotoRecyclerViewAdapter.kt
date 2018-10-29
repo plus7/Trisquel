@@ -87,6 +87,16 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>, //privat
             mListener?.onListFragmentInteraction(holder.mItem!!, true)
             true
         }
+
+        holder.mIdView.setOnClickListener{
+            Log.d("PhotoRecyclerView", "mIdView.OnClick")
+            mListener?.onIndexClick(holder.mItem!!)
+        }
+
+        holder.mThumbnailView.setOnClickListener{
+            Log.d("PhotoRecyclerView", "mThumbnailView.OnClick")
+            mListener?.onThumbnailClick(holder.mItem!!)
+        }
     }
 
     override fun getItemCount(): Int {

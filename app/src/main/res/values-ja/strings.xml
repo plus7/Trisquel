@@ -100,6 +100,7 @@
     <string name="label_mount_adapter">マウントアダプタ</string>
     <string name="label_supplementary_images">補足画像</string>
     <string name="title_dialog_select_accessories">アクセサリを選択</string>
+    <string name="title_dialog_edit_index">インデックス値を変更</string>
     <string name="msg_cannot_remove_item">%s は既存のフィルム記録から参照されているため、削除することができません。</string>
     <string name="msg_confirm_remove_item">本当に %s を削除しますか？この操作は元に戻せません！</string>
     <string name="error_flfactor_toosmall">1.0より大きい数字を入れてください</string>

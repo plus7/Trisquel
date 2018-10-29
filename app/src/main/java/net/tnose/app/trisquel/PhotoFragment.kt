@@ -156,6 +156,8 @@ class PhotoFragment : Fragment() {
     interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
         fun onListFragmentInteraction(item: Photo, isLong: Boolean)
+        fun onThumbnailClick(item: Photo)
+        fun onIndexClick(item: Photo)
     }
 
     companion object {

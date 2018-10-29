@@ -5,6 +5,7 @@ import android.content.*
 import android.graphics.Typeface
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
+import android.support.v4.content.FileProvider
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
 import android.util.Log
@@ -12,16 +13,21 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.LinearLayout
 import android.widget.Toast
+import com.esafirm.imagepicker.features.ImagePicker
 import kotlinx.android.synthetic.main.content_edit_photo_list.*
+import java.io.File
 import java.util.*
 
 class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {
     internal val REQCODE_ADD_PHOTO = 100
     internal val REQCODE_EDIT_PHOTO = 101
     internal val REQCODE_EDIT_FILMROLL = 102
+    internal val REQCODE_EDIT_PHOTOINDEX = 103
+    internal val REQCODE_SELECT_INDEX_SHIFT_RULE = 104
 
     private var toolbar: Toolbar? = null
     private var mFilmRoll: FilmRoll? = null
+    private var thumbnailEditingPhoto: Photo? = null
     private var photo_fragment: PhotoFragment? = null
 
     private val filmRollText: String
@@ -82,6 +88,16 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         val dao = TrisquelDao(applicationContext)
         dao.connection()
         mFilmRoll = dao.getFilmRoll(id)
+        if(savedInstanceState != null){
+            val tbid = savedInstanceState.getInt("thumbnail_editing_id")
+            if(tbid != -1){
+                val p = dao.getPhoto(tbid)
+                assert(p?.filmrollid == id)
+                thumbnailEditingPhoto = p
+            }else{
+                thumbnailEditingPhoto = null
+            }
+        }
         dao.close()
 
         if (mFilmRoll!!.name.isEmpty()) {
@@ -116,6 +132,11 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             intent.putExtra("filmroll", mFilmRoll!!.id)
             startActivityForResult(intent, REQCODE_ADD_PHOTO)
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt("thumbnail_editing_id", thumbnailEditingPhoto?.id ?: -1)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -166,7 +187,10 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if(data == null) return
+        if(data == null){
+            thumbnailEditingPhoto = null
+            return
+        }
 
         when (requestCode) {
             REQCODE_ADD_PHOTO -> if (resultCode == Activity.RESULT_OK) {
@@ -249,6 +273,15 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 dao.close()
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
+            else -> if(ImagePicker.shouldHandle(requestCode, resultCode, data)){
+                val images = ImagePicker.getImages(data)
+                val p = thumbnailEditingPhoto
+                if(images.size > 0 && p != null){
+                    p.supplementalImages.add(images[0].path)
+                    photo_fragment!!.updatePhoto(p)
+                    thumbnailEditingPhoto = null
+                }
+            }
         }
     }
 
@@ -266,6 +299,31 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             intent.putExtra("index", item.index)
             startActivityForResult(intent, REQCODE_EDIT_PHOTO)
         }
+    }
+
+    override fun onThumbnailClick(item: Photo) {
+        if(item.supplementalImages.size == 0) {
+            thumbnailEditingPhoto = item
+            ImagePicker.create(this).folderMode(true).limit(1).start()
+        }else {
+            val intent = Intent()
+            val file = File(item.supplementalImages[0])
+            // android.os.FileUriExposedException回避
+            val photoURI = FileProvider.getUriForFile(this@EditPhotoListActivity, this@EditPhotoListActivity.applicationContext.packageName + ".net.tnose.app.trisquel.provider", file)
+            intent.action = android.content.Intent.ACTION_VIEW
+            intent.setDataAndType(photoURI, "image/*")
+            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            startActivity(intent)
+        }
+    }
+
+    override fun onIndexClick(item: Photo) {
+        val fragment = SimpleInputDialogFragment.Builder()
+                .build(REQCODE_EDIT_PHOTOINDEX)
+        fragment.arguments?.putInt("id", item.id)
+        fragment.arguments?.putString("title", getString(R.string.title_dialog_edit_index))
+        fragment.arguments?.putString("default_value", (item.index + 1).toString())
+        fragment.showOn(this, "dialog")
     }
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
@@ -292,6 +350,11 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                         }
                     }
                     Log.d("PHOTOLIST_SELECTION", Integer.toString(which))
+                }
+            }
+            REQCODE_EDIT_PHOTOINDEX -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                if(data != null){
+                    Log.d("REQCODE_EDIT_PHOTOINDEX", data.getStringExtra("value"))
                 }
             }
         }
