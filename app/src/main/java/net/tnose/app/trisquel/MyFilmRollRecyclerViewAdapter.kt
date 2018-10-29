@@ -28,11 +28,19 @@ class MyFilmRollRecyclerViewAdapter(//private final List<DummyItem> mValues;
             holder.mNameView.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL)
             holder.mNameView.text = mValues[position].name
         }
-        holder.mBrandView.text = mValues[position].manufacturer + " " + mValues[position].brand
-        holder.mCameraView.text = mValues[position].camera.manufacturer + " " + mValues[position].camera.modelName
+        holder.mCameraAndBrandView.text =
+                mValues[position].camera.manufacturer + " " + mValues[position].camera.modelName + "   " +
+                mValues[position].manufacturer + " " + mValues[position].brand
 
-        holder.mDateView.text = mValues[position].dateRange
-        holder.mShotView.text = Integer.toString(mValues[position].exposures) + " shot(s)"
+        val exp = mValues[position].exposures
+        val array = arrayListOf<String>()
+        if(mValues[position].dateRange.isNotEmpty())
+            array.add(mValues[position].dateRange)
+        array.add(
+                if(exp == 1) "%d shot".format(exp)
+                else         "%d shots".format(exp)
+        )
+        holder.mDateAndShotView.text = array.joinToString("   ")
 
         holder.mView.setOnClickListener {
             mListener?.onListFragmentInteraction(holder.mItem!!, false)
@@ -51,19 +59,15 @@ class MyFilmRollRecyclerViewAdapter(//private final List<DummyItem> mValues;
     inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
         //public final TextView mIdView;
         val mNameView: TextView
-        val mCameraView: TextView
-        val mBrandView: TextView
-        val mDateView: TextView
-        val mShotView: TextView
+        val mCameraAndBrandView: TextView
+        val mDateAndShotView: TextView
         var mItem: FilmRoll? = null
 
         init {
             //mIdView = (TextView) view.findViewById(R.id.id);
             mNameView = mView.findViewById(R.id.name)
-            mBrandView = mView.findViewById(R.id.brand)
-            mCameraView = mView.findViewById(R.id.camera)
-            mDateView = mView.findViewById(R.id.date)
-            mShotView = mView.findViewById(R.id.shot)
+            mCameraAndBrandView = mView.findViewById(R.id.camera_and_brand)
+            mDateAndShotView = mView.findViewById(R.id.date_and_shot)
             // http://blog.teamtreehouse.com/contextual-action-bars-removing-items-recyclerview
             /*mView.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
@@ -75,7 +79,7 @@ class MyFilmRollRecyclerViewAdapter(//private final List<DummyItem> mValues;
         }
 
         override fun toString(): String {
-            return super.toString() + " '" + mBrandView.text + "'"
+            return super.toString() + " '" + mCameraAndBrandView.text + "'"
         }
     }
 }
