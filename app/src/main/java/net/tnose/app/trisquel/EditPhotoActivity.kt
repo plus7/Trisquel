@@ -886,7 +886,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                         val intent = Intent()
                         val file = File(view.path)
                         // android.os.FileUriExposedException回避
-                        val photoURI = FileProvider.getUriForFile(this@EditPhotoActivity, this@EditPhotoActivity.applicationContext.packageName + ".net.tnose.app.trisquel.provider", file)
+                        val photoURI = FileProvider.getUriForFile(this@EditPhotoActivity, this@EditPhotoActivity.applicationContext.packageName + ".provider", file)
                         intent.action = android.content.Intent.ACTION_VIEW
                         intent.setDataAndType(photoURI, "image/*")
                         intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
