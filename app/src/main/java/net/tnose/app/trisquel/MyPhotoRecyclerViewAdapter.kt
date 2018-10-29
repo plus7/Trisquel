@@ -12,7 +12,6 @@ import com.bumptech.glide.request.RequestOptions
 import net.tnose.app.trisquel.PhotoFragment.OnListFragmentInteractionListener
 import net.tnose.app.trisquel.dummy.DummyContent.DummyItem
 import java.io.File
-import java.text.MessageFormat
 import java.util.*
 
 
@@ -66,10 +65,10 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>, //privat
         }
         if (l != null)
             holder.mLensView.text = l.manufacturer + " " + l.modelName
-        val params = MessageFormat.format(
-                "f/{0} {1}sec",
-                p.aperture, Util.doubleToStringShutterSpeed(p.shutterSpeed))
-        holder.mParamsView.text = params
+        val params = arrayListOf<String>()
+        if(p.aperture != 0.0) params.add("f/%.1f".format(p.aperture))
+        if(p.shutterSpeed != 0.0) params.add("%ssec".format(Util.doubleToStringShutterSpeed(p.shutterSpeed)))
+        holder.mParamsView.text = params.joinToString(" ")
         if(p.memo.isEmpty()){
             holder.mContentView.visibility = View.GONE
         }else {
