@@ -190,7 +190,8 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     protected fun canSave(): Boolean {
         //マウントとモデル名とF値リストは必須。
-        return edit_mount!!.text.length > 0 && edit_model!!.text.length > 0 && focalLengthOk
+        return (edit_mount!!.text?.isNotEmpty() ?: false) &&
+                (edit_model!!.text?.isNotEmpty() ?: false) && focalLengthOk
     }
 
     override fun onResume() {

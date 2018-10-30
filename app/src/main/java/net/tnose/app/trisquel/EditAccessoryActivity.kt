@@ -249,13 +249,14 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
     }
 
     private fun canSave(): Boolean{
-        val baseCond = (spinner_accessory_type!!.position >= 0) and (edit_name!!.text.length > 0)
+        val baseCond = (spinner_accessory_type!!.position >= 0) and (edit_name!!.text?.isNotEmpty() ?: false)
         val flFactor = Util.safeStr2Dobule(edit_fl_factor!!.text.toString())
+        val mountIsNotEmpty = spinner_mount!!.text?.isNotEmpty() ?: false
         val additionalCond = when (spinner_accessory_type!!.position){
             0 -> true
-            1 -> (spinner_mount!!.text.length > 0) and (flFactor > 1.0)
-            2 -> (spinner_mount!!.text.length > 0) and (flFactor < 1.0) and (flFactor > 0.0)
-            3 -> (spinner_mount!!.text.length > 0)
+            1 -> mountIsNotEmpty and (flFactor > 1.0)
+            2 -> mountIsNotEmpty and (flFactor < 1.0) and (flFactor > 0.0)
+            3 -> mountIsNotEmpty
             4 -> true
             else -> false
         }

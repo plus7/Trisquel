@@ -126,7 +126,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
 
         photo_fragment = PhotoFragment.newInstance(1, id)
         val transaction = supportFragmentManager.beginTransaction()
-        transaction.replace(R.id.container, photo_fragment)
+        transaction.replace(R.id.container, photo_fragment!!)
         transaction.commit()
 
         val fab = findViewById<FloatingActionButton>(R.id.fab)

@@ -358,8 +358,8 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         //マウントが空でない
         //モデル名が空でない
         //シャッタースピードレンジが設定されていて内容に矛盾がない
-        cameraOk = (type == 1 || type == 0 && edit_mount!!.text.length > 0) &&
-                edit_model!!.text.length > 0 &&
+        cameraOk = (type == 1 || type == 0 && edit_mount!!.text.isNotEmpty()) &&
+                (edit_model!!.text?.isNotEmpty() ?: false) &&
                 shutterSpeedRangeOk
 
         //レンズ付きモデルの場合
