@@ -1,10 +1,13 @@
 package net.tnose.app.trisquel
 
+import android.Manifest
 import android.app.Activity
 import android.content.*
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
+import android.support.v4.app.ActivityCompat
 import android.support.v4.content.FileProvider
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
@@ -27,6 +30,9 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     internal val REQCODE_SELECT_THUMBNAIL = 103
     internal val REQCODE_EDIT_PHOTOINDEX = 104
     internal val REQCODE_SELECT_INDEX_SHIFT_RULE = 105
+    internal val RETCODE_SDCARD_PERM_IMGPICKER = 106
+
+    private val PERMISSIONS = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
 
     private var toolbar: Toolbar? = null
     private var mFilmRoll: FilmRoll? = null
@@ -304,18 +310,53 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode){
+            RETCODE_SDCARD_PERM_IMGPICKER -> {
+                onRequestSDCardAccessPermissionsResult(permissions, grantResults, requestCode)
+            }
+        }
+    }
+
+    internal fun onRequestSDCardAccessPermissionsResult(permissions: Array<String>, grantResults: IntArray, requestCode: Int) {
+        val granted = intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED)
+        if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
+            when(requestCode){
+                RETCODE_SDCARD_PERM_IMGPICKER -> {
+                    editThumbPhoto()
+                }
+            }
+        } else {
+            thumbnailEditingPhoto = null
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun editThumbPhoto(){
+        Matisse.from(this)
+                .choose(MimeType.ofImage())
+                .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
+                .capture(true)
+                .countable(true)
+                .maxSelectable(1)
+                .thumbnailScale(0.85f)
+                .imageEngine(Glide4Engine())
+                .forResult(REQCODE_SELECT_THUMBNAIL)
+    }
+
+    fun checkPermAndEditThumbPhoto(){
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
+            return
+        }
+        editThumbPhoto()
+    }
+
     override fun onThumbnailClick(item: Photo) {
         if(item.supplementalImages.size == 0) {
             thumbnailEditingPhoto = item
-            Matisse.from(this)
-                    .choose(MimeType.ofImage())
-                    .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
-                    .capture(true)
-                    .countable(true)
-                    .maxSelectable(1)
-                    .thumbnailScale(0.85f)
-                    .imageEngine(Glide4Engine())
-                    .forResult(REQCODE_SELECT_THUMBNAIL)
+            checkPermAndEditThumbPhoto()
         }else {
             val intent = Intent()
             val file = File(item.supplementalImages[0])

@@ -1,11 +1,14 @@
 package net.tnose.app.trisquel
 
+import android.Manifest
 import android.app.Activity
 import android.content.*
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
-import android.media.ExifInterface
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.support.media.ExifInterface
+import android.support.v4.app.ActivityCompat
 import android.support.v4.content.FileProvider
 import android.support.v7.app.AppCompatActivity
 import android.text.Editable
@@ -35,9 +38,12 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_DATE = 104
     internal val REQCODE_ACCESSORY = 105
     internal val REQCODE_IMAGES = 106
+    internal val RETCODE_SDCARD_PERM_LOADIMG = 107
+    internal val RETCODE_SDCARD_PERM_IMGPICKER = 108
     private var evGrainSize = 3
     private var evWidth = 3
     private var focalLengthRange = Pair(43.0, 43.0) // FA limited 43mm こそ真の標準レンズ！！！
+    private val PERMISSIONS = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
 
     private var filmroll: FilmRoll? = null
     private var photo: Photo? = null
@@ -54,6 +60,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var longitude = 999.0
     private var selectedAccessories: ArrayList<Int> = ArrayList()
     private var supplementalImages: ArrayList<String> = ArrayList()
+    private var supplementalImagesToLoad: ArrayList<String> = ArrayList()
     private var isResumed: Boolean = false
     private var isDirty: Boolean = false
 
@@ -226,9 +233,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 label_focal_length.text = photo!!.focalLength.toString() + "mm"
             }
 
-            for(s in photo!!.supplementalImages){
-                appendSupplementalImage(s)
-            }
+            checkPermAndAppendSupplementalImages(photo!!.supplementalImages)
+
         }else if(savedInstanceState != null){ //復帰データあり
             lensid = savedInstanceState.getInt("lensid")
             lens = dao.getLens(lensid)
@@ -255,9 +261,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 label_focal_length.text = focalLength.toString() + "mm"
             }
 
-            for(s in savedInstanceState.getStringArrayList("suppimgs")){
-                appendSupplementalImage(s)
-            }
+            checkPermAndAppendSupplementalImages(savedInstanceState.getStringArrayList("suppimgs"))
         }else{ //未入力開きたて
             seek_exp_compensation.progress = evWidth * evGrainSize
             label_ev_corr_amount.text = toHumanReadableCompensationAmount(0)
@@ -572,6 +576,62 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         isResumed = true
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode){
+            RETCODE_SDCARD_PERM_LOADIMG, RETCODE_SDCARD_PERM_IMGPICKER -> {
+                onRequestSDCardAccessPermissionsResult(permissions, grantResults, requestCode)
+            }
+        }
+    }
+
+    internal fun onRequestSDCardAccessPermissionsResult(permissions: Array<String>, grantResults: IntArray, requestCode: Int) {
+        val granted = intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED)
+        if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
+            when(requestCode){
+                RETCODE_SDCARD_PERM_LOADIMG -> {
+                    appendSupplementalImages(supplementalImagesToLoad)
+                }
+                RETCODE_SDCARD_PERM_IMGPICKER -> {
+                    openImagePicker()
+                }
+            }
+        } else {
+            supplementalImages = supplementalImagesToLoad //内部的には保持する
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun openImagePicker(){
+        Matisse.from(this)
+                .choose(MimeType.ofImage())
+                .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
+                .capture(true)
+                .countable(true)
+                .maxSelectable(40)
+                .thumbnailScale(0.85f)
+                .imageEngine(Glide4Engine())
+                .forResult(REQCODE_IMAGES)
+    }
+
+    fun checkPermAndOpenImagePicker() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
+            return
+        }
+        openImagePicker()
+    }
+
+    fun checkPermAndAppendSupplementalImages(paths: ArrayList<String>) {
+        if(paths.size == 0) return
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            supplementalImagesToLoad = paths
+            ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_LOADIMG)
+            return
+        }
+        appendSupplementalImages(paths)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_photo)
@@ -579,15 +639,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
         imageButton.setOnClickListener {
-            Matisse.from(this)
-                    .choose(MimeType.ofImage())
-                    .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
-                    .capture(true)
-                    .countable(true)
-                    .maxSelectable(40)
-                    .thumbnailScale(0.85f)
-                    .imageEngine(Glide4Engine())
-                    .forResult(REQCODE_IMAGES)
+            checkPermAndOpenImagePicker()
         }
 
         val typedValue = TypedValue()
@@ -835,10 +887,14 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
     }
 
+    private fun appendSupplementalImages(paths: ArrayList<String>){
+        for(s in paths) appendSupplementalImage(s)
+    }
+
     private fun appendSupplementalImage(path: String){
         if(path in this.supplementalImages) return
+        val options = BitmapFactory.Options()
         try {
-            val options = BitmapFactory.Options()
             options.inJustDecodeBounds = true
             var bmp = BitmapFactory.decodeFile(path, options)
             var (w, h) =
@@ -863,7 +919,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 }
             }
 
-            supplementalImages.add(path)
             val imageView = CustomImageView(this)
             val scale = resources.displayMetrics.density
             val lp = LinearLayout.LayoutParams((150 * scale * w / h).toInt(), (150 * scale).toInt())
@@ -897,6 +952,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }catch (e: Exception){
             e.printStackTrace()
         }
+        supplementalImages.add(path)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
