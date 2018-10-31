@@ -935,6 +935,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                         this@EditPhotoActivity.supplementalImages.remove(view.path)
                         val vg = view.parent as ViewGroup
                         vg.removeView(view)
+                        if(isResumed) isDirty = true
                     }
                 }
             })
