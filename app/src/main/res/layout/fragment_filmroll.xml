@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical">
@@ -10,7 +9,7 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
+<!--
         <ImageView
             android:id="@+id/imageView"
             android:layout_width="40dp"
@@ -19,11 +18,11 @@
             android:layout_marginEnd="@dimen/text_margin"
             android:layout_weight="0"
             app:srcCompat="@drawable/ic_filmroll_vector_gray" />
-
+-->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="@dimen/text_margin"
+            android:layout_marginStart="@dimen/text_margin"
             android:layout_marginTop="@dimen/text_margin"
             android:layout_marginEnd="@dimen/text_margin"
             android:layout_marginBottom="@dimen/text_margin"
@@ -65,12 +64,12 @@
 
         </LinearLayout>
     </LinearLayout>
-
+<!--
     <View
         android:id="@+id/divider3"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_weight="0"
         android:background="?android:attr/listDivider" />
-
+-->
 </LinearLayout>
