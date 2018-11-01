@@ -160,7 +160,7 @@ class PhotoFragment : Fragment() {
                 dao.connection()
                 dao.updatePhoto(p)
                 dao.close()
-                if(newpos != curpos) {
+                if(newpos < curpos || newpos > curpos+1) {
                     photoRecyclerViewAdapter!!.notifyItemMoved(curpos, newpos)
                     photoRecyclerViewAdapter!!.notifyItemChanged(newpos)
                     //日付をグルーピングしているように見える小細工がある都合で一個下にも通知が必要
