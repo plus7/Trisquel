@@ -18,7 +18,7 @@
             android:layout_marginTop="12dp"
             android:layout_weight="0"
             android:text="@string/label_date"
-            android:textAppearance="@android:style/TextAppearance.Material.Large" />
+            android:textAppearance="@style/TextAppearance.AppCompat.Headline" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -38,18 +38,20 @@
                     android:id="@+id/thumbnail"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="?android:attr/colorButtonNormal" />
+                    android:background="#d6d7d7" />
 
                 <TextView
                     android:id="@+id/id"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|right"
+                    android:layout_gravity="bottom|end"
                     android:layout_margin="0dp"
                     android:background="@android:color/background_dark"
+                    android:minWidth="28dp"
                     android:paddingStart="4dp"
                     android:paddingEnd="4dp"
                     android:text="0"
+                    android:textAlignment="center"
                     android:textAppearance="?attr/textAppearanceListItem"
                     android:textColor="?android:attr/textColorPrimaryInverse" />
             </FrameLayout>
