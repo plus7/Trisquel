@@ -9,7 +9,9 @@ import android.support.design.widget.TextInputLayout
 import android.support.v7.app.AlertDialog
 import android.text.InputType
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 
 
 class SimpleInputDialogFragment : AbstractDialogFragment() {
@@ -22,7 +24,9 @@ class SimpleInputDialogFragment : AbstractDialogFragment() {
         val input = frame.findViewById(R.id.input) as TextInputEditText
         input.inputType = InputType.TYPE_CLASS_NUMBER
         input.setText(arguments?.getString("default_value", ""))
-        //input.hint =
+        val desc = frame.findViewById(R.id.desc) as TextView
+        desc.text = arguments?.getString("message", "")
+        if(desc.text.isEmpty()) desc.visibility = View.GONE
         return AlertDialog.Builder(activity!!)
                 .setTitle(arguments?.getString("title", ""))
                 .setView(frame)

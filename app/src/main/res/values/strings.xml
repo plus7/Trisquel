@@ -102,7 +102,8 @@
     <string name="label_supplementary_images">Supplementary images</string>
     <string name="title_dialog_select_accessories">Select accessories</string>
     <string name="title_dialog_edit_index">Modify the index value</string>
-    <string name="title_dialog_shift_index">Modify the index value and shift that of the following items</string>
+    <string name="title_dialog_shift_index">Shift the index values</string>
+    <string name="msg_dialog_shift_index">Modify the index value and shift that of the following items</string>
     <string name="hint_dialog_shift_index">Allowed value: %d or more</string>
     <string name="msg_cannot_remove_item">%s cannot be removed because it is referenced by some film rolls.</string>
     <string name="msg_confirm_remove_item">Are you sure to remove %s? This action is not undoable!</string>

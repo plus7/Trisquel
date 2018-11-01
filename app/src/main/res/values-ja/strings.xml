@@ -101,7 +101,8 @@
     <string name="label_supplementary_images">補足画像</string>
     <string name="title_dialog_select_accessories">アクセサリを選択</string>
     <string name="title_dialog_edit_index">インデックス値を変更</string>
-    <string name="title_dialog_shift_index">この写真情報のインデックス値を変更し、後続の写真の値も同様にシフトする</string>
+    <string name="title_dialog_shift_index">インデックス値をシフト</string>
+    <string name="msg_dialog_shift_index">この写真情報のインデックス値を変更し、後続の写真の値も同様にシフトします</string>
     <string name="hint_dialog_shift_index">有効値: %d以上</string>
     <string name="msg_cannot_remove_item">%s は既存のフィルム記録から参照されているため、削除することができません。</string>
     <string name="msg_confirm_remove_item">本当に %s を削除しますか？この操作は元に戻せません！</string>
