@@ -58,7 +58,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var lensid: Int = -1
     private var lens: LensSpec? = null
     private var id: Int = 0
-    private var index: Int = 0
+    private var frameIndex: Int = 0
     private var latitude = 999.0
     private var longitude = 999.0
     private var selectedAccessories: ArrayList<Int> = ArrayList()
@@ -71,7 +71,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         get() {
             val data = Intent()
             data.putExtra("id", id)
-            data.putExtra("index", index)
+            data.putExtra("frameIndex", frameIndex)
             data.putExtra("filmroll", filmroll!!.id)
             data.putExtra("date", edit_date.text.toString())
             data.putExtra("lens", lenslist[spinner_lens.position].id)
@@ -182,7 +182,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     protected fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?) {
         this.id = data.getIntExtra("id", -1)
-        this.index = data.getIntExtra("index", -1)
+        this.frameIndex = data.getIntExtra("frameIndex", -1)
         val filmrollid = data.getIntExtra("filmroll", -1)
         this.filmroll = dao.getFilmRoll(filmrollid)
         this.photo = dao.getPhoto(id)
@@ -277,9 +277,16 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 val autocomplete = pref.getBoolean("autocomplete_from_previous_shot", false)
                 if (autocomplete) {
                     val ps = dao.getPhotosByFilmRollId(filmrollid)
-                    if (this.index > 0) {
-                        lensid = ps[this.index - 1].lensid
-                    } else if (this.index < 0 && ps.size > 0) {
+                    var pos = -1
+                    for(i in ps.indices){
+                        if(ps[i].id == id){
+                            pos = i
+                            break
+                        }
+                    }
+                    if (pos > 0) {
+                        lensid = ps[pos - 1].lensid
+                    } else if (pos < 0 && ps.size > 0) {
                         lensid = ps[ps.size - 1].lensid
                     } else {
                         lensid = -1

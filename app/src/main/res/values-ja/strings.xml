@@ -52,8 +52,8 @@
     <string name="change">変更</string>
     <string name="prime">単焦点</string>
     <string name="delete">削除</string>
-    <string name="add_photo_above">一つ上に写真情報を追加</string>
-    <string name="hint_zoom">ズームの場合ハイフンで区切る（例: 70-300）</string>
+    <string name="add_photo_same_index">同じインデックスを持つアイテムを追加</string>
+    <string name="hint_zoom">ズームの場合ハイフンで区切る（例: 70&#8211;300）</string>
     <string name="label_index">番号</string>
     <string name="label_date">日付</string>
     <string name="label_aperture">絞り値</string>
@@ -101,6 +101,8 @@
     <string name="label_supplementary_images">補足画像</string>
     <string name="title_dialog_select_accessories">アクセサリを選択</string>
     <string name="title_dialog_edit_index">インデックス値を変更</string>
+    <string name="title_dialog_shift_index">この写真情報のインデックス値を変更し、後続の写真の値も同様にシフトする</string>
+    <string name="hint_dialog_shift_index">有効値: %d以上</string>
     <string name="msg_cannot_remove_item">%s は既存のフィルム記録から参照されているため、削除することができません。</string>
     <string name="msg_confirm_remove_item">本当に %s を削除しますか？この操作は元に戻せません！</string>
     <string name="error_flfactor_toosmall">1.0より大きい数字を入れてください</string>

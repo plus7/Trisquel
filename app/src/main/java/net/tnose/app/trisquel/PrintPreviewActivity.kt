@@ -73,7 +73,7 @@ class PrintPreviewActivity : AppCompatActivity() {
         for (p in photos) {
             val accessories = p.accessories.map{a -> dao.getAccessory(a)!!.name }.joinToString(", ")
             sb.append("<div class=\"photo\">")
-            sb.append("<h2>#${p.index+1}</h2>")
+            sb.append("<h2>#${p.frameIndex+1}</h2>")
             sb.append("<table width=\"100%\">")
             val lens = dao.getLens(p.lensid)
             sb.append("<tr><td>${getString(R.string.label_date)}</td>          <td>${p.date}</td></tr>")

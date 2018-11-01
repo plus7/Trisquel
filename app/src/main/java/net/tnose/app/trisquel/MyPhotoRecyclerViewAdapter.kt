@@ -56,7 +56,7 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>, //privat
         Log.d("modelname_of_lens", Integer.toString(p.lensid))
         val l = dao.getLens(p.lensid)
         dao.close()
-        holder.mIdView.text = Integer.toString(p.index + 1)
+        holder.mIdView.text = Integer.toString(p.frameIndex + 1)
         if(prev_p != null && prev_p.date.equals(p.date)){
             holder.mDateView.visibility = View.GONE
         }else {
@@ -88,8 +88,12 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>, //privat
         }
 
         holder.mIdView.setOnClickListener{
-            Log.d("PhotoRecyclerView", "mIdView.OnClick")
             mListener?.onIndexClick(holder.mItem!!)
+        }
+
+        holder.mIdView.setOnLongClickListener{
+            mListener?.onIndexLongClick(holder.mItem!!)
+            true
         }
 
         holder.mThumbnailView.setOnClickListener{

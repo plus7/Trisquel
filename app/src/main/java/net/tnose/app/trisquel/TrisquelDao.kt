@@ -489,7 +489,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     fun addPhoto(p: Photo): Long {
         val cval = ContentValues()
         cval.put("filmroll", p.filmrollid)
-        cval.put("_index", p.index)
+        cval.put("_index", p.frameIndex)
         cval.put("date", p.date)
         cval.put("camera", p.cameraid)
         cval.put("lens", p.lensid)
@@ -512,7 +512,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         val selectArgs = arrayOf(Integer.toString(p.id))
         val cval = ContentValues()
         cval.put("filmroll", p.filmrollid)
-        cval.put("_index", p.index)
+        cval.put("_index", p.frameIndex)
         cval.put("date", p.date)
         cval.put("camera", p.cameraid)
         cval.put("lens", p.lensid)

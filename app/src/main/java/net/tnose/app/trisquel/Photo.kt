@@ -9,7 +9,7 @@ import java.util.*
  * Created by user on 2018/01/13.
  */
 
-class Photo(var id: Int, var filmrollid: Int, var index: Int, var date: String, var cameraid: Int, var lensid: Int,
+class Photo(var id: Int, var filmrollid: Int, var frameIndex: Int, var date: String, var cameraid: Int, var lensid: Int,
             var focalLength: Double, var aperture: Double, var shutterSpeed: Double, var expCompensation: Double,
             var ttlLightMeter: Double, var location: String, var latitude: Double, var longitude: Double, var memo: String, accessories: String, supplementalImages: String) {
     var accessories: ArrayList<Int>
@@ -28,7 +28,7 @@ class Photo(var id: Int, var filmrollid: Int, var index: Int, var date: String, 
         Log.d("new Photo",
                 "id:" + Integer.toString(id) + ", " +
                         "filmroll:" + Integer.toString(filmrollid) + ", " +
-                        "index:" + Integer.toString(index) + ", " +
+                        "frameIndex:" + Integer.toString(frameIndex) + ", " +
                         "date:" + date + ", " +
                         "lensid:" + Integer.toString(lensid))
         this.accessories = ArrayList()

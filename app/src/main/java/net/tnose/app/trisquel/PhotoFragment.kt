@@ -28,7 +28,7 @@ class PhotoFragment : Fragment() {
     private var mColumnCount = 1
     private var mFilmRollId = -1
     private val mFilmRoll: FilmRoll? = null
-    private var mPhotos: ArrayList<Photo>? = null
+    private var mPhotos = ArrayList<Photo>()
     private var mListener: OnListFragmentInteractionListener? = null
     private var photoRecyclerViewAdapter: MyPhotoRecyclerViewAdapter? = null
 
@@ -57,7 +57,7 @@ class PhotoFragment : Fragment() {
             } else {
                 view.layoutManager = GridLayoutManager(context, mColumnCount)
             }
-            this.photoRecyclerViewAdapter = MyPhotoRecyclerViewAdapter(mPhotos!!, mFilmRollId, mListener)
+            this.photoRecyclerViewAdapter = MyPhotoRecyclerViewAdapter(mPhotos, mFilmRollId, mListener)
             view.adapter = photoRecyclerViewAdapter
         }
         return view
@@ -77,71 +77,127 @@ class PhotoFragment : Fragment() {
         mListener = null
     }
 
-    fun insertPhoto(p: Photo) {
-        if (mPhotos != null) {
-            val index: Int
-            val dao = TrisquelDao(this.context)
-            dao.connection()
-            if (p.index == -1) {
-                index = mPhotos!!.size
-                p.index = index
-            } else {
-                index = p.index
-                // 挿入する前にこれ以降のインデックスをずらす
-                for (i in mPhotos!!.size - 1 downTo index) {
-                    val followingPhoto = mPhotos!![i]
-                    followingPhoto.index = followingPhoto.index + 1
-                    dao.updatePhoto(followingPhoto)
-                    photoRecyclerViewAdapter!!.notifyItemChanged(i)
-                }
-            }
-            mPhotos!!.add(index, p)
-            val id = dao.addPhoto(p)
-            p.id = id.toInt()
-            photoRecyclerViewAdapter!!.notifyItemInserted(index)
-            dao.close()
+    private fun getInsertPos(frameIndex: Int): Int{
+        for(i in mPhotos.indices){
+            if(mPhotos[i].frameIndex > frameIndex) return i
+        }
+        return mPhotos.size
+    }
+
+    fun possibleDownShiftLimit(p: Photo): Int{
+        var curpos = curPosOf(p)
+        if(curpos > 0){
+            val prev = mPhotos[curpos - 1]
+            return prev.frameIndex
+        }else{
+            return 0
         }
     }
 
-    fun updatePhoto(p: Photo) {
-        if (mPhotos != null) {
-            for (i in mPhotos!!.indices) {
-                if (mPhotos!![i].id == p.id) {
-                    mPhotos!!.removeAt(i)
-                    mPhotos!!.add(i, p)
-                    val dao = TrisquelDao(this.context)
-                    dao.connection()
-                    dao.updatePhoto(p)
-                    dao.close()
+    private fun curPosOf(p: Photo): Int{
+        var curpos = -1
+        for(i in mPhotos.indices){
+            if(mPhotos[i].id == p.id){
+                curpos = i
+                break
+            }
+        }
+        return curpos
+    }
+
+    fun shiftFrameIndexFrom(p: Photo, amount: Int){
+        if(p.frameIndex + amount < possibleDownShiftLimit(p)) throw Exception()
+        val curpos = curPosOf(p)
+        val dao = TrisquelDao(this.context)
+        dao.connection()
+        for(i in curpos..(mPhotos.size-1)){
+            mPhotos[i].frameIndex += amount
+            dao.updatePhoto(mPhotos[i])
+            photoRecyclerViewAdapter!!.notifyItemChanged(i)
+        }
+        dao.close()
+    }
+
+    fun insertPhoto(p: Photo) {
+            val pos: Int
+            val dao = TrisquelDao(this.context)
+            dao.connection()
+            //TODO: ここがまずい
+            if (p.frameIndex == -1) {
+                pos = mPhotos.size
+                p.frameIndex = if(mPhotos.isEmpty()) 0 else mPhotos.last().frameIndex + 1
+            } else {
+                pos = getInsertPos(p.frameIndex)
+                //index = p.frameIndex
+                // 挿入する前にこれ以降のインデックスをずらす
+                /*
+                for (i in mPhotos!!.size - 1 downTo index) {
+                    val followingPhoto = mPhotos!![i]
+                    followingPhoto.frameIndex = followingPhoto.frameIndex + 1
+                    dao.updatePhoto(followingPhoto)
                     photoRecyclerViewAdapter!!.notifyItemChanged(i)
                 }
+                */
+            }
+            mPhotos.add(pos, p)
+            val id = dao.addPhoto(p)
+            p.id = id.toInt()
+            photoRecyclerViewAdapter!!.notifyItemInserted(pos)
+            dao.close()
+    }
+
+    fun updatePhoto(p: Photo) {
+        for (i in mPhotos.indices) {
+            if (mPhotos[i].id == p.id) {
+                val newpos = getInsertPos(p.frameIndex)
+                val curpos = i
+                mPhotos.removeAt(curpos)
+                if(newpos > curpos)
+                    mPhotos.add(newpos - 1, p)
+                else
+                    mPhotos.add(newpos, p)
+                val dao = TrisquelDao(this.context)
+                dao.connection()
+                dao.updatePhoto(p)
+                dao.close()
+                if(newpos != curpos) {
+                    photoRecyclerViewAdapter!!.notifyItemMoved(curpos, newpos)
+                    photoRecyclerViewAdapter!!.notifyItemChanged(newpos)
+                    //日付をグルーピングしているように見える小細工がある都合で一個下にも通知が必要
+                    if (newpos != mPhotos.lastIndex) photoRecyclerViewAdapter!!.notifyItemChanged(newpos + 1)
+                }
+                photoRecyclerViewAdapter!!.notifyItemChanged(curpos)
+                //ここも同様
+                if(curpos != mPhotos.lastIndex) photoRecyclerViewAdapter!!.notifyItemChanged(curpos + 1)
             }
         }
     }
 
     fun deletePhoto(id: Int) {
-        var deletedIndex = -1
-        if (mPhotos != null) {
-            val dao = TrisquelDao(this.context)
-            dao.connection()
-            for (i in mPhotos!!.indices) {
-                if (mPhotos!![i].id == id) {
-                    deletedIndex = i
-                    mPhotos!!.removeAt(i)
-                    dao.deletePhoto(id)
-                    photoRecyclerViewAdapter!!.notifyItemRemoved(i)
-                    break
-                }
+        var deletedPos = -1
+        val dao = TrisquelDao(this.context)
+        dao.connection()
+        for (i in mPhotos.indices) {
+            if (mPhotos[i].id == id) {
+                deletedPos = i
+                mPhotos.removeAt(i)
+                dao.deletePhoto(id)
+                photoRecyclerViewAdapter!!.notifyItemRemoved(i)
+                //日付をグルーピングしているように見える小細工がある都合で一個下にも通知が必要
+                //上でremoveAtしてるから以下の判定式ではmPhoto.size-1ではなくmPhoto.sizeを使わなければならない
+                if(i != mPhotos.size) photoRecyclerViewAdapter!!.notifyItemChanged(i)
+                break
             }
-            //削除した写真以降のインデックスをずらす
-            for (i in deletedIndex until mPhotos!!.size) {
-                val followingPhoto = mPhotos!![i]
-                followingPhoto.index = followingPhoto.index - 1
-                dao.updatePhoto(followingPhoto)
-                photoRecyclerViewAdapter!!.notifyItemChanged(i)
-            }
-            dao.close()
         }
+        //削除した写真以降のインデックスをずらす
+        //TODO: ここもよろしくない
+        /*for (i in deletedIndex until mPhotos!!.size) {
+            val followingPhoto = mPhotos!![i]
+            followingPhoto.frameIndex = followingPhoto.frameIndex - 1
+            dao.updatePhoto(followingPhoto)
+            photoRecyclerViewAdapter!!.notifyItemChanged(i)
+        }*/
+        dao.close()
     }
 
     /**
@@ -158,6 +214,7 @@ class PhotoFragment : Fragment() {
         fun onListFragmentInteraction(item: Photo, isLong: Boolean)
         fun onThumbnailClick(item: Photo)
         fun onIndexClick(item: Photo)
+        fun onIndexLongClick(item: Photo)
     }
 
     companion object {

@@ -29,7 +29,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     internal val REQCODE_EDIT_FILMROLL = 102
     internal val REQCODE_SELECT_THUMBNAIL = 103
     internal val REQCODE_EDIT_PHOTOINDEX = 104
-    internal val REQCODE_SELECT_INDEX_SHIFT_RULE = 105
+    internal val REQCODE_INDEX_SHIFT = 105
     internal val RETCODE_SDCARD_PERM_IMGPICKER = 106
 
     private val PERMISSIONS = arrayOf(
@@ -60,7 +60,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             for (i in ps.indices) {
                 val p = ps[i]
                 val l = dao.getLens(p.lensid)
-                sb.append("------[No. " + (p.index + 1) + "]------\n")
+                sb.append("------[No. " + (p.frameIndex + 1) + "]------\n")
                 sb.append(getString(R.string.label_date) + ": " + p.date + "\n")
                 sb.append(getString(R.string.label_lens_name) + ": " + l!!.manufacturer + " " + l.modelName + "\n")
                 if (p.aperture > 0) sb.append(getString(R.string.label_aperture) + ": " + p.aperture + "\n")
@@ -210,7 +210,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 val p = Photo(
                         -1,
                         bundle!!.getInt("filmroll"),
-                        bundle.getInt("index"),
+                        bundle.getInt("frameIndex"),
                         bundle.getString("date")!!,
                         bundle.getInt("camera"),
                         bundle.getInt("lens"),
@@ -233,7 +233,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 val p = Photo(
                         bundle.getInt("id"),
                         bundle.getInt("filmroll"),
-                        bundle.getInt("index"),
+                        bundle.getInt("frameIndex"),
                         bundle.getString("date")!!,
                         bundle.getInt("camera"),
                         bundle.getInt("lens"),
@@ -302,13 +302,13 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             val fragment = SelectDialogFragment.Builder()
                     .build(200)
             fragment.arguments?.putInt("id", item.id)
-            fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.delete), getString(R.string.add_photo_above)))
+            fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.delete), getString(R.string.add_photo_same_index)))
             fragment.showOn(this, "dialog")
         } else {
             val intent = Intent(application, EditPhotoActivity::class.java)
             intent.putExtra("filmroll", mFilmRoll!!.id)
             intent.putExtra("id", item.id)
-            intent.putExtra("index", item.index)
+            intent.putExtra("frameIndex", item.frameIndex)
             startActivityForResult(intent, REQCODE_EDIT_PHOTO)
         }
     }
@@ -374,12 +374,22 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     }
 
     override fun onIndexClick(item: Photo) {
-        return
         val fragment = SimpleInputDialogFragment.Builder()
                 .build(REQCODE_EDIT_PHOTOINDEX)
         fragment.arguments?.putInt("id", item.id)
         fragment.arguments?.putString("title", getString(R.string.title_dialog_edit_index))
-        fragment.arguments?.putString("default_value", (item.index + 1).toString())
+        fragment.arguments?.putString("default_value", (item.frameIndex + 1).toString())
+        fragment.showOn(this, "dialog")
+    }
+
+    override fun onIndexLongClick(item: Photo) {
+        val fragment = SimpleInputDialogFragment.Builder()
+                .build(REQCODE_INDEX_SHIFT)
+        fragment.arguments?.putInt("id", item.id)
+        fragment.arguments?.putString("title", getString(R.string.title_dialog_shift_index))
+        val downshiftLimit = photo_fragment?.possibleDownShiftLimit(item) ?: 0
+        fragment.arguments?.putString("hint", getString(R.string.hint_dialog_shift_index).format(downshiftLimit+1))
+        fragment.arguments?.putString("default_value", (item.frameIndex + 1).toString())
         fragment.showOn(this, "dialog")
     }
 
@@ -396,13 +406,13 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                     dao.connection()
                     val p = dao.getPhoto(id)
                     dao.close()
-                    index = p!!.index
+                    index = p!!.frameIndex
                     when (which) {
                         0 -> if (id != -1) photo_fragment!!.deletePhoto(id)
                         1 -> {
                             val intent = Intent(application, EditPhotoActivity::class.java)
                             intent.putExtra("filmroll", mFilmRoll!!.id)
-                            intent.putExtra("index", index)
+                            intent.putExtra("frameIndex", index)
                             startActivityForResult(intent, REQCODE_ADD_PHOTO)
                         }
                     }
@@ -410,9 +420,35 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 }
             }
             REQCODE_EDIT_PHOTOINDEX -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if(data != null){
-                    Log.d("REQCODE_EDIT_PHOTOINDEX", data.getStringExtra("value"))
+                val newindex = data.getStringExtra("value").toInt() - 1
+                if(newindex < 0) return
+                val id = data.getIntExtra("id", -1)
+                val dao = TrisquelDao(this.applicationContext)
+                dao.connection()
+                val p = dao.getPhoto(id)
+                dao.close()
+                if(p != null) {
+                    if(p.frameIndex == newindex) return
+                    p.frameIndex = newindex
+                    photo_fragment!!.updatePhoto(p)
                 }
+            }
+            REQCODE_INDEX_SHIFT -> if (resultCode == DialogInterface.BUTTON_POSITIVE){
+                val newindex = data.getStringExtra("value").toInt() - 1
+
+                val id = data.getIntExtra("id", -1)
+                val dao = TrisquelDao(this.applicationContext)
+                dao.connection()
+                val p = dao.getPhoto(id)
+                dao.close()
+
+                if(p == null) return
+
+                val downshiftLimit = photo_fragment!!.possibleDownShiftLimit(p)
+                if(newindex < downshiftLimit) return
+                if(p.frameIndex == newindex) return
+
+                photo_fragment!!.shiftFrameIndexFrom(p, newindex - p.frameIndex)
             }
         }
     }

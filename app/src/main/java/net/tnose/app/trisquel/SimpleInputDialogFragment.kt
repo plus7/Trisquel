@@ -4,18 +4,28 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.support.design.widget.TextInputEditText
+import android.support.design.widget.TextInputLayout
 import android.support.v7.app.AlertDialog
 import android.text.InputType
-import android.widget.EditText
+import android.view.LayoutInflater
+import android.view.ViewGroup
+
 
 class SimpleInputDialogFragment : AbstractDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val input = EditText(activity!!)
+        val frame = LayoutInflater.from(context).inflate(R.layout.dialog_text_input_layout, view as ViewGroup?, false)
+        val layout = frame.findViewById(R.id.layout) as TextInputLayout
+        layout.isHintEnabled = true
+        layout.isHintAnimationEnabled = true
+        layout.hint = arguments?.getString("hint", "")
+        val input = frame.findViewById(R.id.input) as TextInputEditText
         input.inputType = InputType.TYPE_CLASS_NUMBER
         input.setText(arguments?.getString("default_value", ""))
+        //input.hint =
         return AlertDialog.Builder(activity!!)
                 .setTitle(arguments?.getString("title", ""))
-                .setView(input)
+                .setView(frame)
                 .setPositiveButton(android.R.string.yes
                 ) { dialog, which ->
                     val data = Intent()
