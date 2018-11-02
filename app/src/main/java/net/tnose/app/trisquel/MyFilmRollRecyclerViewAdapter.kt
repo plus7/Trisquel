@@ -9,7 +9,7 @@ import android.widget.TextView
 import net.tnose.app.trisquel.FilmRollFragment.OnListFragmentInteractionListener
 import java.util.*
 
-class MyFilmRollRecyclerViewAdapter(//private final List<DummyItem> mValues;
+class MyFilmRollRecyclerViewAdapter(
         private val mValues: ArrayList<FilmRoll>, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyFilmRollRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

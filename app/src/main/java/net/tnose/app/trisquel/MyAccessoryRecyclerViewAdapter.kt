@@ -8,13 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 
 import net.tnose.app.trisquel.AccessoryFragment.OnListFragmentInteractionListener
-import net.tnose.app.trisquel.dummy.DummyContent.DummyItem
 
-/**
- * [RecyclerView.Adapter] that can display a [DummyItem] and makes a call to the
- * specified [OnListFragmentInteractionListener].
- * TODO: Replace the implementation with code for your data type.
- */
 class MyAccessoryRecyclerViewAdapter(private val mValues: List<Accessory>, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyAccessoryRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

@@ -8,7 +8,7 @@ import android.widget.TextView
 import net.tnose.app.trisquel.LensFragment.OnListFragmentInteractionListener
 import java.util.*
 
-class MyLensRecyclerViewAdapter(//private final List<DummyItem> mValues;
+class MyLensRecyclerViewAdapter(
         private val mValues: ArrayList<LensSpec>, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyLensRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

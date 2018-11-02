@@ -8,7 +8,7 @@ import android.widget.TextView
 import net.tnose.app.trisquel.CameraFragment.OnListFragmentInteractionListener
 import java.util.*
 
-class MyCameraRecyclerViewAdapter(//private final List<DummyItem> mValues;
+class MyCameraRecyclerViewAdapter(
         private val mValues: ArrayList<CameraSpec>, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyCameraRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

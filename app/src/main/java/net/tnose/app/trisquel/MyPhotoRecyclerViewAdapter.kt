@@ -10,17 +10,10 @@ import android.widget.TextView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import net.tnose.app.trisquel.PhotoFragment.OnListFragmentInteractionListener
-import net.tnose.app.trisquel.dummy.DummyContent.DummyItem
 import java.io.File
 import java.util.*
 
-
-/**
- * [RecyclerView.Adapter] that can display a [DummyItem] and makes a call to the
- * specified [OnListFragmentInteractionListener].
- * TODO: Replace the implementation with code for your data type.
- */
-class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>, //private final List<DummyItem> mValues;
+class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
                                  private val mFilmRollId: Int, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyPhotoRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
