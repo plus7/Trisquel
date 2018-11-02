@@ -905,65 +905,65 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private fun appendSupplementalImage(path: String){
         if(path in this.supplementalImages) return
         val options = BitmapFactory.Options()
-        try {
-            options.inJustDecodeBounds = true
-            var bmp = BitmapFactory.decodeFile(path, options)
-            var (w, h) =
-                    if(options.outWidth > 0 && options.outHeight > 0)
-                        Pair(options.outWidth, options.outHeight)
-                    else
-                        Pair(150, 150)
 
+        options.inJustDecodeBounds = true
+        var bmp = BitmapFactory.decodeFile(path, options)
+        var (w, h) =
+                if(options.outWidth > 0 && options.outHeight > 0)
+                    Pair(options.outWidth, options.outHeight)
+                else
+                    Pair(150, 150)
+        try {
             // 枠を回転させるかどうか考える
             val exifInterface = ExifInterface(path)
             val orientation = exifInterface.getAttributeInt(
                     ExifInterface.TAG_ORIENTATION,
                     ExifInterface.ORIENTATION_UNDEFINED)
-            when(orientation){
+            when (orientation) {
                 ExifInterface.ORIENTATION_ROTATE_90,
                 ExifInterface.ORIENTATION_TRANSVERSE,
                 ExifInterface.ORIENTATION_TRANSPOSE,
-                ExifInterface.ORIENTATION_ROTATE_270 ->{
+                ExifInterface.ORIENTATION_ROTATE_270 -> {
                     val tmp = h
                     h = w
                     w = tmp
                 }
             }
-
-            val imageView = CustomImageView(this)
-            val scale = resources.displayMetrics.density
-            val lp = LinearLayout.LayoutParams((150 * scale * w / h).toInt(), (150 * scale).toInt())
-            lp.setMargins(0,0, 16, 0)
-            image_container.addView(imageView, image_container.childCount - 1, lp)
-            imageView.path = path
-            imageView.setOnCloseClickListener(object: View.OnClickListener{
-                override fun onClick(view: View?): Unit {
-                    if(view is CustomImageView) {
-                        this@EditPhotoActivity.supplementalImages.remove(view.path)
-                        val vg = view.parent as ViewGroup
-                        vg.removeView(view)
-                        if(isResumed) isDirty = true
-                    }
-                }
-            })
-            imageView.setOnClickListener(object: View.OnClickListener{
-                override fun onClick(view: View?): Unit {
-                    if(view is CustomImageView){
-                        Log.v("debug", "clicked" + view.path)
-                        val intent = Intent()
-                        val file = File(view.path)
-                        // android.os.FileUriExposedException回避
-                        val photoURI = FileProvider.getUriForFile(this@EditPhotoActivity, this@EditPhotoActivity.applicationContext.packageName + ".provider", file)
-                        intent.action = android.content.Intent.ACTION_VIEW
-                        intent.setDataAndType(photoURI, "image/*")
-                        intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        startActivity(intent)
-                    }
-                }
-            })
         }catch (e: Exception){
             e.printStackTrace()
         }
+
+        val imageView = CustomImageView(this)
+        val scale = resources.displayMetrics.density
+        val lp = LinearLayout.LayoutParams((150 * scale * w / h).toInt(), (150 * scale).toInt())
+        lp.setMargins(0,0, 16, 0)
+        image_container.addView(imageView, image_container.childCount - 1, lp)
+        imageView.path = path
+        imageView.setOnCloseClickListener(object: View.OnClickListener{
+            override fun onClick(view: View?): Unit {
+                if(view is CustomImageView) {
+                    this@EditPhotoActivity.supplementalImages.remove(view.path)
+                    val vg = view.parent as ViewGroup
+                    vg.removeView(view)
+                    if(isResumed) isDirty = true
+                }
+            }
+        })
+        imageView.setOnClickListener(object: View.OnClickListener{
+            override fun onClick(view: View?): Unit {
+                if(view is CustomImageView){
+                    Log.v("debug", "clicked" + view.path)
+                    val intent = Intent()
+                    val file = File(view.path)
+                    // android.os.FileUriExposedException回避
+                    val photoURI = FileProvider.getUriForFile(this@EditPhotoActivity, this@EditPhotoActivity.applicationContext.packageName + ".provider", file)
+                    intent.action = android.content.Intent.ACTION_VIEW
+                    intent.setDataAndType(photoURI, "image/*")
+                    intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    startActivity(intent)
+                }
+            }
+        })
         supplementalImages.add(path)
     }
 
