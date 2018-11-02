@@ -41,7 +41,9 @@ class CustomImageView @JvmOverloads constructor(context: Context, attrs: Attribu
             // 大きさが確定してから描画しないといけない。
             // 当初はonCreateで追加されたCustomImageViewにpathが設定された瞬間に描画していたが、
             // それだと妙に小さくなる。なおこの半端な実装はgitの履歴には残していない。
-            if(mPath.isNotEmpty()){
+            if(mPath.isNotEmpty() &&
+                    oldBottom - oldTop != bottom - top &&
+                    oldRight - oldLeft != right - left){
                 val file = File(mPath)
                 Glide.with(civ_image_view.context)
                         .load(file)
@@ -49,6 +51,7 @@ class CustomImageView @JvmOverloads constructor(context: Context, attrs: Attribu
                                 .placeholder(R.drawable.general_image_gray)
                                 .centerCrop()
                                 .error(R.drawable.ic_error_circle)
+                                .timeout(5000)
                         )
                         .into(civ_image_view)
             }
