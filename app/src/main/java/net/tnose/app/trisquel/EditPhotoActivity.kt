@@ -158,6 +158,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         spinner_lens.setAdapter(lensadapter)
         if (lensadapter!!.count == 0) {
             spinner_lens.error = getString(R.string.error_nolens).replace("%s", filmroll!!.camera.mount)
+        }else{
+            spinner_lens.error = null
         }
 
         if (lens != null) {
