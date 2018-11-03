@@ -21,8 +21,8 @@ import java.util.*
 import java.util.regex.Pattern
 
 class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
-    private var id: Int = 0
-    private var created: String? = null
+    private var id: Int = -1
+    private var created: String = ""
     private var fsAdapter: FStepAdapter? = null
     private var isResumed: Boolean = false
     private var isDirty: Boolean = false
@@ -54,13 +54,13 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     val data: Intent
         get() {
             val data = Intent()
-            data.putExtra("id", id)
-            data.putExtra("created", created)
-            data.putExtra("mount", edit_mount!!.text.toString())
-            data.putExtra("manufacturer", edit_manufacturer!!.text.toString())
-            data.putExtra("model_name", edit_model!!.text.toString())
-            data.putExtra("focal_length", edit_focal_length!!.text.toString())
-            data.putExtra("f_steps", fStepsString)
+            val l = LensSpec(id, created, Util.dateToStringUTC(Date()),
+                     edit_mount!!.text.toString(), 0,
+                     edit_manufacturer!!.text.toString(),
+                     edit_model!!.text.toString(),
+                     edit_focal_length!!.text.toString(),
+                     fStepsString)
+            data.putExtra("lensspec", l)
             return data
         }
 

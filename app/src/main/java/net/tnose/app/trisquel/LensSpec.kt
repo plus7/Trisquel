@@ -1,12 +1,15 @@
 package net.tnose.app.trisquel
 
+import android.os.Parcel
+import android.os.Parcelable
 import java.util.*
+
 
 /**
  * Created by user on 2018/01/13.
  */
 
-class LensSpec {
+class LensSpec: Parcelable {
     var id: Int = 0
     var body: Int = 0
     var created: Date
@@ -61,5 +64,45 @@ class LensSpec {
 
     override fun toString(): String {
         return modelName /* なんかMaterialBetterSpinnerがtoStringを呼んでるみたいなので、一時的にモデル名にする */
+    }
+
+    override fun describeContents(): Int {
+        return 0
+    }
+
+    override fun writeToParcel(out: Parcel, flags: Int) {
+        out.writeInt(id)
+        out.writeInt(body)
+        out.writeString(Util.dateToStringUTC(created))
+        out.writeString(Util.dateToStringUTC(lastModified))
+        out.writeString(mount)
+        out.writeString(manufacturer)
+        out.writeString(modelName)
+        out.writeString(focalLength)
+        out.writeDoubleArray(fSteps.toDoubleArray())
+    }
+
+    constructor(inp: Parcel){
+        id = inp.readInt()
+        body = inp.readInt()
+        created = Util.stringToDateUTC(inp.readString() ?: "")
+        lastModified = Util.stringToDateUTC(inp.readString() ?: "")
+        mount = inp.readString() ?: ""
+        manufacturer = inp.readString() ?: ""
+        modelName = inp.readString() ?: ""
+        focalLength = inp.readString() ?: ""
+        fSteps = inp.createDoubleArray()!!.toTypedArray()
+    }
+
+    companion object {
+        @JvmField val CREATOR: Parcelable.Creator<LensSpec> = object : Parcelable.Creator<LensSpec> {
+            override fun createFromParcel(inp: Parcel): LensSpec {
+                return LensSpec(inp)
+            }
+
+            override fun newArray(size: Int): Array<LensSpec?> {
+                return arrayOfNulls<LensSpec?>(size)
+            }
+        }
     }
 }

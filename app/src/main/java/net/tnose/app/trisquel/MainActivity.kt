@@ -286,35 +286,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             REQCODE_ADD_LENS -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val l = LensSpec(
-                        -1,
-                        bundle!!.getString("mount")!!,
-                        0,
-                        bundle.getString("manufacturer")!!,
-                        bundle.getString("model_name")!!,
-                        bundle.getString("focal_length")!!,
-                        bundle.getString("f_steps")!!
-                )
-                Log.d("new lens", l.toString())
-                if(frag is LensFragment) frag.insertLens(l)
-            } else if (resultCode == Activity.RESULT_CANCELED) {
+                val l = bundle!!.getParcelable<LensSpec>("lensspec")
+                if(frag is LensFragment && l != null) frag.insertLens(l)
             }
             REQCODE_EDIT_LENS -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val l = LensSpec(
-                        bundle!!.getInt("id"),
-                        bundle.getString("created")!!,
-                        Util.dateToStringUTC(Date()),
-                        bundle.getString("mount")!!,
-                        0,
-                        bundle.getString("manufacturer")!!,
-                        bundle.getString("model_name")!!,
-                        bundle.getString("focal_length")!!,
-                        bundle.getString("f_steps")!!
-                )
-                //Log.d("new lens", l.toString());
-                if(frag is LensFragment) frag.updateLens(l)
-            } else if (resultCode == Activity.RESULT_CANCELED) {
+                val l = bundle!!.getParcelable<LensSpec>("lensspec")
+                if(frag is LensFragment && l != null) frag.updateLens(l)
             }
             REQCODE_ADD_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
