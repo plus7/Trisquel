@@ -109,6 +109,7 @@
     <string name="msg_confirm_remove_item">Are you sure to remove %s? This action is not undoable!</string>
     <string name="error_flfactor_toosmall">Input more than 1.0</string>
     <string name="error_flfactor_toobig">Input less than 1.0</string>
+    <string name="error_ss_inconsistent">Inconsistent values</string>
     <string name="error_nolens">"%s" mount lens is not registered</string>
     <string name="no_data_available">no data available</string>
     <string name="warning_lens_not_registered">No lenses registered</string>

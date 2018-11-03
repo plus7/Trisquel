@@ -129,7 +129,7 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             spinner_fastest_ss!!.error = null
             spinner_slowest_ss!!.error = null
         } else if (fastestSS > slowestSS) {
-            spinner_fastest_ss!!.error = "okashii"
+            spinner_fastest_ss!!.error = getString(R.string.error_ss_inconsistent)
             spinner_slowest_ss!!.error = ""
             ret = false
         } else {

@@ -108,6 +108,7 @@
     <string name="msg_confirm_remove_item">本当に %s を削除しますか？この操作は元に戻せません！</string>
     <string name="error_flfactor_toosmall">1.0より大きい数字を入れてください</string>
     <string name="error_flfactor_toobig">1.0より小さい数字を入れてください</string>
+    <string name="error_ss_inconsistent">矛盾した値です</string>
     <string name="error_nolens">%sマウントのレンズが登録されていません</string>
     <string name="warning_lens_not_registered">レンズが登録されていません</string>
     <string name="warning_cam_not_registered">カメラが登録されていません</string>
