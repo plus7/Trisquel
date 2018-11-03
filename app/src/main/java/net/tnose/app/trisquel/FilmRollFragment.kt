@@ -26,7 +26,6 @@ class FilmRollFragment : Fragment() {
     // TODO: Customize parameters
     private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
-
     private var mRecyclerView: RecyclerViewEmptySupport? = null
     private var list: ArrayList<FilmRoll>? = null
     private var filmrollRecyclerViewAdapter: MyFilmRollRecyclerViewAdapter? = null
@@ -93,6 +92,7 @@ class FilmRollFragment : Fragment() {
                 dao.close()
                 Log.d("FilmRollFragment", "notifyItemInserted")
                 filmrollRecyclerViewAdapter!!.notifyItemInserted(0)
+                mRecyclerView?.layoutManager?.scrollToPosition(0)
             }
         }
     }

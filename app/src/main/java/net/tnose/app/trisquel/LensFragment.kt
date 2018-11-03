@@ -25,6 +25,7 @@ class LensFragment : Fragment() {
     // TODO: Customize parameters
     private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
+    private var mView: RecyclerViewEmptySupport? = null
     private var list: ArrayList<LensSpec>? = null
     private var lensRecyclerViewAdapter: MyLensRecyclerViewAdapter? = null
 
@@ -44,6 +45,7 @@ class LensFragment : Fragment() {
 
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
+            mView = view
             val context = view.getContext()
             view.setEmptyMessage(getString(R.string.warning_lens_not_registered))
             view.setEmptyView(container!!.findViewById(R.id.empty_view))
@@ -84,6 +86,7 @@ class LensFragment : Fragment() {
                 dao.close()
                 lens.id = id.toInt()
                 lensRecyclerViewAdapter!!.notifyItemInserted(0)
+                mView?.layoutManager?.scrollToPosition(0)
             }
         }
     }

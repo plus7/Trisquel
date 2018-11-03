@@ -25,6 +25,7 @@ class CameraFragment : Fragment() {
     // TODO: Customize parameters
     private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
+    private var mView: RecyclerViewEmptySupport? = null
     private var list: ArrayList<CameraSpec>? = null
     private var cameraRecyclerViewAdapter: MyCameraRecyclerViewAdapter? = null
 
@@ -46,6 +47,7 @@ class CameraFragment : Fragment() {
 
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
+            mView = view
             val context = view.getContext()
             view.setEmptyMessage(getString(R.string.warning_cam_not_registered))
             view.setEmptyView(container!!.findViewById(R.id.empty_view))
@@ -86,6 +88,7 @@ class CameraFragment : Fragment() {
                 dao.close()
                 camera.id = id.toInt()
                 cameraRecyclerViewAdapter!!.notifyItemInserted(0)
+                mView?.layoutManager?.scrollToPosition(0)
             }
         }
     }
