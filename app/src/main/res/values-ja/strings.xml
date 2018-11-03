@@ -114,11 +114,6 @@
     <string name="warning_filmroll_not_registered">フィルムが登録されていません</string>
     <string name="warning_accessory_not_registered">アクセサリが登録されていません</string>
     <string name="warning_photo_not_registered">写真がありません</string>
-    <string name="warning_firstrun">
-        本アプリケーションは早期アクセス版です。
-        未成熟な機能や予期せぬクラッシュバグ、データ破壊バグ、ユーザーインターフェースの不具合などが
-        含まれている可能性があります。詳細につきましてはリリースノートを熟読ください。
-    </string>
     <string name="warning_newversion">
         Trisquelはアップデートされました。詳細についてはリリースノートをお読み下さい。
     </string>

@@ -142,15 +142,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val lastVersion = pref.getInt("last_version", 0)
-        if (lastVersion < Util.TRISQUEL_VERSION) {
+        if (0 < lastVersion && lastVersion < Util.TRISQUEL_VERSION) {
             val fragment = YesNoDialogFragment.Builder()
                     .build(RETCODE_OPEN_RELEASE_NOTES)
             fragment.arguments?.putString("title", "Trisquel")
-            if (lastVersion != 0) {
+            //if (lastVersion != 0) {
                 fragment.arguments?.putString("message", getString(R.string.warning_newversion))
-            } else {
-                fragment.arguments?.putString("message", getString(R.string.warning_firstrun))
-            }
+            //} else {
+                //fragment.arguments?.putString("message", getString(R.string.warning_firstrun))
+            //}
             fragment.arguments?.putString("positive", getString(R.string.show_release_notes))
             fragment.arguments?.putString("negative", getString(R.string.close))
             fragment.showOn(this, "dialog")

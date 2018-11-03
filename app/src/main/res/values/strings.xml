@@ -116,11 +116,6 @@
     <string name="warning_filmroll_not_registered">No film rolls registered</string>
     <string name="warning_accessory_not_registered">No accessories registered</string>
     <string name="warning_photo_not_registered">No photos</string>
-    <string name="warning_firstrun">
-        This application is early access version.
-        Premature features are contained and unexpected crash bugs, data corruption bugs, and UI bugs may occur.
-        Read the release note for details.
-    </string>
     <string name="warning_newversion">
         Trisquel has been updated. Read the release notes for details.
     </string>
