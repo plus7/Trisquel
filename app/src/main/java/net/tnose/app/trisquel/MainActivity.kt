@@ -231,15 +231,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         bundle.getInt("ev_width"))
                 if(frag is CameraFragment) frag.insertCamera(c)
                 if (c.type == 1) {
-                    val l = LensSpec(
-                            -1,
-                            "",
-                            c.id,
-                            bundle.getString("manufacturer")!!,
-                            bundle.getString("fixedlens_name")!!,
-                            bundle.getString("fixedlens_focal_length")!!,
-                            bundle.getString("fixedlens_f_steps")!!
-                    )
+                    val l = bundle.getParcelable<LensSpec>("fixed_lens")
+                    l!!.body = c.id
                     val dao = TrisquelDao(this)
                     dao.connection()
                     val id = dao.addLens(l)
@@ -269,16 +262,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 if (c.type == 1) {
                     val dao = TrisquelDao(this)
                     dao.connection()
+                    val l = bundle.getParcelable<LensSpec>("fixed_lens")
                     val lensid = dao.getFixedLensIdByBody(c.id)
-                    val l = LensSpec(
-                            lensid,
-                            "",
-                            c.id,
-                            bundle.getString("manufacturer")!!,
-                            bundle.getString("fixedlens_name")!!,
-                            bundle.getString("fixedlens_focal_length")!!,
-                            bundle.getString("fixedlens_f_steps")!!
-                    )
+                    l.id = lensid
                     dao.updateLens(l)
                     dao.close()
                 }

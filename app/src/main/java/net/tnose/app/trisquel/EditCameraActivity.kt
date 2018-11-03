@@ -23,7 +23,7 @@ import java.util.*
 import java.util.regex.Pattern
 
 class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
-    private var id: Int = 0
+    private var id: Int = -1
     private var type: Int = 0
     private var created: String = ""
     private var formatAdapter: ArrayAdapter<CharSequence>? = null
@@ -101,9 +101,11 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             data.putExtra("ev_grain_size", spinner_ev_grain_size!!.selectedItemPosition + 1)
             data.putExtra("ev_width", spinner_ev_width!!.selectedItemPosition + 1)
             if (type == 1) {
-                data.putExtra("fixedlens_name", edit_lens_name_flc!!.text.toString())
-                data.putExtra("fixedlens_focal_length", edit_focal_length_flc!!.text.toString())
-                data.putExtra("fixedlens_f_steps", fsAdapter!!.fStepsString)
+                val l = LensSpec(-1, "", id, edit_manufacturer!!.text.toString(),
+                        edit_lens_name_flc!!.text.toString(),
+                        edit_focal_length_flc!!.text.toString(),
+                        fsAdapter!!.fStepsString)
+                data.putExtra("fixed_lens", l)
             }
             return data
         }
