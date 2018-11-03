@@ -1,12 +1,14 @@
 package net.tnose.app.trisquel
 
+import android.os.Parcel
+import android.os.Parcelable
 import java.util.*
 
 /**
  * Created by user on 2018/01/13.
  */
 
-class CameraSpec {
+class CameraSpec: Parcelable {
     var id: Int = 0
     var type: Int = 0
     var created: Date
@@ -84,5 +86,57 @@ class CameraSpec {
 
     override fun toString(): String {
         return "$manufacturer $modelName"
+    }
+
+    override fun describeContents(): Int {
+        return 0
+    }
+
+    override fun writeToParcel(out: Parcel, flags: Int) {
+        out.writeInt(id)
+        out.writeInt(type)
+        out.writeString(Util.dateToStringUTC(created))
+        out.writeString(Util.dateToStringUTC(lastModified))
+        out.writeString(mount)
+        out.writeString(manufacturer)
+        out.writeString(modelName)
+        out.writeInt(format)
+        out.writeInt(shutterSpeedGrainSize)
+        out.writeDouble(fastestShutterSpeed ?: 0.0)
+        out.writeDouble(slowestShutterSpeed ?: 0.0)
+        out.writeInt(if(bulbAvailable) 1 else 0)
+        out.writeDoubleArray(shutterSpeedSteps.toDoubleArray())
+        out.writeInt(evGrainSize)
+        out.writeInt(evWidth)
+    }
+
+    constructor(inp: Parcel){
+        id = inp.readInt()
+        type = inp.readInt()
+        created = Util.stringToDateUTC(inp.readString() ?: "")
+        lastModified = Util.stringToDateUTC(inp.readString() ?: "")
+        mount = inp.readString() ?: ""
+        manufacturer = inp.readString() ?: ""
+        modelName = inp.readString() ?: ""
+        format = inp.readInt()
+        shutterSpeedGrainSize = inp.readInt()
+        fastestShutterSpeed = inp.readDouble()
+        slowestShutterSpeed = inp.readDouble()
+        bulbAvailable = inp.readInt() > 0
+        shutterSpeedSteps = inp.createDoubleArray()!!.toTypedArray()
+        evGrainSize = inp.readInt()
+        evWidth = inp.readInt()
+    }
+
+    companion object {
+        @JvmField val CREATOR: Parcelable.Creator<CameraSpec> = object : Parcelable.Creator<CameraSpec> {
+            override fun createFromParcel(inp: Parcel): CameraSpec {
+                return CameraSpec(inp)
+            }
+
+            override fun newArray(size: Int): Array<CameraSpec?> {
+                return arrayOfNulls<CameraSpec?>(size)
+            }
+        }
     }
 }

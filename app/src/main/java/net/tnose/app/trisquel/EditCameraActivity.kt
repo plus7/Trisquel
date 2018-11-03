@@ -87,19 +87,21 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
     val data: Intent
         get() {
             val data = Intent()
-            data.putExtra("id", this.id)
-            data.putExtra("type", this.type)
-            data.putExtra("created", this.created)
-            data.putExtra("mount", edit_mount!!.text.toString())
-            data.putExtra("manufacturer", edit_manufacturer!!.text.toString())
-            data.putExtra("model_name", edit_model!!.text.toString())
-            data.putExtra("format", spinner_format!!.position)
-            data.putExtra("ss_grain_size", ssGrainSize)
-            data.putExtra("fastest_ss", Util.stringToDoubleShutterSpeed(spinner_fastest_ss!!.text.toString()))
-            data.putExtra("slowest_ss", Util.stringToDoubleShutterSpeed(spinner_slowest_ss!!.text.toString()))
-            data.putExtra("bulb_available", if (check_bulb_available!!.isChecked) 1 else 0)
-            data.putExtra("ev_grain_size", spinner_ev_grain_size!!.selectedItemPosition + 1)
-            data.putExtra("ev_width", spinner_ev_width!!.selectedItemPosition + 1)
+            val c = CameraSpec(id, type,
+                    if(created.isNotEmpty()) created else Util.dateToStringUTC(Date()),
+                    Util.dateToStringUTC(Date()),
+                    edit_mount!!.text.toString(),
+                    edit_manufacturer!!.text.toString(),
+                    edit_model!!.text.toString(),
+                    spinner_format!!.position,
+                    ssGrainSize,
+                    Util.stringToDoubleShutterSpeed(spinner_fastest_ss!!.text.toString()),
+                    Util.stringToDoubleShutterSpeed(spinner_slowest_ss!!.text.toString()),
+                    check_bulb_available!!.isChecked,
+                    "",
+                    spinner_ev_grain_size!!.selectedItemPosition + 1,
+                    spinner_ev_width!!.selectedItemPosition + 1)
+            data.putExtra("cameraspec", c)
             if (type == 1) {
                 val l = LensSpec(-1, "", id, edit_manufacturer!!.text.toString(),
                         edit_lens_name_flc!!.text.toString(),
@@ -203,6 +205,7 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             spinner_ev_grain_size!!.setSelection(savedInstanceState.getInt("ev_grain_size") - 1, false)
             spinner_ev_width!!.setSelection(savedInstanceState.getInt("ev_width") - 1, false)
         }else{ //未入力開きたて
+            this.created = ""
         }
 
         if (type == 1) gridview!!.adapter = fsAdapter

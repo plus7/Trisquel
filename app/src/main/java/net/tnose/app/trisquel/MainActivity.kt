@@ -215,21 +215,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         when (requestCode) {
             REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val c = CameraSpec(
-                        -1,
-                        bundle!!.getInt("type"),
-                        bundle.getString("mount")!!,
-                        bundle.getString("manufacturer")!!,
-                        bundle.getString("model_name")!!,
-                        bundle.getInt("format"),
-                        bundle.getInt("ss_grain_size"),
-                        bundle.getDouble("fastest_ss"),
-                        bundle.getDouble("slowest_ss"),
-                        bundle.getInt("bulb_available") != 0,
-                        "",
-                        bundle.getInt("ev_grain_size"),
-                        bundle.getInt("ev_width"))
-                if(frag is CameraFragment) frag.insertCamera(c)
+                val c = bundle!!.getParcelable<CameraSpec>("cameraspec")
+                if(frag is CameraFragment && c != null) frag.insertCamera(c)
                 if (c.type == 1) {
                     val l = bundle.getParcelable<LensSpec>("fixed_lens")
                     l!!.body = c.id
@@ -242,23 +229,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             REQCODE_EDIT_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val c = CameraSpec(
-                        bundle!!.getInt("id"),
-                        bundle.getInt("type"),
-                        bundle.getString("created")!!,
-                        Util.dateToStringUTC(Date()),
-                        bundle.getString("mount")!!,
-                        bundle.getString("manufacturer")!!,
-                        bundle.getString("model_name")!!,
-                        bundle.getInt("format"),
-                        bundle.getInt("ss_grain_size"),
-                        bundle.getDouble("fastest_ss"),
-                        bundle.getDouble("slowest_ss"),
-                        bundle.getInt("bulb_available") != 0,
-                        "",
-                        bundle.getInt("ev_grain_size"),
-                        bundle.getInt("ev_width"))
-                if(frag is CameraFragment) frag.updateCamera(c)
+                val c = bundle!!.getParcelable<CameraSpec>("cameraspec")
+                if(frag is CameraFragment && c != null) frag.updateCamera(c)
                 if (c.type == 1) {
                     val dao = TrisquelDao(this)
                     dao.connection()
