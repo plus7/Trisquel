@@ -3,6 +3,7 @@ package net.tnose.app.trisquel
 import android.Manifest
 import android.app.Activity
 import android.content.*
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Bundle
@@ -620,6 +621,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 .countable(true)
                 .maxSelectable(40)
                 .thumbnailScale(0.85f)
+                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
                 .imageEngine(Glide4Engine())
                 .forResult(REQCODE_IMAGES)
     }
@@ -987,7 +989,11 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             REQCODE_IMAGES -> if (resultCode == RESULT_OK) {
                 val paths = Matisse.obtainPathResult(data)
                 for(p in paths){
-                    appendSupplementalImage(p)
+                    if(p != null){
+                        appendSupplementalImage(p)
+                    }else{
+                        Toast.makeText(this, "Failed to obtain an image. The result was null.", Toast.LENGTH_LONG).show()
+                    }
                 }
                 if(isResumed) isDirty = true
             }

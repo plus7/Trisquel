@@ -3,6 +3,7 @@ package net.tnose.app.trisquel
 import android.Manifest
 import android.app.Activity
 import android.content.*
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.os.Bundle
@@ -344,6 +345,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 .countable(true)
                 .maxSelectable(1)
                 .thumbnailScale(0.85f)
+                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
                 .imageEngine(Glide4Engine())
                 .forResult(REQCODE_SELECT_THUMBNAIL)
     }
