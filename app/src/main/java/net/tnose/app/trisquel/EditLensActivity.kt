@@ -54,12 +54,14 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     val data: Intent
         get() {
             val data = Intent()
-            val l = LensSpec(id, created, Util.dateToStringUTC(Date()),
-                     edit_mount!!.text.toString(), 0,
-                     edit_manufacturer!!.text.toString(),
-                     edit_model!!.text.toString(),
-                     edit_focal_length!!.text.toString(),
-                     fStepsString)
+            val l = LensSpec(id,
+                    if(created.isNotEmpty()) created else Util.dateToStringUTC(Date()),
+                    Util.dateToStringUTC(Date()),
+                    edit_mount!!.text.toString(), 0,
+                    edit_manufacturer!!.text.toString(),
+                    edit_model!!.text.toString(),
+                    edit_focal_length!!.text.toString(),
+                    fStepsString)
             data.putExtra("lensspec", l)
             return data
         }
