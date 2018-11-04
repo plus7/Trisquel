@@ -14,7 +14,6 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_edit_film_roll.*
 import org.json.JSONArray
 import org.json.JSONException
@@ -23,6 +22,8 @@ import java.util.*
 import java.util.regex.Pattern
 
 class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
+    internal val REQCODE_ASK_CREATE_CAMERA = 103
+    internal val REQCODE_ADD_CAMERA = 104
     private var id: Int = 0
     private var created: String? = null
     private var cameralist: ArrayList<CameraSpec>? = null
@@ -101,6 +102,17 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             oldListener.onItemClick(parent, view, position, id)
         }
 
+        spinner_camera.setOnClickListener {
+            if(spinner_camera.adapter.count == 0){
+                val fragment = YesNoDialogFragment.Builder()
+                        .build(REQCODE_ASK_CREATE_CAMERA)
+                fragment.arguments?.putString("message", getString(R.string.msg_ask_create_camera))
+                fragment.arguments?.putString("positive", getString(android.R.string.yes))
+                fragment.arguments?.putString("negative", getString(android.R.string.no))
+                fragment.showOn(this, "dialog")
+            }
+        }
+
         edit_manufacturer!!.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
@@ -169,11 +181,8 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
         val dao = TrisquelDao(applicationContext)
         dao.connection()
-        cameralist = dao.allCameras
 
-        cadapter = CameraAdapter(this, android.R.layout.simple_spinner_item, cameralist!!)
-        cadapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner_camera!!.setAdapter<CameraAdapter>(cadapter)
+        updateCameraList(dao)
 
         val manufacturer_adapter = getSuggestListPref("film_manufacturer",
                 R.array.film_manufacturer,
@@ -198,12 +207,6 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         loadData(data, dao, savedInstanceState)
         dao.close()
 
-        if (cameralist!!.size == 0) {
-            Toast.makeText(this, getString(R.string.error_please_reg_cam), Toast.LENGTH_LONG).show()
-            setResult(Activity.RESULT_CANCELED, Intent())
-            finish()
-        }
-
         val brand_adapter = getSuggestListSubPref("film_brand",
                 edit_manufacturer!!.text.toString(),
                 android.R.layout.simple_dropdown_item_1line)
@@ -215,6 +218,21 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             isDirty = savedInstanceState.getBoolean("isDirty")
         } else {
             isDirty = false
+        }
+    }
+
+    protected fun updateCameraList(dao: TrisquelDao) {
+        cameralist = dao.allCameras
+        cadapter = CameraAdapter(this, android.R.layout.simple_spinner_item, cameralist!!)
+        cadapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner_camera!!.setAdapter<CameraAdapter>(cadapter)
+        if(cameralist!!.size == 0){
+            spinner_camera.error = getString(R.string.error_nocamera)
+        }else{
+            spinner_camera.error = null
+            if(cameralist!!.size == 1){
+                spinner_camera.position = 0
+            }
         }
     }
 
@@ -360,11 +378,35 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                 setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
+            REQCODE_ASK_CREATE_CAMERA -> if(resultCode == DialogInterface.BUTTON_POSITIVE){
+                intent = Intent(application, EditCameraActivity::class.java)
+                startActivityForResult(intent, REQCODE_ADD_CAMERA)
+            }
         }
     }
 
     override fun onDialogCancelled(requestCode: Int) {
         // onDialogResult(requestCode, DialogInterface.BUTTON_NEUTRAL, null);
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        when (requestCode) {
+            REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
+                if(data != null) {
+                    val bundle = data.extras
+                    val c = bundle!!.getParcelable<CameraSpec>("cameraspec")
+                    val dao = TrisquelDao(this)
+                    dao.connection()
+                    c.id = dao.addCamera(c).toInt()
+                    updateCameraList(dao)
+                    dao.close()
+                    spinner_camera.clearFocus()
+                    invalidateOptionsMenu()
+                }
+            }
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

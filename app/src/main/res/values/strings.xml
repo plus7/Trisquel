@@ -111,6 +111,7 @@
     <string name="error_flfactor_toobig">Input less than 1.0</string>
     <string name="error_ss_inconsistent">Inconsistent values</string>
     <string name="error_nolens">"%s" mount lens is not registered</string>
+    <string name="error_nocamera">Any cameras are not registered</string>
     <string name="no_data_available">no data available</string>
     <string name="warning_lens_not_registered">No lenses registered</string>
     <string name="warning_cam_not_registered">No cameras registered</string>
@@ -126,7 +127,8 @@
     <string name="msg_continue_editing_or_discard_data">Continue editing or discard unsaved changes?</string>
     <string name="msg_select_mount_adapters">Select adapters for %s mount</string>
     <string name="msg_no_printer_support">This device does not support printing</string>
-    <string name="msg_ask_create_lens">No lenses available now. Do you create one?</string>
+    <string name="msg_ask_create_lens">No lenses available. Do you create one now?</string>
+    <string name="msg_ask_create_camera">No cameras available. Do you create one now?</string>
     <string name="empty_name">(empty)</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>

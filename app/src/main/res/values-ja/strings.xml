@@ -110,6 +110,7 @@
     <string name="error_flfactor_toobig">1.0より小さい数字を入れてください</string>
     <string name="error_ss_inconsistent">矛盾した値です</string>
     <string name="error_nolens">%sマウントのレンズが登録されていません</string>
+    <string name="error_nocamera">カメラが登録されていません</string>
     <string name="warning_lens_not_registered">レンズが登録されていません</string>
     <string name="warning_cam_not_registered">カメラが登録されていません</string>
     <string name="warning_filmroll_not_registered">フィルムが登録されていません</string>
@@ -125,6 +126,7 @@
     <string name="msg_select_mount_adapters">%sマウント用マウントアダプタを選んでください</string>
     <string name="msg_no_printer_support">この端末では印刷をサポートしていません</string>
     <string name="msg_ask_create_lens">使用可能なレンズがありません。作成しますか？</string>
+    <string name="msg_ask_create_camera">使用可能なカメラがありません。作成しますか？</string>
     <string name="empty_name">(名前なし)</string>
     <!-- Strings related to Settings -->
 
