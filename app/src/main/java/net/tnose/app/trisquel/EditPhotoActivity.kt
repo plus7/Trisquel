@@ -41,6 +41,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_IMAGES = 106
     internal val RETCODE_SDCARD_PERM_LOADIMG = 107
     internal val RETCODE_SDCARD_PERM_IMGPICKER = 108
+    internal val REQCODE_ASK_CREATE_LENS = 109
+    internal val REQCODE_ADD_LENS = 110
     private var evGrainSize = 3
     private var evWidth = 3
     private var focalLengthRange = Pair(43.0, 43.0) // FA limited 43mm こそ真の標準レンズ！！！
@@ -330,6 +332,18 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }*/
 
     protected fun setEventListeners() {
+
+        spinner_lens.setOnClickListener {
+            if(spinner_lens.adapter.count == 0){
+                val fragment = YesNoDialogFragment.Builder()
+                        .build(REQCODE_ASK_CREATE_LENS)
+                fragment.arguments?.putString("message", getString(R.string.msg_ask_create_lens))
+                fragment.arguments?.putString("positive", getString(android.R.string.yes))
+                fragment.arguments?.putString("negative", getString(android.R.string.no))
+                fragment.showOn(this, "dialog")
+            }
+        }
+
         val oldListener = spinner_lens.onItemClickListener // これやらないとgetPositionがおかしくなる
         spinner_lens.onItemClickListener = AdapterView.OnItemClickListener { adapterView, view, i, l ->
             if(lens?.id != lenslist[i].id){
@@ -798,6 +812,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     dao.close()
                 }
             }
+            REQCODE_ASK_CREATE_LENS -> if(resultCode == DialogInterface.BUTTON_POSITIVE){
+                intent = Intent(application, EditLensActivity::class.java)
+                startActivityForResult(intent, REQCODE_ADD_LENS)
+            }
         }
     }
 
@@ -998,6 +1016,21 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     }
                 }
                 if(isResumed) isDirty = true
+            }
+            REQCODE_ADD_LENS -> if (resultCode == Activity.RESULT_OK) {
+                if(data != null) {
+                    val bundle = data.extras
+                    val l = bundle!!.getParcelable<LensSpec>("lensspec")
+                    val dao = TrisquelDao(this)
+                    dao.connection()
+                    l.id = dao.addLens(l).toInt()
+                    updateLensList(l, dao)
+                    dao.close()
+                    spinner_lens.clearFocus()
+                    refreshApertureAdapter(l)
+                    refreshFocalLength(l)
+                    invalidateOptionsMenu()
+                }
             }
         }
     }

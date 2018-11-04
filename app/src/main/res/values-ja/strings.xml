@@ -124,6 +124,7 @@
     <string name="msg_continue_editing_or_discard_data">変更されたデータがあります。編集を継続しますか？</string>
     <string name="msg_select_mount_adapters">%sマウント用マウントアダプタを選んでください</string>
     <string name="msg_no_printer_support">この端末では印刷をサポートしていません</string>
+    <string name="msg_ask_create_lens">使用可能なレンズがありません。作成しますか？</string>
     <string name="empty_name">(名前なし)</string>
     <!-- Strings related to Settings -->
 

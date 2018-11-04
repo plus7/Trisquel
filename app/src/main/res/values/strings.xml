@@ -126,6 +126,7 @@
     <string name="msg_continue_editing_or_discard_data">Continue editing or discard unsaved changes?</string>
     <string name="msg_select_mount_adapters">Select adapters for %s mount</string>
     <string name="msg_no_printer_support">This device does not support printing</string>
+    <string name="msg_ask_create_lens">No lenses available now. Do you create one?</string>
     <string name="empty_name">(empty)</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
