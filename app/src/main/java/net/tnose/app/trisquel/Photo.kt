@@ -11,9 +11,11 @@ import java.util.*
 
 class Photo(var id: Int, var filmrollid: Int, var frameIndex: Int, var date: String, var cameraid: Int, var lensid: Int,
             var focalLength: Double, var aperture: Double, var shutterSpeed: Double, var expCompensation: Double,
-            var ttlLightMeter: Double, var location: String, var latitude: Double, var longitude: Double, var memo: String, accessories: String, supplementalImages: String) {
+            var ttlLightMeter: Double, var location: String, var latitude: Double, var longitude: Double, var memo: String,
+            accessories: String, supplementalImages: String, favorite: Boolean) {
     var accessories: ArrayList<Int>
     var supplementalImages: ArrayList<String>
+    var favorite: Boolean
 
     val isValidLatLng: Boolean
         get() = latitude <= 90 && latitude >= -90 && longitude <= 180 && longitude >= -180
@@ -44,5 +46,7 @@ class Photo(var id: Int, var filmrollid: Int, var frameIndex: Int, var date: Str
             }
         } catch (e: JSONException) {
         }
+
+        this.favorite = favorite
     }//内部的にはゼロオリジンで管理する
 }

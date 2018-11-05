@@ -63,13 +63,18 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         if(p.shutterSpeed != 0.0) params.add("%ssec".format(Util.doubleToStringShutterSpeed(p.shutterSpeed)))
         holder.mParamsView.text = params.joinToString(" ")
         if(p.memo.isEmpty()){
-            holder.mContentView.visibility = View.GONE
+            //holder.mContentView.visibility = View.GONE
         }else {
             holder.mContentView.text = p.memo
             holder.mContentView.visibility = View.VISIBLE
         }
         setThumbnail(p.supplementalImages, holder.mThumbnailView)
         //holder.mContentView.setText("f/" + p.aperture + " " + Util.doubleToStringShutterSpeed(p.shutterSpeed) + "sec" /*+ l.modelName*/);
+
+        if(p.favorite)
+            holder.mFavorite.setImageResource(R.drawable.ic_fav)
+        else
+            holder.mFavorite.setImageResource(R.drawable.ic_fav_border)
 
         holder.mView.setOnClickListener {
             mListener?.onListFragmentInteraction(holder.mItem!!, false)
@@ -93,6 +98,10 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
             Log.d("PhotoRecyclerView", "mThumbnailView.OnClick")
             mListener?.onThumbnailClick(holder.mItem!!)
         }
+
+        holder.mFavorite.setOnClickListener {
+            mListener?.onFavoriteClick(holder.mItem!!)
+        }
     }
 
     override fun getItemCount(): Int {
@@ -107,6 +116,7 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         val mContentView: TextView
         val mThumbnailView: ImageView
         var mItem: Photo? = null
+        val mFavorite: ImageView
 
         init {
             mIdView = mView.findViewById(R.id.id)
@@ -115,6 +125,7 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
             mParamsView = mView.findViewById(R.id.params)
             mContentView = mView.findViewById(R.id.content)
             mThumbnailView = mView.findViewById(R.id.thumbnail)
+            mFavorite = mView.findViewById(R.id.favorite)
         }
 
         override fun toString(): String {

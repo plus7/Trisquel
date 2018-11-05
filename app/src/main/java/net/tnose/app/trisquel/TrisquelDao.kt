@@ -474,9 +474,10 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
                     longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
                 }
                 val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
+                val favorite = cursor.getInt(cursor.getColumnIndex("favorite"))
                 photos.add(Photo(id, filmRollId, index, date, camera, lens, focalLength,
                         aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo,
-                        accessoriesStr, supplementalImgStr))
+                        accessoriesStr, supplementalImgStr, favorite != 0))
             }
         } finally {
             cursor?.close()
@@ -505,6 +506,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("memo", p.memo)
         cval.put("accessories", p.accessoriesStr)
         cval.put("suppimgs", p.supplementalImagesStr)
+        cval.put("favorite", if(p.favorite) 1 else 0)
         return mDb!!.insert("photo", null, cval)
     }
 
@@ -528,6 +530,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("memo", p.memo)
         cval.put("accessories", p.accessoriesStr)
         cval.put("suppimgs", p.supplementalImagesStr)
+        cval.put("favorite", if(p.favorite) 1 else 0)
         return mDb!!.update("photo",
                 cval,
                 "_id = ?",
@@ -573,9 +576,10 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
                     longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
                 }
                 val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
+                val favorite = cursor.getInt(cursor.getColumnIndex("favorite"))
                 p = Photo(id, filmroll, index, date, camera, lens, focalLength,
                         aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo, accessoriesStr,
-                        supplementalImgStr)
+                        supplementalImgStr, favorite != 0)
             }
         } finally {
             cursor?.close()

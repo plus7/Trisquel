@@ -67,6 +67,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var selectedAccessories: ArrayList<Int> = ArrayList()
     private var supplementalImages: ArrayList<String> = ArrayList()
     private var supplementalImagesToLoad: ArrayList<String> = ArrayList()
+    private var favorite = false
     private var isResumed: Boolean = false
     private var isDirty: Boolean = false
 
@@ -88,6 +89,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             data.putExtra("longitude", longitude)
             data.putExtra("memo", edit_memo.text.toString())
             data.putExtra("suppimgs", JSONArray(supplementalImages).toString())
+            data.putExtra("favorite", favorite)
 
             val sb = StringBuilder("/")
             for (accessory in selectedAccessories) {
@@ -241,6 +243,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 label_focal_length.text = photo!!.focalLength.toString() + "mm"
             }
 
+            favorite = photo!!.favorite
             checkPermAndAppendSupplementalImages(photo!!.supplementalImages)
 
         }else if(savedInstanceState != null){ //復帰データあり
@@ -268,6 +271,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 seek_focal_length.progress = (focalLength - lens!!.focalLengthRange.first).toInt()
                 label_focal_length.text = focalLength.toString() + "mm"
             }
+
+            favorite = savedInstanceState.getBoolean("favorite")
 
             checkPermAndAppendSupplementalImages(savedInstanceState.getStringArrayList("suppimgs"))
         }else{ //未入力開きたて
@@ -713,6 +718,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         outState.putString("location", edit_location.text.toString())
         outState.putString("memo", edit_memo.text.toString())
         outState.putStringArrayList("suppimgs", supplementalImages)
+        outState.putBoolean("favorite", favorite)
         super.onSaveInstanceState(outState)
     }
 

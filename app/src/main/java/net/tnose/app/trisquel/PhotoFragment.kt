@@ -215,6 +215,7 @@ class PhotoFragment : Fragment() {
         fun onThumbnailClick(item: Photo)
         fun onIndexClick(item: Photo)
         fun onIndexLongClick(item: Photo)
+        fun onFavoriteClick(item: Photo)
     }
 
     companion object {

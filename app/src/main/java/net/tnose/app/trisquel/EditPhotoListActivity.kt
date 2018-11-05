@@ -225,7 +225,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                         bundle.getDouble("longitude"),
                         bundle.getString("memo")!!,
                         bundle.getString("accessories")!!,
-                        bundle.getString("suppimgs")!!)
+                        bundle.getString("suppimgs")!!,
+                        bundle.getBoolean("favorite"))
                 photo_fragment!!.insertPhoto(p)
             }
             REQCODE_EDIT_PHOTO -> if (resultCode == Activity.RESULT_OK) {
@@ -248,7 +249,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                         bundle.getDouble("longitude"),
                         bundle.getString("memo")!!,
                         bundle.getString("accessories")!!,
-                        bundle.getString("suppimgs")!!)
+                        bundle.getString("suppimgs")!!,
+                        bundle.getBoolean("favorite"))
                 photo_fragment!!.updatePhoto(p)
             }
             REQCODE_EDIT_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
@@ -373,6 +375,11 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
             startActivity(intent)
         }
+    }
+
+    override fun onFavoriteClick(item: Photo) {
+        item.favorite = !item.favorite
+        photo_fragment!!.updatePhoto(item)
     }
 
     override fun onIndexClick(item: Photo) {

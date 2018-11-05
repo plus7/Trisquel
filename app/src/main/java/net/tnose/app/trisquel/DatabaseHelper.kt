@@ -78,7 +78,8 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                         + "longitude real,"
                         + "memo text not null,"
                         + "accessories text not null,"
-                        + "suppimgs text not null"
+                        + "suppimgs text not null,"
+                        + "favorite integer"
                         + ");"
         )
 
@@ -182,6 +183,10 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
         if (oldVersion <= 12) {
             db.execSQL("alter table photo add column suppimgs text not null default '' ;")
         }
+
+        if (oldVersion <= 13) {
+            db.execSQL("alter table photo add column favorite integer default 0 ;")
+        }
     }
 
     fun open(): SQLiteDatabase {
@@ -191,7 +196,7 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
     companion object {
         internal val DATABASE_NAME = "trisquel.db"
 
-        internal val DATABASE_VERSION = 13
+        internal val DATABASE_VERSION = 14
     }
 }
 
