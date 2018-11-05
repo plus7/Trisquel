@@ -146,6 +146,21 @@ class PhotoFragment : Fragment() {
             dao.close()
     }
 
+    fun toggleFavPhoto(p: Photo){
+        var curpos = -1
+        for (i in mPhotos.indices) {
+            if (mPhotos[i].id == p.id) {
+                curpos = i
+                break
+            }
+        }
+        val dao = TrisquelDao(this.context)
+        dao.connection()
+        dao.updatePhoto(p)
+        dao.close()
+        photoRecyclerViewAdapter!!.notifyItemChanged(curpos, p.favorite)
+    }
+
     fun updatePhoto(p: Photo) {
         for (i in mPhotos.indices) {
             if (mPhotos[i].id == p.id) {

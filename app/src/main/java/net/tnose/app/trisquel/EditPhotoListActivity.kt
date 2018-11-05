@@ -379,7 +379,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
 
     override fun onFavoriteClick(item: Photo) {
         item.favorite = !item.favorite
-        photo_fragment!!.updatePhoto(item)
+        photo_fragment!!.toggleFavPhoto(item)
     }
 
     override fun onIndexClick(item: Photo) {

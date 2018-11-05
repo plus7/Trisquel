@@ -439,6 +439,52 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         return f
     }
 
+    fun getAllFavedPhotos(): ArrayList<Photo> {
+        val photos = ArrayList<Photo>()
+
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.rawQuery("select * from photo where favorite = 1 order by date desc;", null)
+            while (cursor!!.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndex("_id"))
+                val filmroll = cursor.getInt(cursor.getColumnIndex("filmroll"))
+                val index = cursor.getInt(cursor.getColumnIndex("_index"))
+                val date = cursor.getString(cursor.getColumnIndex("date"))
+                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
+                val lens = cursor.getInt(cursor.getColumnIndex("lens"))
+                val focalLength = cursor.getDouble(cursor.getColumnIndex("focal_length"))
+                val aperture = cursor.getDouble(cursor.getColumnIndex("aperture"))
+                val shutterSpeed = cursor.getDouble(cursor.getColumnIndex("shutter_speed"))
+                val ev = cursor.getDouble(cursor.getColumnIndex("exp_compensation"))
+                val ttl = cursor.getDouble(cursor.getColumnIndex("ttl_light_meter"))
+                val location = cursor.getString(cursor.getColumnIndex("location"))
+                val memo = cursor.getString(cursor.getColumnIndex("memo"))
+                val accessoriesStr = cursor.getString(cursor.getColumnIndex("accessories"))
+                val latitude: Double
+                val longitude: Double
+                if (cursor.getType(cursor.getColumnIndex("latitude")) == FIELD_TYPE_NULL) {
+                    latitude = 999.0
+                } else {
+                    latitude = cursor.getDouble(cursor.getColumnIndex("latitude"))
+                }
+                if (cursor.getType(cursor.getColumnIndex("longitude")) == FIELD_TYPE_NULL) {
+                    longitude = 999.0
+                } else {
+                    longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
+                }
+                val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
+                val favorite = cursor.getInt(cursor.getColumnIndex("favorite"))
+                photos.add(Photo(id, filmroll, index, date, camera, lens, focalLength,
+                        aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo,
+                        accessoriesStr, supplementalImgStr, favorite != 0))
+            }
+        } finally {
+            cursor?.close()
+        }
+
+        return photos
+    }
+
     fun getPhotosByFilmRollId(filmRollId: Int): ArrayList<Photo> {
 
         val photos = ArrayList<Photo>()

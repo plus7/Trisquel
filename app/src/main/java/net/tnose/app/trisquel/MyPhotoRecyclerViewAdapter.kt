@@ -104,6 +104,19 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         }
     }
 
+    override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any>) {
+        if (payloads.isEmpty()) {
+            this.onBindViewHolder(holder, position)
+        } else {
+            // 部分的に更新する
+            if(payloads.isNotEmpty()) {
+                val flag = payloads[0]
+                if(flag is Boolean)
+                    holder.toggleFav(flag)
+            }
+        }
+    }
+
     override fun getItemCount(): Int {
         return mValues.size
     }
@@ -126,6 +139,13 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
             mContentView = mView.findViewById(R.id.content)
             mThumbnailView = mView.findViewById(R.id.thumbnail)
             mFavorite = mView.findViewById(R.id.favorite)
+        }
+
+        fun toggleFav(fav: Boolean){
+            if(fav)
+                mFavorite.setImageResource(R.drawable.ic_fav)
+            else
+                mFavorite.setImageResource(R.drawable.ic_fav_border)
         }
 
         override fun toString(): String {
