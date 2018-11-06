@@ -2,43 +2,34 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:showIn="navigation_view">
-
-    <group android:checkableBehavior="single">
+<!--android:checkableBehavior="single"-->
+    <group>
         <item
             android:id="@+id/nav_filmrolls"
             android:icon="@drawable/ic_filmroll_vector"
             android:title="@string/title_activity_filmroll_list" />
         <item
-            android:id="@+id/nav_camera"
-            android:icon="@drawable/ic_menu_camera"
-            android:title="@string/title_activity_cam_list" />
-        <item
-            android:id="@+id/nav_lens"
-            android:icon="@drawable/ic_lens"
-            android:title="@string/title_activity_lens_list" />
-        <item
-            android:id="@+id/nav_accessory"
-            android:icon="@drawable/ic_extension_black_24dp"
-            android:title="@string/title_activity_accessory_list" />
-    </group>
+            android:id="@+id/nav_favorites"
+            android:icon="@drawable/ic_fav_border_black"
+            android:title="@string/title_activity_favorites" />
 
-    <item
-        android:title="Communicate"
-        android:visible="false">
+        <item
+            android:title="@string/menu_category_gears">
         <menu>
             <item
-                android:id="@+id/nav_manage"
-                android:icon="@drawable/ic_menu_manage"
-                android:title="Tools" />
+                android:id="@+id/nav_camera"
+                android:icon="@drawable/ic_menu_camera"
+                android:title="@string/title_activity_cam_list" />
             <item
-                android:id="@+id/nav_share"
-                android:icon="@drawable/ic_menu_share"
-                android:title="Share" />
+                android:id="@+id/nav_lens"
+                android:icon="@drawable/ic_lens"
+                android:title="@string/title_activity_lens_list" />
             <item
-                android:id="@+id/nav_send"
-                android:icon="@drawable/ic_menu_send"
-                android:title="Send" />
+                android:id="@+id/nav_accessory"
+                android:icon="@drawable/ic_extension_black_24dp"
+                android:title="@string/title_activity_accessory_list" />
         </menu>
-    </item>
+        </item>
+    </group>
 
 </menu>

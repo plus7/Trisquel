@@ -9,6 +9,7 @@
     <string name="title_activity_cam_list">カメラ一覧</string>
     <string name="title_activity_lens_list">レンズ一覧</string>
     <string name="title_activity_filmroll_list">フィルム一覧</string>
+    <string name="title_activity_favorites">お気に入り</string>
     <string name="title_activity_accessory_list">アクセサリ一覧</string>
     <string name="title_activity_reg_cam">カメラを登録</string>
     <string name="title_activity_reg_lens">レンズを登録</string>
@@ -30,6 +31,7 @@
     <string name="menu_save">保存</string>
     <string name="menu_copy_to_clipboard">クリップボードにコピー</string>
     <string name="menu_print">印刷</string>
+    <string name="menu_category_gears">機材</string>
     <string name="action_backup_sqlite">データベースをバックアップ</string>
     <string name="title_backup">データベースをバックアップ</string>
     <string name="description_backup">

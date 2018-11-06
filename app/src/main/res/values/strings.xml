@@ -8,6 +8,7 @@
     <string name="title_activity_cam_list">Camera list</string>
     <string name="title_activity_lens_list">Lens list</string>
     <string name="title_activity_filmroll_list">Film roll list</string>
+    <string name="title_activity_favorites">Favorites</string>
     <string name="title_activity_accessory_list">Accessory list</string>
     <string name="title_activity_reg_cam">Register Camera</string>
     <string name="title_activity_reg_lens">Register Lens</string>
@@ -35,6 +36,7 @@
     <string name="menu_save">Save</string>
     <string name="menu_copy_to_clipboard">Copy to clipboard</string>
     <string name="menu_print">Print</string>
+    <string name="menu_category_gears">Gears</string>
     <string name="action_backup_sqlite">Backup db file</string>
     <string name="title_backup">Backup db file</string>
     <string name="description_backup">

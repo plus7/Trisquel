@@ -29,7 +29,15 @@ import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener, CameraFragment.OnListFragmentInteractionListener, LensFragment.OnListFragmentInteractionListener, FilmRollFragment.OnListFragmentInteractionListener, EmptyFragment.OnFragmentInteractionListener, AccessoryFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {
+class MainActivity : AppCompatActivity(),
+        NavigationView.OnNavigationItemSelectedListener,
+        CameraFragment.OnListFragmentInteractionListener,
+        LensFragment.OnListFragmentInteractionListener,
+        FilmRollFragment.OnListFragmentInteractionListener,
+        EmptyFragment.OnFragmentInteractionListener,
+        AccessoryFragment.OnListFragmentInteractionListener,
+        FavoritePhotoFragment.OnListFragmentInteractionListener,
+        AbstractDialogFragment.Callback {
     companion object {
         const val REQCODE_EDIT_CAMERA = 1
         const val REQCODE_ADD_CAMERA = 2
@@ -84,6 +92,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             3 -> {
                 currentFragment = AccessoryFragment()
                 setTitle(R.string.title_activity_accessory_list)
+            }
+            4 -> {
+                currentFragment = FavoritePhotoFragment()
+                setTitle(R.string.title_activity_favorites)
             }
             else -> {
                 currentFragment = FilmRollFragment()
@@ -166,6 +178,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             is CameraFragment -> 1
             is LensFragment -> 2
             is AccessoryFragment -> 3
+            is FavoritePhotoFragment -> 4
             else -> 0
         })
     }
@@ -361,32 +374,45 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             transaction.replace(R.id.container, currentFragment)
             transaction.commit()
             setTitle(R.string.title_activity_cam_list)
+            //一旦隠さないと設定したリソースが反映されない。
+            //おそらくAndroid側のバグ
+            fab.hide()
             fab.setImageResource(R.drawable.ic_menu_camera_white)
+            fab.show()
         } else if (id == R.id.nav_lens) {
             currentFragment = LensFragment()
             val transaction = supportFragmentManager.beginTransaction()
             transaction.replace(R.id.container, currentFragment)
             transaction.commit()
             setTitle(R.string.title_activity_lens_list)
+            fab.hide()
             fab.setImageResource(R.drawable.ic_lens_white)
+            fab.show()
         } else if (id == R.id.nav_filmrolls) {
             currentFragment = FilmRollFragment()
             val transaction = supportFragmentManager.beginTransaction()
             transaction.replace(R.id.container, currentFragment)
             transaction.commit()
             setTitle(R.string.title_activity_filmroll_list)
+            fab.hide()
             fab.setImageResource(R.drawable.ic_filmroll_vector_white)
+            fab.show()
+        } else if (id == R.id.nav_favorites) {
+            currentFragment = FavoritePhotoFragment()
+            val transaction = supportFragmentManager.beginTransaction()
+            transaction.replace(R.id.container, currentFragment)
+            transaction.commit()
+            setTitle(R.string.title_activity_favorites)
+            fab.hide()
         } else if (id == R.id.nav_accessory) {
             currentFragment = AccessoryFragment()
             val transaction = supportFragmentManager.beginTransaction()
             transaction.replace(R.id.container, currentFragment)
             transaction.commit()
             setTitle(R.string.title_activity_accessory_list)
+            fab.hide()
             fab.setImageResource(R.drawable.ic_extension_white)
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
+            fab.show()
         }
 
         val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
@@ -483,7 +509,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    fun onListFragmentInteraction(item: DummyContent.DummyItem) {
+    override fun onListFragmentInteraction(item: Photo?) {
+
+    }
+
+    fun onListFragmentInteraction(item: DummyContent.DummyItem?) {
 
     }
 

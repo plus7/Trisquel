@@ -10,9 +10,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 
-import net.tnose.app.trisquel.dummy.DummyContent
-import net.tnose.app.trisquel.dummy.DummyContent.DummyItem
-
 /**
  * A fragment representing a list of Items.
  * Activities containing this fragment MUST implement the
@@ -44,7 +41,11 @@ class FavoritePhotoFragment : Fragment() {
                     columnCount <= 1 -> LinearLayoutManager(context)
                     else -> GridLayoutManager(context, columnCount)
                 }
-                adapter = MyFavPhotoRecyclerViewAdapter(DummyContent.ITEMS, listener)
+                val dao = TrisquelDao(this.context)
+                dao.connection()
+                val list = dao.getAllFavedPhotos()
+                dao.close()
+                adapter = MyFavPhotoRecyclerViewAdapter(list, listener)
             }
         }
         return view
@@ -77,7 +78,7 @@ class FavoritePhotoFragment : Fragment() {
      */
     interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
-        fun onListFragmentInteraction(item: DummyItem?)
+        fun onListFragmentInteraction(item: Photo?)
     }
 
     companion object {
