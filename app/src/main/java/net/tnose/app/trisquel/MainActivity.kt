@@ -368,51 +368,53 @@ class MainActivity : AppCompatActivity(),
         val id = item.itemId
 
         val fab = findViewById<FloatingActionButton>(R.id.fab)
-        if (id == R.id.nav_camera) {
-            currentFragment = CameraFragment()
-            val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, currentFragment)
-            transaction.commit()
-            setTitle(R.string.title_activity_cam_list)
-            //一旦隠さないと設定したリソースが反映されない。
-            //おそらくAndroid側のバグ
-            fab.hide()
-            fab.setImageResource(R.drawable.ic_menu_camera_white)
-            fab.show()
-        } else if (id == R.id.nav_lens) {
-            currentFragment = LensFragment()
-            val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, currentFragment)
-            transaction.commit()
-            setTitle(R.string.title_activity_lens_list)
-            fab.hide()
-            fab.setImageResource(R.drawable.ic_lens_white)
-            fab.show()
-        } else if (id == R.id.nav_filmrolls) {
-            currentFragment = FilmRollFragment()
-            val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, currentFragment)
-            transaction.commit()
-            setTitle(R.string.title_activity_filmroll_list)
-            fab.hide()
-            fab.setImageResource(R.drawable.ic_filmroll_vector_white)
-            fab.show()
-        } else if (id == R.id.nav_favorites) {
-            currentFragment = FavoritePhotoFragment()
-            val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, currentFragment)
-            transaction.commit()
-            setTitle(R.string.title_activity_favorites)
-            fab.hide()
-        } else if (id == R.id.nav_accessory) {
-            currentFragment = AccessoryFragment()
-            val transaction = supportFragmentManager.beginTransaction()
-            transaction.replace(R.id.container, currentFragment)
-            transaction.commit()
-            setTitle(R.string.title_activity_accessory_list)
-            fab.hide()
-            fab.setImageResource(R.drawable.ic_extension_white)
-            fab.show()
+
+        var titleRsc: Int = 0
+        var fabRsc: Int = 0
+        when(id) {
+            R.id.nav_camera -> {
+                currentFragment = CameraFragment()
+                titleRsc = R.string.title_activity_cam_list
+                fabRsc = R.drawable.ic_menu_camera_white
+            }
+            R.id.nav_lens -> {
+                currentFragment = LensFragment()
+                titleRsc = R.string.title_activity_lens_list
+                fabRsc = R.drawable.ic_lens_white
+            }
+            R.id.nav_filmrolls -> {
+                currentFragment = FilmRollFragment()
+                titleRsc = R.string.title_activity_filmroll_list
+                fabRsc = R.drawable.ic_filmroll_vector_white
+            }
+            R.id.nav_favorites -> {
+                currentFragment = FavoritePhotoFragment()
+                titleRsc = R.string.title_activity_favorites
+            }
+            R.id.nav_accessory -> {
+                currentFragment = AccessoryFragment()
+                titleRsc = R.string.title_activity_accessory_list
+                fabRsc = R.drawable.ic_extension_white
+            }
+        }
+
+        val transaction = supportFragmentManager.beginTransaction()
+        transaction.replace(R.id.container, currentFragment)
+        transaction.commit()
+        setTitle(titleRsc)
+
+        when(id){
+            0 -> {}
+            R.id.nav_favorites -> {
+                fab.hide()
+            }
+            else -> {
+                //一旦隠さないと設定したリソースが反映されない。
+                //おそらくAndroid側のバグ
+                fab.hide()
+                fab.setImageResource(fabRsc)
+                fab.show()
+            }
         }
 
         val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
