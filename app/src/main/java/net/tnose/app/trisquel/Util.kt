@@ -81,9 +81,14 @@ class Util {
             return focalLength.indexOf("-") >= 0
         }
 
+        private val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS")
+        private var sdf_inited = false
+
         internal fun stringToDateUTC(s: String): Date {
-            val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS")
-            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            if(!sdf_inited){
+                sdf.timeZone = TimeZone.getTimeZone("UTC")
+                sdf_inited = true
+            }
             try {
                 return sdf.parse(s)
             } catch (e: ParseException) {
@@ -93,8 +98,10 @@ class Util {
         }
 
         internal fun dateToStringUTC(d: Date): String {
-            val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS")
-            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            if(!sdf_inited){
+                sdf.timeZone = TimeZone.getTimeZone("UTC")
+                sdf_inited = true
+            }
             return sdf.format(d)
         }
     }

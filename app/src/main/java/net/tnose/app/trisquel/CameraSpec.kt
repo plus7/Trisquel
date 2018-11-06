@@ -12,7 +12,17 @@ class CameraSpec: Parcelable {
     var id: Int = 0
     var type: Int = 0
     var created: Date
+        get() = Util.stringToDateUTC(createdStr)
+        set(value) {
+            createdStr = Util.dateToStringUTC(value)
+        }
+    private var createdStr: String = ""
     var lastModified: Date
+        get() = Util.stringToDateUTC(lastModifiedStr)
+        set(value) {
+            lastModifiedStr = Util.dateToStringUTC(value)
+        }
+    private var lastModifiedStr: String = ""
     var mount: String
     var manufacturer: String
     var modelName: String
@@ -58,8 +68,8 @@ class CameraSpec: Parcelable {
                 bulbAvailable: Boolean, shutterSpeedSteps: String, evGrainSize: Int, evWidth: Int) {
         this.id = id
         this.type = type
-        this.created = Util.stringToDateUTC(created)
-        this.lastModified = Util.stringToDateUTC(lastModified)
+        this.createdStr = created
+        this.lastModifiedStr = lastModified
         this.mount = mount
         this.manufacturer = manufacturer
         this.modelName = modelName

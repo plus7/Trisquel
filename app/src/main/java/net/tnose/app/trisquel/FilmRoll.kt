@@ -12,7 +12,17 @@ class FilmRoll {
     var id: Int = 0
     var name: String
     var created: Date
+        get() = Util.stringToDateUTC(createdStr)
+        set(value) {
+            createdStr = Util.dateToStringUTC(value)
+        }
+    private var createdStr: String = ""
     var lastModified: Date
+        get() = Util.stringToDateUTC(lastModifiedStr)
+        set(value) {
+            lastModifiedStr = Util.dateToStringUTC(value)
+        }
+    private var lastModifiedStr: String = ""
     //public int format;
     var manufacturer: String
     var brand: String
@@ -71,8 +81,8 @@ class FilmRoll {
     constructor(id: Int, name: String, created: String, lastModified: String, camera: CameraSpec, manufacturer: String, brand: String, iso: Int, exposures: Int) {
         this.id = id
         this.name = name
-        this.created = Util.stringToDateUTC(created)
-        this.lastModified = Util.stringToDateUTC(lastModified)
+        this.createdStr = created
+        this.lastModifiedStr = lastModified
         this.camera = camera
         //this.format = camera.format;
         this.manufacturer = manufacturer
@@ -85,8 +95,8 @@ class FilmRoll {
                 manufacturer: String, brand: String, iso: Int, exposures: Int, photos: ArrayList<Photo>) {
         this.id = id
         this.name = name
-        this.created = Util.stringToDateUTC(created)
-        this.lastModified = Util.stringToDateUTC(lastModified)
+        this.createdStr = created
+        this.lastModifiedStr = lastModified
         this.camera = camera
         //this.format = camera.format;
         this.manufacturer = manufacturer

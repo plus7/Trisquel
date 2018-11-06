@@ -1,6 +1,5 @@
 package net.tnose.app.trisquel
 
-import android.util.Log
 import org.json.JSONArray
 import org.json.JSONException
 import java.util.*
@@ -26,15 +25,13 @@ class Photo(var id: Int, var filmrollid: Int, var frameIndex: Int, var date: Str
     val supplementalImagesStr: String // アクセサリと違って検索する要件がないので楽なやり方で行く
         get() = JSONArray(supplementalImages).toString()
 
+    companion object {
+        val splitter = "/".toRegex()
+    }
+
     init {
-        Log.d("new Photo",
-                "id:" + Integer.toString(id) + ", " +
-                        "filmroll:" + Integer.toString(filmrollid) + ", " +
-                        "frameIndex:" + Integer.toString(frameIndex) + ", " +
-                        "date:" + date + ", " +
-                        "lensid:" + Integer.toString(lensid))
         this.accessories = ArrayList()
-        for (idStr in accessories.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
+        for (idStr in accessories.split(splitter).dropLastWhile { it.isEmpty() }.toTypedArray()) {
             if (!idStr.isEmpty()) this.accessories.add(Integer.parseInt(idStr))
         }
 
