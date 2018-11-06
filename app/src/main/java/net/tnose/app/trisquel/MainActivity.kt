@@ -39,6 +39,11 @@ class MainActivity : AppCompatActivity(),
         FavoritePhotoFragment.OnListFragmentInteractionListener,
         AbstractDialogFragment.Callback {
     companion object {
+        const val ID_FILMROLL = 0
+        const val ID_CAMERA = 1
+        const val ID_LENS = 2
+        const val ID_ACCESSORY = 3
+        const val ID_FAVORITES = 4
         const val REQCODE_EDIT_CAMERA = 1
         const val REQCODE_ADD_CAMERA = 2
         const val REQCODE_EDIT_LENS = 3
@@ -75,25 +80,25 @@ class MainActivity : AppCompatActivity(),
         val currentFragmentId = if (savedInstanceState != null) {
             savedInstanceState.getInt("current_fragment")
         } else {
-            0
+            ID_FILMROLL
         }
 
         val f: Fragment
         val transaction = supportFragmentManager.beginTransaction()
         when (currentFragmentId) {
-            1 -> {
+            ID_CAMERA -> {
                 currentFragment = CameraFragment()
                 setTitle(R.string.title_activity_cam_list)
             }
-            2 -> {
+            ID_LENS -> {
                 currentFragment = LensFragment()
                 setTitle(R.string.title_activity_lens_list)
             }
-            3 -> {
+            ID_ACCESSORY -> {
                 currentFragment = AccessoryFragment()
                 setTitle(R.string.title_activity_accessory_list)
             }
-            4 -> {
+            ID_FAVORITES -> {
                 currentFragment = FavoritePhotoFragment()
                 setTitle(R.string.title_activity_favorites)
             }
@@ -175,11 +180,11 @@ class MainActivity : AppCompatActivity(),
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt("current_fragment", when(currentFragment){
-            is CameraFragment -> 1
-            is LensFragment -> 2
-            is AccessoryFragment -> 3
-            is FavoritePhotoFragment -> 4
-            else -> 0
+            is CameraFragment -> ID_CAMERA
+            is LensFragment -> ID_LENS
+            is AccessoryFragment -> ID_ACCESSORY
+            is FavoritePhotoFragment -> ID_FAVORITES
+            else -> ID_FILMROLL
         })
     }
 
@@ -256,13 +261,11 @@ class MainActivity : AppCompatActivity(),
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_ADD_LENS -> if (resultCode == Activity.RESULT_OK) {
-                val bundle = data.extras
-                val l = bundle!!.getParcelable<LensSpec>("lensspec")
+                val l = data.extras!!.getParcelable<LensSpec>("lensspec")
                 if(frag is LensFragment && l != null) frag.insertLens(l)
             }
             REQCODE_EDIT_LENS -> if (resultCode == Activity.RESULT_OK) {
-                val bundle = data.extras
-                val l = bundle!!.getParcelable<LensSpec>("lensspec")
+                val l = data.extras!!.getParcelable<LensSpec>("lensspec")
                 if(frag is LensFragment && l != null) frag.updateLens(l)
             }
             REQCODE_ADD_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
@@ -404,11 +407,10 @@ class MainActivity : AppCompatActivity(),
         setTitle(titleRsc)
 
         when(id){
-            0 -> {}
             R.id.nav_favorites -> {
                 fab.hide()
             }
-            else -> {
+            R.id.nav_camera, R.id.nav_lens, R.id.nav_filmrolls, R.id.nav_accessory -> {
                 //一旦隠さないと設定したリソースが反映されない。
                 //おそらくAndroid側のバグ
                 fab.hide()
