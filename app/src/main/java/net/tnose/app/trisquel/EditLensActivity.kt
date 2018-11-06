@@ -46,10 +46,7 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
 
     private val fStepsString: String
-        get() {
-            Log.d("getFStepsString", fsAdapter!!.fStepsString)
-            return fsAdapter!!.fStepsString
-        }
+        get() = fsAdapter!!.fStepsString
 
     val data: Intent
         get() {

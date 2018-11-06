@@ -7,7 +7,7 @@ import java.util.*
  */
 
 class Accessory {
-    var id: Int = 0
+    var id: Int = -1
     var created: Date
     var last_modified: Date
     var type: Int = 0
