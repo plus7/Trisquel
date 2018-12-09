@@ -66,8 +66,8 @@ class MapsActivity : FragmentActivity(), OnMapReadyCallback {
 
                     if (addresses.size == 1) {
                         val a = addresses[0]
-                        val featureName = Normalizer.normalize(a.featureName, Normalizer.Form.NFKC)
-                        val address = Normalizer.normalize(a.getAddressLine(0), Normalizer.Form.NFKC)
+                        val featureName = Normalizer.normalize(a.featureName?: "", Normalizer.Form.NFKC)
+                        val address = Normalizer.normalize(a.getAddressLine(0)?: "", Normalizer.Form.NFKC)
                         Log.d("getAddressLine", address)
                         if (a.featureName != null) Log.d("getFeatureName", a.featureName)
                         if (a.adminArea != null) Log.d("getAdminArea", a.adminArea)
@@ -76,7 +76,7 @@ class MapsActivity : FragmentActivity(), OnMapReadyCallback {
                         if (a.subLocality != null) Log.d("getSubLocality", a.subLocality)
                         if (a.thoroughfare != null) Log.d("getThoroughfare", a.thoroughfare)
                         Log.d("getMaxAddressLineIndex", Integer.toString(a.maxAddressLineIndex))
-                        if (featureName.matches("^[\\d\\-−－]++$".toRegex())) {
+                        if (featureName.matches("^[\\d\\-−－]++$".toRegex()) || featureName.isEmpty()) {
                             // U+002DとU+2212とU+2015。
                             // このAPI＋Normalizerの組み合わせだと2212が返るみたいだが
                             // 警戒してほかにも来そうな奴らをregexに入れてある
