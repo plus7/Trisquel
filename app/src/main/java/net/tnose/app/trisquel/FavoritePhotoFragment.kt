@@ -4,11 +4,14 @@ import android.content.Context
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.widget.GridLayoutManager
-import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.github.chuross.recyclerviewadapters.CompositeRecyclerAdapter
+import com.github.chuross.recyclerviewadapters.SpanSizeLookupBuilder
+
 
 /**
  * A fragment representing a list of Items.
@@ -18,7 +21,7 @@ import android.view.ViewGroup
 class FavoritePhotoFragment : Fragment() {
 
     // TODO: Customize parameters
-    private var columnCount = 1
+    private var columnCount = 3
 
     private var listener: OnListFragmentInteractionListener? = null
 
@@ -37,15 +40,31 @@ class FavoritePhotoFragment : Fragment() {
         // Set the adapter
         if (view is RecyclerView) {
             with(view) {
-                layoutManager = when {
-                    columnCount <= 1 -> LinearLayoutManager(context)
-                    else -> GridLayoutManager(context, columnCount)
-                }
                 val dao = TrisquelDao(this.context)
                 dao.connection()
                 val list = dao.getAllFavedPhotos()
+
+                val map = list.groupBy { it.filmrollid }
+                val list2 = map.values.sortedByDescending { it[0].date }
+                val compositeAdapter = CompositeRecyclerAdapter()
+
+                val glm = GridLayoutManager(context, columnCount)
+                val spans = SpanSizeLookupBuilder(compositeAdapter)
+
+                for(l in list2) {
+                    Log.d("FavPhotoFrag", "size:"+l.size.toString())
+                    val localAdapter = FavPhotoLocalAdapter(context)
+                    localAdapter.addAll(l.sortedBy { it.frameIndex })
+                    val filmrollName = dao.getFilmRoll(l[0].filmrollid)!!.name
+                    val header = FavPhotoHeader(context, filmrollName)
+                    compositeAdapter.add(header)
+                    spans.register(header, columnCount)
+                    compositeAdapter.add(localAdapter)
+                }
                 dao.close()
-                adapter = MyFavPhotoRecyclerViewAdapter(list, listener)
+                glm.spanSizeLookup = spans.build()
+                layoutManager = glm
+                adapter = compositeAdapter //MyFavPhotoRecyclerViewAdapter(list, listener)
             }
         }
         return view

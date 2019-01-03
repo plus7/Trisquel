@@ -6,6 +6,9 @@
     android:name="net.tnose.app.trisquel.FavoritePhotosFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_marginBottom="-2dp"
+    android:layout_marginStart="-2dp"
+    android:layout_marginEnd="-2dp"
     app:layoutManager="LinearLayoutManager"
     tools:context=".FavoritePhotoFragment"
-    tools:listitem="@layout/fragment_favorite_photo" />
+    tools:listitem="@layout/fragment_favorite_photo" /> <!-- android:layout_marginTop="-2dp" -->
