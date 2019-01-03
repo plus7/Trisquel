@@ -103,6 +103,22 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                         + "_index integer"
                         + ");"
         )
+
+        db.execSQL(
+                "create table tag ("
+                        + "_id  integer primary key autoincrement not null,"
+                        + "label text not null,"
+                        + "refcnt integer"
+                        + ");"
+        )
+
+        db.execSQL(
+                "create table tagmap ("
+                        + "_id  integer primary key autoincrement not null,"
+                        + "photo_id integer,"
+                        + "tag_id integer"
+                        + ");"
+        )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -187,6 +203,24 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
         if (oldVersion <= 13) {
             db.execSQL("alter table photo add column favorite integer default 0 ;")
         }
+
+        if (oldVersion <= 14){
+            db.execSQL(
+                    "create table tag ("
+                            + "_id  integer primary key autoincrement not null,"
+                            + "label text not null,"
+                            + "refcnt integer"
+                            + ");"
+            )
+
+            db.execSQL(
+                    "create table tagmap ("
+                            + "_id  integer primary key autoincrement not null,"
+                            + "photo_id integer,"
+                            + "tag_id integer"
+                            + ");"
+            )
+        }
     }
 
     fun open(): SQLiteDatabase {
@@ -196,7 +230,7 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
     companion object {
         internal val DATABASE_NAME = "trisquel.db"
 
-        internal val DATABASE_VERSION = 14
+        internal val DATABASE_VERSION = 15
     }
 }
 
