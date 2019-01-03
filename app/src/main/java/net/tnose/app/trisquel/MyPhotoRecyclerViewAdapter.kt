@@ -62,12 +62,10 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         if(p.aperture != 0.0) params.add("f/%.1f".format(p.aperture))
         if(p.shutterSpeed != 0.0) params.add("%ssec".format(Util.doubleToStringShutterSpeed(p.shutterSpeed)))
         holder.mParamsView.text = params.joinToString(" ")
-        if(p.memo.isEmpty()){
-            //holder.mContentView.visibility = View.GONE
-        }else {
-            holder.mContentView.text = p.memo
+        holder.mContentView.text = p.memo
+        /*if(p.memo.isNotEmpty()){
             holder.mContentView.visibility = View.VISIBLE
-        }
+        }*/
         setThumbnail(p.supplementalImages, holder.mThumbnailView)
         //holder.mContentView.setText("f/" + p.aperture + " " + Util.doubleToStringShutterSpeed(p.shutterSpeed) + "sec" /*+ l.modelName*/);
 
