@@ -32,7 +32,7 @@ class Util {
     }
 
     companion object {
-        val TRISQUEL_VERSION = 7
+        val TRISQUEL_VERSION = 10
 
         /* シャッタースピードはたかだか2桁精度なのでdoubleからきれいに変換できる */
         internal fun doubleToStringShutterSpeed(ss: Double): String {
