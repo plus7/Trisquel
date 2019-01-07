@@ -54,7 +54,11 @@ class FavoritePhotoFragment : Fragment() {
                 for(l in list2) {
                     Log.d("FavPhotoFrag", "size:"+l.size.toString())
                     val localAdapter = FavPhotoLocalAdapter(context)
-                    localAdapter.addAll(l.sortedBy { it.frameIndex })
+                    val sortedList = l.sortedBy { it.frameIndex }
+                    localAdapter.addAll(sortedList)
+                    localAdapter.setOnItemClickListener { viewHolder, i, photo ->
+                        listener?.onListFragmentInteraction(photo, sortedList)
+                    }
                     val filmrollName = dao.getFilmRoll(l[0].filmrollid)!!.name
                     val header = FavPhotoHeader(context, filmrollName)
                     compositeAdapter.add(header)
@@ -97,7 +101,7 @@ class FavoritePhotoFragment : Fragment() {
      */
     interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
-        fun onListFragmentInteraction(item: Photo?)
+        fun onListFragmentInteraction(item: Photo?, list: List<Photo?>)
     }
 
     companion object {

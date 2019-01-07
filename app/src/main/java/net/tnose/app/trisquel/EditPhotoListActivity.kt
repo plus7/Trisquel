@@ -9,7 +9,6 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
-import android.support.v4.content.FileProvider
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
 import android.util.Log
@@ -21,7 +20,6 @@ import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
 import kotlinx.android.synthetic.main.content_edit_photo_list.*
-import java.io.File
 import java.util.*
 
 class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {
@@ -366,14 +364,24 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             thumbnailEditingPhoto = item
             checkPermAndEditThumbPhoto()
         }else {
-            val intent = Intent()
-            val file = File(item.supplementalImages[0])
+
+            val dao = TrisquelDao(this)
+            dao.connection()
+            val ps = dao.getPhotosByFilmRollId(mFilmRoll!!.id)
+            dao.close()
+
+            val intent = Intent(application, GalleryActivity::class.java)
+            intent.putExtra("photo", item)
+            intent.putParcelableArrayListExtra("favList", ps)
+            startActivity(intent)
+
+            /*val file = File(item.supplementalImages[0])
             // android.os.FileUriExposedException回避
             val photoURI = FileProvider.getUriForFile(this@EditPhotoListActivity, this@EditPhotoListActivity.applicationContext.packageName + ".provider", file)
             intent.action = android.content.Intent.ACTION_VIEW
-            intent.setDataAndType(photoURI, "image/*")
+            intent.setDataAndType(photoURI, "image/ *")
             intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            startActivity(intent)
+            startActivity(intent)*/
         }
     }
 

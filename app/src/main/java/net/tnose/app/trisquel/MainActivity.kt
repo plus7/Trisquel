@@ -513,8 +513,11 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    override fun onListFragmentInteraction(item: Photo?) {
-
+    override fun onListFragmentInteraction(item: Photo?, list: List<Photo?>) {
+        val intent = Intent(application, GalleryActivity::class.java)
+        intent.putExtra("photo", item)
+        intent.putParcelableArrayListExtra("favList", ArrayList(list))
+        startActivity(intent)
     }
 
     fun onListFragmentInteraction(item: DummyContent.DummyItem?) {
