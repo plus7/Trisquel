@@ -17,4 +17,9 @@
         android:orderInCategory="101"
         android:title="@string/action_backup_sqlite"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_license"
+        android:orderInCategory="101"
+        android:title="@string/action_license"
+        app:showAsAction="never" />
 </menu>

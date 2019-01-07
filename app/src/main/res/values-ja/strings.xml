@@ -33,6 +33,8 @@
     <string name="menu_print">印刷</string>
     <string name="menu_category_gears">機材</string>
     <string name="action_backup_sqlite">データベースをバックアップ</string>
+    <string name="action_license">ライセンス</string>
+    <string name="title_activity_license">ライセンス</string>
     <string name="title_backup">データベースをバックアップ</string>
     <string name="description_backup">
         本アプリのデータはSQLite形式で保存されています。

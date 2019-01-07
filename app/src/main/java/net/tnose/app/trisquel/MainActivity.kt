@@ -221,6 +221,9 @@ class MainActivity : AppCompatActivity(),
             fragment.arguments?.putString("message", getString(R.string.description_backup))
             fragment.arguments?.putString("positive", getString(R.string.continue_))
             fragment.showOn(this, "dialog")
+        } else if (id == R.id.action_license) {
+            val intent = Intent(this, LicenseActivity::class.java)
+            startActivity(intent)
         }
 
         return super.onOptionsItemSelected(item)

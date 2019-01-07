@@ -93,8 +93,12 @@
             android:required="false" />
         <activity
             android:name=".GalleryActivity"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:label="@string/title_activity_gallery"></activity>
+            android:label="@string/title_activity_gallery"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".LicenseActivity"
+            android:label="@string/title_activity_license"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 
 </manifest>

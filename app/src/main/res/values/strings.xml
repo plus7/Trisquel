@@ -38,6 +38,7 @@
     <string name="menu_print">Print</string>
     <string name="menu_category_gears">Gears</string>
     <string name="action_backup_sqlite">Backup db file</string>
+    <string name="action_license">Licenses</string>
     <string name="title_backup">Backup db file</string>
     <string name="description_backup">
         Data of this application is saved in SQLite format.
@@ -230,4 +231,5 @@
         <item quantity="many">You can only select up to %1$d media files</item>
     </plurals>
     <string name="title_activity_gallery">GalleryActivity</string>
+    <string name="title_activity_license">Licenses</string>
 </resources>

@@ -50,6 +50,8 @@ dependencies {
 
     implementation 'com.github.chuross.recyclerview-adapters:recyclerview-adapters:2.1.4'
 
+    implementation 'com.larswerkman:LicenseView:1.1'
+
     //compile ('com.weiwangcn.betterspinner:library-material:1.1.0') {
     //    exclude group: 'com.android.support', module: 'appcompat-v7'
     //    exclude group: 'com.rengwuxian.materialedittext', module: 'library'
