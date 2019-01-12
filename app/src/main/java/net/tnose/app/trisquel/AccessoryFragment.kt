@@ -2,6 +2,7 @@ package net.tnose.app.trisquel
 
 import android.content.Context
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.support.v4.app.Fragment
 import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.LinearLayoutManager
@@ -45,6 +46,11 @@ class AccessoryFragment : Fragment() {
         list = dao.accessories
         dao.close()
 
+        //ここでいいのか？
+        val pref = PreferenceManager.getDefaultSharedPreferences(this.context)
+        val key  = pref.getInt("accessory_sortkey", 0)
+        changeSortKey(key)
+
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
             mView = view
@@ -76,6 +82,18 @@ class AccessoryFragment : Fragment() {
     override fun onDetach() {
         super.onDetach()
         mListener = null
+    }
+
+    fun changeSortKey(key: Int){
+        if(list != null){
+            when(key){
+                0 -> {list!!.sortByDescending { it.created }}
+                1 -> {list!!.sortBy { it.name }}
+                2 -> {list!!.sortBy { it.type }}
+                else -> {}
+            }
+            accessoryRecyclerViewAdapter?.notifyDataSetChanged()
+        }
     }
 
     fun insertAccessory(accessory: Accessory) {

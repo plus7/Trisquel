@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="action_settings">設定</string>
+    <string name="action_sort">並べ替え</string>
     <string name="action_releasenotes">リリースノート</string>
     <string name="title_activity_spec_editor">機材を編集</string>
     <string name="title_activity_camera_spec_editor">カメラを編集</string>
@@ -59,7 +60,9 @@
     <string name="add_photo_same_index">同じインデックスを持つアイテムを追加</string>
     <string name="hint_zoom">ズームの場合ハイフンで区切る（例: 70&#8211;300）</string>
     <string name="label_index">番号</string>
+    <string name="label_sort_by">並べ替え</string>
     <string name="label_date">日付</string>
+    <string name="label_created_date">作成日</string>
     <string name="label_aperture">絞り値</string>
     <string name="label_f_stops">設定できるF値</string>
     <string name="label_lens">レンズ</string>

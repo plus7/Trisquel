@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_DELETE_ACCESSORY = 104
         const val RETCODE_BACKUP_DB = 400
         const val RETCODE_SDCARD_PERM = 401
+        const val RETCODE_SORT = 402
 
         const val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
     }
@@ -203,6 +204,15 @@ class MainActivity : AppCompatActivity(),
         return true
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        val sortmenu = menu.findItem(R.id.action_sort)
+        sortmenu.isVisible = when(currentFragment){
+            is FilmRollFragment, is CameraFragment, is LensFragment, is AccessoryFragment -> true
+            else -> false
+        }
+        return true
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val id = item.itemId
 
@@ -224,6 +234,43 @@ class MainActivity : AppCompatActivity(),
         } else if (id == R.id.action_license) {
             val intent = Intent(this, LicenseActivity::class.java)
             startActivity(intent)
+        } else if (id == R.id.action_sort){
+            val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)
+            val arr = when(currentFragment){
+                is FilmRollFragment -> arrayOf(
+                        getString(R.string.label_created_date),
+                        getString(R.string.label_name),
+                        getString(R.string.label_camera),
+                        getString(R.string.label_brand))
+                is CameraFragment -> arrayOf(
+                        getString(R.string.label_created_date),
+                        getString(R.string.label_name),
+                        getString(R.string.label_mount),
+                        getString(R.string.label_format))
+                is LensFragment   -> arrayOf(
+                        getString(R.string.label_created_date),
+                        getString(R.string.label_name),
+                        getString(R.string.label_mount),
+                        getString(R.string.label_focal_length))
+                is AccessoryFragment   -> arrayOf(
+                        getString(R.string.label_created_date),
+                        getString(R.string.label_name),
+                        getString(R.string.label_accessory_type))
+                else -> arrayOf()
+            }
+            val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+            val key = when(currentFragment){
+                is FilmRollFragment -> pref.getInt("filmroll_sortkey", 0)
+                is CameraFragment   -> pref.getInt("camera_sortkey", 0)
+                is LensFragment     -> pref.getInt("lens_sortkey", 0)
+                is AccessoryFragment-> pref.getInt("accessory_sortkey", 0)
+                else -> 0
+            }
+            fragment.arguments?.putString("title", getString(R.string.label_sort_by))
+            fragment.arguments?.putInt("selected", key)
+            fragment.arguments?.putStringArray("items", arr)
+            fragment.arguments?.putString("positive", getString(android.R.string.ok))
+            fragment.showOn(this, "dialog")
         }
 
         return super.onOptionsItemSelected(item)
@@ -422,6 +469,8 @@ class MainActivity : AppCompatActivity(),
             }
         }
 
+        invalidateOptionsMenu()
+
         val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
         drawer.closeDrawer(GravityCompat.START)
         return true
@@ -608,6 +657,28 @@ class MainActivity : AppCompatActivity(),
                 val intent = Intent(application, EditCameraActivity::class.java)
                 intent.putExtra("type", which)
                 startActivityForResult(intent, REQCODE_ADD_CAMERA)
+            }
+            RETCODE_SORT -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                val which = data.getIntExtra("which", 0)
+
+                val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+                val key = when(frag){
+                    is FilmRollFragment -> "filmroll_sortkey"
+                    is CameraFragment -> "camera_sortkey"
+                    is LensFragment -> "lens_sortkey"
+                    is AccessoryFragment -> "accessory_sortkey"
+                    else -> ""
+                }
+                val e = pref.edit()
+                e.putInt(key, which)
+                e.apply()
+
+                when(frag){
+                    is FilmRollFragment -> frag.changeSortKey(which)
+                    is CameraFragment -> frag.changeSortKey(which)
+                    is LensFragment -> frag.changeSortKey(which)
+                    is AccessoryFragment -> frag.changeSortKey(which)
+                }
             }
         }
     }

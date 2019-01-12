@@ -2,6 +2,7 @@ package net.tnose.app.trisquel
 
 import android.content.Context
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.support.v4.app.Fragment
 import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.LinearLayoutManager
@@ -44,6 +45,11 @@ class FilmRollFragment : Fragment() {
         list = dao.allFilmRolls
         dao.close()
 
+        //ここでいいのか？
+        val pref = PreferenceManager.getDefaultSharedPreferences(this.context)
+        val key  = pref.getInt("filmroll_sortkey", 0)
+        changeSortKey(key)
+
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
             val context = view.getContext()
@@ -78,6 +84,19 @@ class FilmRollFragment : Fragment() {
     override fun onDetach() {
         super.onDetach()
         mListener = null
+    }
+
+    fun changeSortKey(key: Int){
+        if(list != null){
+            when(key){
+                0 -> {list!!.sortByDescending { it.created }}
+                1 -> {list!!.sortBy { it.name }}
+                2 -> {list!!.sortBy { it.camera.manufacturer + " " + it.camera.modelName }}
+                3 -> {list!!.sortBy { it.manufacturer + " " + it.brand }}
+                else -> {}
+            }
+            filmrollRecyclerViewAdapter?.notifyDataSetChanged()
+        }
     }
 
     fun insertFilmRoll(filmroll: FilmRoll) {

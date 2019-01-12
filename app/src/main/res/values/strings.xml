@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Trisquel</string>
     <string name="action_settings">Settings</string>
+    <string name="action_sort">Sort</string>
     <string name="action_releasenotes">Release notes</string>
     <string name="title_activity_spec_editor">SpecEditorActivity</string>
     <string name="title_activity_camera_spec_editor">CameraSpecEditorActivity</string>
@@ -59,7 +60,9 @@
     <string name="show_release_notes">Show release notes</string>
     <string name="hint_zoom">Use hypen for zoom lens as "70-300"</string>
     <string name="label_index">Index</string>
+    <string name="label_sort_by">Sort by</string>
     <string name="label_date">Date</string>
+    <string name="label_created_date">Created date</string>
     <string name="label_aperture">Aperture</string>
     <string name="label_f_stops">F-stops</string>
     <string name="label_lens">Lens</string>
