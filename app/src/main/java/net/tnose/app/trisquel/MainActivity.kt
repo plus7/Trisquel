@@ -495,7 +495,6 @@ class MainActivity : AppCompatActivity(),
             }
         } else {
             val intent = Intent(application, EditCameraActivity::class.java)
-            Log.d("camera", "type=" + Integer.toString(camera.type))
             intent.putExtra("id", camera.id)
             intent.putExtra("type", camera.type)
             startActivityForResult(intent, REQCODE_EDIT_CAMERA)

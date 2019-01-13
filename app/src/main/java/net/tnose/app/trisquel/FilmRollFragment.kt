@@ -6,7 +6,6 @@ import android.preference.PreferenceManager
 import android.support.v4.app.Fragment
 import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.LinearLayoutManager
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -109,7 +108,6 @@ class FilmRollFragment : Fragment() {
                 val id = dao.addFilmRoll(filmroll)
                 filmroll.id = id.toInt()
                 dao.close()
-                Log.d("FilmRollFragment", "notifyItemInserted")
                 filmrollRecyclerViewAdapter!!.notifyItemInserted(0)
                 mRecyclerView?.layoutManager?.scrollToPosition(0)
             }
@@ -148,7 +146,6 @@ class FilmRollFragment : Fragment() {
                     f!!.photos = p
                     dao.close()
                     list!!.add(i, f)
-                    Log.d("refreshFilmRoll", Integer.toString(id))
                     filmrollRecyclerViewAdapter!!.notifyItemChanged(i)
                 }
             }
@@ -165,7 +162,6 @@ class FilmRollFragment : Fragment() {
                     dao.connection()
                     dao.deleteFilmRoll(id)
                     dao.close()
-                    Log.d("deleteFilmRoll", Integer.toString(id))
                     filmrollRecyclerViewAdapter!!.notifyItemRemoved(i)
                     break
                 }

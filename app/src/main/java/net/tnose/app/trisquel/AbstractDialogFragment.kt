@@ -13,7 +13,6 @@ import android.support.v4.app.Fragment
 import android.support.v4.app.FragmentManager
 import android.support.v4.app.FragmentTransaction
 import android.support.v7.app.AppCompatActivity
-import android.util.Log
 import net.tnose.app.trisquel.AbstractDialogFragment.Builder
 import net.tnose.app.trisquel.AbstractDialogFragment.Callback
 
@@ -271,7 +270,6 @@ abstract class AbstractDialogFragment : DialogFragment() {
      */
     fun showOn(host: Activity, tag: String) {
         checkAppCompatActivity(host)
-        Log.d("getArguments", arguments.toString())
         checkArguments(arguments)
 
         arguments?.putSerializable(ARG_CALLBACK_HOST, HostType.ACTIVITY)

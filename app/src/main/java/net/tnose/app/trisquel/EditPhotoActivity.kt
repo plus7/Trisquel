@@ -838,10 +838,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                if (isDirty)
-                    Log.d("Dirty?", "yes")
-                else
-                    Log.d("Dirty?", "no")
                 if (!isDirty) {
                     setResult(Activity.RESULT_CANCELED, Intent())
                     finish()
@@ -884,7 +880,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }
 
     override fun onBackPressed() {
-        Log.d("onBackPressed", "EditPhotoActivity")
         if (!isDirty) {
             setResult(Activity.RESULT_CANCELED, Intent())
             super.onBackPressed()

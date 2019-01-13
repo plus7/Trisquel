@@ -10,7 +10,6 @@ import android.database.Cursor
 import android.database.Cursor.FIELD_TYPE_NULL
 import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
-import android.util.Log
 
 class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     protected val mContext = context
@@ -134,7 +133,6 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
                     val created = cursor.getString(cursor.getColumnIndex("created"))
                     val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
                     val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                    Log.d("unchi", Integer.toString(camera))
                     val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
                     val brand = cursor.getString(cursor.getColumnIndex("brand"))
                     val iso = cursor.getInt(cursor.getColumnIndex("iso"))
@@ -540,7 +538,6 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("date", p.date)
         cval.put("camera", p.cameraid)
         cval.put("lens", p.lensid)
-        Log.d("addPhoto", "lens=" + Integer.toString(p.lensid))
         cval.put("focal_length", p.focalLength)
         cval.put("aperture", p.aperture)
         cval.put("shutter_speed", p.shutterSpeed)
@@ -564,7 +561,6 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("date", p.date)
         cval.put("camera", p.cameraid)
         cval.put("lens", p.lensid)
-        Log.d("updatePhoto", "lens=" + Integer.toString(p.lensid))
         cval.put("focal_length", p.focalLength)
         cval.put("aperture", p.aperture)
         cval.put("shutter_speed", p.shutterSpeed)
@@ -600,7 +596,6 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
                 val date = cursor.getString(cursor.getColumnIndex("date"))
                 val camera = cursor.getInt(cursor.getColumnIndex("camera"))
                 val lens = cursor.getInt(cursor.getColumnIndex("lens"))
-                Log.d("getPhoto", "lens=" + Integer.toString(lens))
                 val focalLength = cursor.getDouble(cursor.getColumnIndex("focal_length"))
                 val aperture = cursor.getDouble(cursor.getColumnIndex("aperture"))
                 val shutterSpeed = cursor.getDouble(cursor.getColumnIndex("shutter_speed"))

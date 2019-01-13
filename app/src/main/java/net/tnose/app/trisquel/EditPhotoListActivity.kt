@@ -11,7 +11,6 @@ import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.LinearLayout
@@ -189,7 +188,6 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     }
 
     override fun onBackPressed() {
-        Log.d("onBackPressed", "java")
         val data = Intent()
         data.putExtra("filmroll", this.mFilmRoll!!.id)
         setResult(Activity.RESULT_OK, data)
@@ -229,7 +227,6 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             }
             REQCODE_EDIT_PHOTO -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                Log.d("ActivityResult: lens", Integer.toString(bundle!!.getInt("lens")))
                 val p = Photo(
                         bundle.getInt("id"),
                         bundle.getInt("filmroll"),
@@ -434,7 +431,6 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                             startActivityForResult(intent, REQCODE_ADD_PHOTO)
                         }
                     }
-                    Log.d("PHOTOLIST_SELECTION", Integer.toString(which))
                 }
             }
             REQCODE_EDIT_PHOTOINDEX -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {

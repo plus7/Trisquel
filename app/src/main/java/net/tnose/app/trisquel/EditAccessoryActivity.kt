@@ -8,7 +8,6 @@ import android.preference.PreferenceManager
 import android.support.v7.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -383,10 +382,6 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         when (item.itemId) {
             android.R.id.home -> {
                 data = Intent()
-                if (isDirty)
-                    Log.d("Dirty?", "yes")
-                else
-                    Log.d("Dirty?", "no")
                 if (!isDirty) {
                     setResult(Activity.RESULT_CANCELED, data)
                     finish()

@@ -1,7 +1,6 @@
 package net.tnose.app.trisquel
 
 import android.support.v7.widget.RecyclerView
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -46,7 +45,6 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         dao.connection()
         val p = mValues[position]
         val prev_p = if(position > 0) mValues[position - 1] else null
-        Log.d("modelname_of_lens", Integer.toString(p.lensid))
         val l = dao.getLens(p.lensid)
         dao.close()
         holder.mIdView.text = Integer.toString(p.frameIndex + 1)
@@ -93,7 +91,6 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         }
 
         holder.mThumbnailView.setOnClickListener{
-            Log.d("PhotoRecyclerView", "mThumbnailView.OnClick")
             mListener?.onThumbnailClick(holder.mItem!!)
         }
 
