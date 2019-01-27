@@ -10,6 +10,7 @@
     <string name="title_activity_cam_list">カメラ一覧</string>
     <string name="title_activity_lens_list">レンズ一覧</string>
     <string name="title_activity_filmroll_list">フィルム一覧</string>
+    <string name="title_activity_archive">アーカイブ</string>
     <string name="title_activity_favorites">お気に入り</string>
     <string name="title_activity_accessory_list">アクセサリ一覧</string>
     <string name="title_activity_reg_cam">カメラを登録</string>

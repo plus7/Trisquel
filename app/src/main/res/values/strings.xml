@@ -9,6 +9,7 @@
     <string name="title_activity_cam_list">Camera list</string>
     <string name="title_activity_lens_list">Lens list</string>
     <string name="title_activity_filmroll_list">Film roll list</string>
+    <string name="title_activity_archive">Archive</string>
     <string name="title_activity_favorites">Favorites</string>
     <string name="title_activity_accessory_list">Accessory list</string>
     <string name="title_activity_reg_cam">Register Camera</string>

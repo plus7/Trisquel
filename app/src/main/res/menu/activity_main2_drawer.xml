@@ -9,6 +9,10 @@
             android:icon="@drawable/ic_filmroll_vector"
             android:title="@string/title_activity_filmroll_list" />
         <item
+            android:id="@+id/nav_archive"
+            android:icon="@drawable/ic_archive_black_24dp"
+            android:title="@string/title_activity_archive" />
+        <item
             android:id="@+id/nav_favorites"
             android:icon="@drawable/ic_fav_border_black"
             android:title="@string/title_activity_favorites" />
