@@ -120,6 +120,25 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             return mounts
         }
 
+
+    val availableFilmBrandList: ArrayList<String>
+        get() {
+            val fbs = ArrayList<String>()
+
+            var cursor: Cursor? = null
+            try {
+                cursor = mDb!!.rawQuery("select distinct brand from filmroll order by manufacturer;", null)
+                while (cursor!!.moveToNext()) {
+                    val brand = cursor.getString(cursor.getColumnIndex("brand"))
+                    if (!brand.isEmpty()) fbs.add(brand)
+                }
+            } finally {
+                cursor?.close()
+            }
+
+            return fbs
+        }
+
     val allFilmRolls: ArrayList<FilmRoll>
         get() {
             val filmList = ArrayList<FilmRoll>()

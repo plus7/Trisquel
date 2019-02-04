@@ -16,7 +16,8 @@
             android:id="@+id/nav_favorites"
             android:icon="@drawable/ic_fav_border_black"
             android:title="@string/title_activity_favorites" />
-
+    </group>
+    <group android:id="@+id/group_gears">
         <item
             android:title="@string/menu_category_gears">
         <menu>
@@ -34,6 +35,20 @@
                 android:title="@string/title_activity_accessory_list" />
         </menu>
         </item>
+    </group>
+    <group android:id="@+id/group_info">
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_settings_black_24dp"
+            android:title="@string/action_settings" />
+    </group>
+    <group>
+        <item
+            android:id="@+id/nav_release_notes"
+            android:title="@string/action_releasenotes"/>
+        <item
+            android:id="@+id/nav_license"
+            android:title="@string/action_license" />
     </group>
 
 </menu>

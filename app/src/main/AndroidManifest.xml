@@ -88,9 +88,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />
+
         <activity
             android:name=".GalleryActivity"
             android:label="@string/title_activity_gallery"
@@ -98,7 +100,8 @@
         <activity
             android:name=".LicenseActivity"
             android:label="@string/title_activity_license"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity android:name=".FilterActivity"></activity>
     </application>
 
 </manifest>

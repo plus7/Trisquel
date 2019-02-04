@@ -85,6 +85,16 @@ class FilmRollFragment : Fragment() {
         mListener = null
     }
 
+    // 0: No filtering, 1: Filter by camera, 2: Filter by film brand
+    // そのうち詳細なフィルタリングにも対応する
+    var currentFilter:Pair<Int, String>
+        get() = filmrollRecyclerViewAdapter?.currentFilter ?: Pair<Int, String>(0, "")
+        set(value) {
+            if(list != null){
+                filmrollRecyclerViewAdapter?.setFilter(value.first, value.second)
+            }
+        }
+
     fun changeSortKey(key: Int){
         if(list != null){
             when(key){

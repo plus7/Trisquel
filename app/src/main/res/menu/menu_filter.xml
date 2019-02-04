@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/action_no_filtering"
+        android:orderInCategory="0"
+        android:title="@string/label_no_filter" />
+    <item android:id="@+id/action_filter_by_camera"
+        android:title="@string/label_filter_by_camera"
+        android:orderInCategory="100" />
+    <item android:id="@+id/action_filter_by_filmbrand"
+        android:title="@string/label_filter_by_film_brand"
+        android:orderInCategory="100" />
+    <item android:id="@+id/action_detailed_filtering"
+        android:title="@string/label_filter_detail"
+        android:orderInCategory="100"
+        android:visible="false"/>
+</menu>

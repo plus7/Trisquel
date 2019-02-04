@@ -15,12 +15,15 @@ class SelectDialogFragment : AbstractDialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val items = arguments?.getStringArray("items")
+        val ids = arguments?.getIntegerArrayList("ids")
         return AlertDialog.Builder(context!!)
                 //.setTitle(getArguments().getString("title",""))
                 .setItems(items) { dialog, which ->
                     val data = Intent()
-                    data.putExtra("id", arguments?.getInt("id"))
+                    data.putExtra("id", arguments?.getInt("id") ?: -1)
                     data.putExtra("which", which)
+                    data.putExtra("which_id", ids?.get(which) ?: -1)
+                    data.putExtra("which_str", items?.get(which) ?: "")
                     notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
                 }
                 .setCancelable(true)

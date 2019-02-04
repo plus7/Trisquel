@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Trisquel</string>
     <string name="action_settings">Settings</string>
+    <string name="action_filter">Filter</string>
     <string name="action_sort">Sort</string>
     <string name="action_releasenotes">Release notes</string>
     <string name="title_activity_spec_editor">SpecEditorActivity</string>
@@ -107,6 +108,10 @@
     <string name="label_accessory_unknown">Other</string>
     <string name="label_mount_adapter">Mount adapter</string>
     <string name="label_supplementary_images">Supplementary images</string>
+    <string name="label_no_filter">No filtering</string>
+    <string name="label_filter_by_camera">Filter by camera</string>
+    <string name="label_filter_by_film_brand">Filter by film brand</string>
+    <string name="label_filter_detail">Detailed filtering</string>
     <string name="title_dialog_select_accessories">Select accessories</string>
     <string name="title_dialog_edit_index">Modify the index value</string>
     <string name="title_dialog_shift_index">Shift the index values</string>

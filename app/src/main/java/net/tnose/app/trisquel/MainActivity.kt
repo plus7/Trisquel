@@ -17,10 +17,15 @@ import android.support.v4.view.GravityCompat
 import android.support.v4.widget.DrawerLayout
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.PopupMenu
 import android.support.v7.widget.Toolbar
 import android.util.Log
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM
+import android.view.MenuItem.SHOW_AS_ACTION_NEVER
+import android.view.View
 import android.widget.Toast
 import net.rdrei.android.dirchooser.DirectoryChooserActivity
 import net.rdrei.android.dirchooser.DirectoryChooserConfig
@@ -64,6 +69,8 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_BACKUP_DB = 400
         const val RETCODE_SDCARD_PERM = 401
         const val RETCODE_SORT = 402
+        const val RETCODE_FILTER_CAMERA = 403
+        const val RETCODE_FILTER_FILM_BRAND = 404
 
         const val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
     }
@@ -77,7 +84,6 @@ class MainActivity : AppCompatActivity(),
         setContentView(R.layout.activity_main2)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-
         val currentFragmentId = if (savedInstanceState != null) {
             savedInstanceState.getInt("current_fragment")
         } else {
@@ -210,6 +216,17 @@ class MainActivity : AppCompatActivity(),
             is FilmRollFragment, is CameraFragment, is LensFragment, is AccessoryFragment -> true
             else -> false
         }
+        sortmenu.setShowAsAction(
+                when(currentFragment){
+                    is CameraFragment, is LensFragment, is AccessoryFragment -> SHOW_AS_ACTION_IF_ROOM
+                    else -> SHOW_AS_ACTION_NEVER
+                }
+        )
+        val filtermenu = menu.findItem(R.id.action_filter)
+        filtermenu.isVisible = when(currentFragment){
+            is FilmRollFragment -> true
+            else -> false
+        }
         return true
     }
 
@@ -220,10 +237,6 @@ class MainActivity : AppCompatActivity(),
             val intent = Intent(application, SettingsActivity::class.java)
             startActivity(intent)
             return true
-        } else if (id == R.id.action_release_notes) {
-            val uri = Uri.parse(RELEASE_NOTES_URL) // + Integer.toString(Util.TRISQUEL_VERSION)
-            val i = Intent(Intent.ACTION_VIEW, uri)
-            startActivity(i)
         } else if (id == R.id.action_backup_sqlite) {
             val fragment = YesNoDialogFragment.Builder()
                     .build(RETCODE_BACKUP_DB)
@@ -231,9 +244,6 @@ class MainActivity : AppCompatActivity(),
             fragment.arguments?.putString("message", getString(R.string.description_backup))
             fragment.arguments?.putString("positive", getString(R.string.continue_))
             fragment.showOn(this, "dialog")
-        } else if (id == R.id.action_license) {
-            val intent = Intent(this, LicenseActivity::class.java)
-            startActivity(intent)
         } else if (id == R.id.action_sort){
             val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)
             val arr = when(currentFragment){
@@ -271,6 +281,52 @@ class MainActivity : AppCompatActivity(),
             fragment.arguments?.putStringArray("items", arr)
             fragment.arguments?.putString("positive", getString(android.R.string.ok))
             fragment.showOn(this, "dialog")
+        } else if (id == R.id.action_filter){
+            val vItem: View = findViewById(R.id.action_filter)
+            val popupMenu = PopupMenu(this, vItem, Gravity.NO_GRAVITY, R.attr.actionOverflowMenuStyle, 0)
+            popupMenu.inflate(R.menu.menu_filter)
+            val nofilter_item = popupMenu.menu.findItem(R.id.action_no_filtering)
+            if (currentFragment is FilmRollFragment) {
+                nofilter_item.isVisible = (currentFragment as FilmRollFragment).currentFilter.first != 0
+            }
+
+            //popupMenu.menu.add(R.id.group_recent_filter, View.generateViewId() , 0, "hogehoge")
+            popupMenu.setOnMenuItemClickListener {
+                when (it.itemId) {
+                    R.id.action_no_filtering ->
+                        if (currentFragment is FilmRollFragment) {
+                            (currentFragment as FilmRollFragment).currentFilter = Pair<Int, String>(0, "")
+                            supportActionBar?.subtitle = ""
+                        }
+                    R.id.action_filter_by_camera ->
+                        if (currentFragment is FilmRollFragment) {
+                            val fragment = SelectDialogFragment.Builder()
+                                    .build(RETCODE_FILTER_CAMERA)
+
+                            val dao = TrisquelDao(this)
+                            dao.connection()
+                            val cs = dao.allCameras
+                            dao.close()
+                            cs.sortBy { it.manufacturer + " "+ it.modelName }
+                            fragment.arguments?.putStringArray("items", cs.map { it.manufacturer + " " + it.modelName }.toTypedArray())
+                            fragment.arguments?.putIntegerArrayList("ids", ArrayList(cs.map { it.id }))
+                            fragment.showOn(this@MainActivity, "dialog")
+                        }
+                    R.id.action_filter_by_filmbrand ->
+                        if (currentFragment is FilmRollFragment) {
+                            val fragment = SelectDialogFragment.Builder()
+                                    .build(RETCODE_FILTER_FILM_BRAND)
+                            val dao = TrisquelDao(this)
+                            dao.connection()
+                            val fbs = dao.availableFilmBrandList
+                            dao.close()
+                            fragment.arguments?.putStringArray("items", fbs.toTypedArray())
+                            fragment.showOn(this@MainActivity, "dialog")
+                        }
+                }
+                true
+            }
+            popupMenu.show()
         }
 
         return super.onOptionsItemSelected(item)
@@ -421,10 +477,29 @@ class MainActivity : AppCompatActivity(),
         val id = item.itemId
 
         val fab = findViewById<FloatingActionButton>(R.id.fab)
-
+        val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
         var titleRsc: Int = 0
         var fabRsc: Int = 0
         when(id) {
+            R.id.nav_settings ->{
+                val intent = Intent(application, SettingsActivity::class.java)
+                startActivity(intent)
+                drawer.closeDrawer(GravityCompat.START)
+                return true
+            }
+            R.id.nav_license -> {
+                val intent = Intent(this, LicenseActivity::class.java)
+                startActivity(intent)
+                drawer.closeDrawer(GravityCompat.START)
+                return true
+            }
+            R.id.nav_release_notes -> {
+                val uri = Uri.parse(RELEASE_NOTES_URL) // + Integer.toString(Util.TRISQUEL_VERSION)
+                val i = Intent(Intent.ACTION_VIEW, uri)
+                startActivity(i)
+                drawer.closeDrawer(GravityCompat.START)
+                return true
+            }
             R.id.nav_camera -> {
                 currentFragment = CameraFragment()
                 titleRsc = R.string.title_activity_cam_list
@@ -471,7 +546,6 @@ class MainActivity : AppCompatActivity(),
 
         invalidateOptionsMenu()
 
-        val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
         drawer.closeDrawer(GravityCompat.START)
         return true
     }
@@ -677,6 +751,30 @@ class MainActivity : AppCompatActivity(),
                     is CameraFragment -> frag.changeSortKey(which)
                     is LensFragment -> frag.changeSortKey(which)
                     is AccessoryFragment -> frag.changeSortKey(which)
+                }
+            }
+            RETCODE_FILTER_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                if(currentFragment is FilmRollFragment) {
+                    val cameraid = data.getIntExtra("which_id", -1)
+                    if(cameraid != -1) {
+                        (currentFragment as FilmRollFragment).currentFilter = Pair<Int, String>(1, cameraid.toString())
+                        val dao = TrisquelDao(this)
+                        dao.connection()
+                        val c = dao.getCamera(cameraid)
+                        dao.close()
+                        if(c != null) {
+                            supportActionBar?.subtitle = getString(R.string.label_filter_by_camera) + ": " + c.manufacturer + " " + c.modelName
+                        }
+                    }
+                }
+            }
+            RETCODE_FILTER_FILM_BRAND -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                if(currentFragment is FilmRollFragment) {
+                    val brand = data.getStringExtra("which_str")
+                    if(brand.isNotEmpty()) {
+                        (currentFragment as FilmRollFragment).currentFilter = Pair<Int, String>(2, brand)
+                        supportActionBar?.subtitle = getString(R.string.label_filter_by_film_brand) + ": " + brand
+                    }
                 }
             }
         }

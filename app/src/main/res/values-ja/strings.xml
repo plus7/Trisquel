@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="action_settings">設定</string>
+    <string name="action_filter">絞り込み</string>
     <string name="action_sort">並べ替え</string>
     <string name="action_releasenotes">リリースノート</string>
     <string name="title_activity_spec_editor">機材を編集</string>
@@ -107,6 +108,10 @@
     <string name="label_fl_factor">焦点距離の倍率</string>
     <string name="label_mount_adapter">マウントアダプタ</string>
     <string name="label_supplementary_images">補足画像</string>
+    <string name="label_no_filter">絞り込みなし</string>
+    <string name="label_filter_by_camera">カメラで絞り込み</string>
+    <string name="label_filter_by_film_brand">フィルム銘柄で絞り込み</string>
+    <string name="label_filter_detail">詳細な絞り込み</string>
     <string name="title_dialog_select_accessories">アクセサリを選択</string>
     <string name="title_dialog_edit_index">インデックス値を変更</string>
     <string name="title_dialog_shift_index">インデックス値をシフト</string>
