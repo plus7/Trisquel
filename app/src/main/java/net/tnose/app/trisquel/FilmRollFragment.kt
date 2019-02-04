@@ -87,12 +87,31 @@ class FilmRollFragment : Fragment() {
 
     // 0: No filtering, 1: Filter by camera, 2: Filter by film brand
     // そのうち詳細なフィルタリングにも対応する
+    var _currentFilter:Pair<Int, String> = Pair<Int, String>(0, "")
     var currentFilter:Pair<Int, String>
-        get() = filmrollRecyclerViewAdapter?.currentFilter ?: Pair<Int, String>(0, "")
+        get() = _currentFilter //filmrollRecyclerViewAdapter?.currentFilter ?: Pair<Int, String>(0, "")
         set(value) {
-            if(list != null){
-                filmrollRecyclerViewAdapter?.setFilter(value.first, value.second)
+            val dao = TrisquelDao(this.context)
+            dao.connection()
+            list = when(value.first){
+                0 -> dao.allFilmRolls
+                1 -> dao.getFilmRollsByCamera(value.second.toInt())
+                2 -> dao.getFilmRollsByFilmBrand(value.second)
+                else -> dao.allFilmRolls
             }
+            dao.close()
+
+            val pref = PreferenceManager.getDefaultSharedPreferences(this.context)
+            val key  = pref.getInt("filmroll_sortkey", 0)
+            changeSortKey(key)
+
+            filmrollRecyclerViewAdapter = MyFilmRollRecyclerViewAdapter(list!!, mListener)
+
+            mRecyclerView?.adapter = filmrollRecyclerViewAdapter
+            _currentFilter = value
+            //if(list != null){
+            //    filmrollRecyclerViewAdapter?.setFilter(value.first, value.second)
+            //}
         }
 
     fun changeSortKey(key: Int){

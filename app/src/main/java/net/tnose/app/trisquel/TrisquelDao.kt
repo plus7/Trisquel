@@ -121,16 +121,17 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         }
 
 
-    val availableFilmBrandList: ArrayList<String>
+    val availableFilmBrandList: ArrayList<Pair<String,String>>
         get() {
-            val fbs = ArrayList<String>()
+            val fbs = ArrayList<Pair<String,String>>()
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select distinct brand from filmroll order by manufacturer;", null)
+                cursor = mDb!!.rawQuery("select distinct manufacturer, brand from filmroll order by manufacturer;", null)
                 while (cursor!!.moveToNext()) {
+                    val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
                     val brand = cursor.getString(cursor.getColumnIndex("brand"))
-                    if (!brand.isEmpty()) fbs.add(brand)
+                    if (!brand.isEmpty()) fbs.add(Pair<String, String>(manufacturer, brand))
                 }
             } finally {
                 cursor?.close()
@@ -166,6 +167,60 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             return filmList
         }
+
+    fun getFilmRollsByCamera(cameraid: Int): ArrayList<FilmRoll>{
+        val filmList = ArrayList<FilmRoll>()
+
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.rawQuery("select * from filmroll where camera = ? order by created desc;", arrayOf(Integer.toString(cameraid)))
+            while (cursor!!.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndex("_id"))
+                val name = cursor.getString(cursor.getColumnIndex("name"))
+                val created = cursor.getString(cursor.getColumnIndex("created"))
+                val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
+                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
+                val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
+                val brand = cursor.getString(cursor.getColumnIndex("brand"))
+                val iso = cursor.getInt(cursor.getColumnIndex("iso"))
+
+                val f = FilmRoll(id, name, created, lastModified, getCamera(camera)!!, manufacturer, brand, iso, 36)
+                filmList.add(f)
+                f.photos = getPhotosByFilmRollId(f.id)
+            }
+        } finally {
+            cursor?.close()
+        }
+
+        return filmList
+    }
+
+    fun getFilmRollsByFilmBrand(brand: String): ArrayList<FilmRoll>{
+        val filmList = ArrayList<FilmRoll>()
+
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.rawQuery("select * from filmroll where brand = ? order by created desc;", arrayOf(brand))
+            while (cursor!!.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndex("_id"))
+                val name = cursor.getString(cursor.getColumnIndex("name"))
+                val created = cursor.getString(cursor.getColumnIndex("created"))
+                val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
+                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
+                val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
+                val brand = cursor.getString(cursor.getColumnIndex("brand"))
+                val iso = cursor.getInt(cursor.getColumnIndex("iso"))
+
+                val f = FilmRoll(id, name, created, lastModified, getCamera(camera)!!, manufacturer, brand, iso, 36)
+                filmList.add(f)
+                f.photos = getPhotosByFilmRollId(f.id)
+            }
+        } finally {
+            cursor?.close()
+        }
+
+        return filmList
+    }
 
     val accessories: ArrayList<Accessory>
         get() {

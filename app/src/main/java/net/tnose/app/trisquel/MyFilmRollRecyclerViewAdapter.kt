@@ -12,36 +12,13 @@ import java.util.*
 class MyFilmRollRecyclerViewAdapter(
         private val mValues: ArrayList<FilmRoll>, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyFilmRollRecyclerViewAdapter.ViewHolder>() {
 
-    var currentFilter = Pair<Int, String>(0, "")
-
-    fun setFilter(keytype: Int, key: String){
-        currentFilter = Pair<Int, String>(keytype, key)
-        notifyDataSetChanged()
-    }
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.fragment_filmroll, parent, false)
         return ViewHolder(view)
     }
 
-    fun shouldVisible(f: FilmRoll): Boolean{
-        return when(currentFilter.first){
-            1 -> f.camera.id == currentFilter.second.toInt()
-            2 -> f.brand == currentFilter.second
-            else -> true
-        }
-    }
-
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        if(!shouldVisible(mValues[position])){
-            holder.mView.visibility = View.GONE
-            holder.mView.layoutParams = RecyclerView.LayoutParams(0, 0)
-            return
-        }else{
-            holder.mView.visibility = View.VISIBLE
-            holder.mView.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
         holder.mItem = mValues[position]
         //holder.mIdView.setText(Integer.toString(mValues.get(position).id));
         if (mValues[position].name.isEmpty()) {

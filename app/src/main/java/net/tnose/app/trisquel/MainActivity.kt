@@ -96,22 +96,27 @@ class MainActivity : AppCompatActivity(),
             ID_CAMERA -> {
                 currentFragment = CameraFragment()
                 setTitle(R.string.title_activity_cam_list)
+                supportActionBar?.subtitle = ""
             }
             ID_LENS -> {
                 currentFragment = LensFragment()
                 setTitle(R.string.title_activity_lens_list)
+                supportActionBar?.subtitle = ""
             }
             ID_ACCESSORY -> {
                 currentFragment = AccessoryFragment()
                 setTitle(R.string.title_activity_accessory_list)
+                supportActionBar?.subtitle = ""
             }
             ID_FAVORITES -> {
                 currentFragment = FavoritePhotoFragment()
                 setTitle(R.string.title_activity_favorites)
+                supportActionBar?.subtitle = ""
             }
             else -> {
                 currentFragment = FilmRollFragment()
                 setTitle(R.string.title_activity_filmroll_list)
+                supportActionBar?.subtitle = ""
             }
         }
         //addではなくreplaceでないとonCreateが再び呼ばれたときに変になる（以前作ったfragmentの残骸が残って表示される）
@@ -320,7 +325,7 @@ class MainActivity : AppCompatActivity(),
                             dao.connection()
                             val fbs = dao.availableFilmBrandList
                             dao.close()
-                            fragment.arguments?.putStringArray("items", fbs.toTypedArray())
+                            fragment.arguments?.putStringArray("items", fbs.map { it.first + " " +it.second }.toTypedArray())
                             fragment.showOn(this@MainActivity, "dialog")
                         }
                 }
@@ -530,6 +535,7 @@ class MainActivity : AppCompatActivity(),
         transaction.replace(R.id.container, currentFragment)
         transaction.commit()
         setTitle(titleRsc)
+        supportActionBar?.subtitle = ""
 
         when(id){
             R.id.nav_favorites -> {
@@ -763,17 +769,22 @@ class MainActivity : AppCompatActivity(),
                         val c = dao.getCamera(cameraid)
                         dao.close()
                         if(c != null) {
-                            supportActionBar?.subtitle = getString(R.string.label_filter_by_camera) + ": " + c.manufacturer + " " + c.modelName
+                            //getString(R.string.label_filter_by_camera) +
+                            supportActionBar?.subtitle = "📷 " + c.manufacturer + " " + c.modelName
                         }
                     }
                 }
             }
             RETCODE_FILTER_FILM_BRAND -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 if(currentFragment is FilmRollFragment) {
-                    val brand = data.getStringExtra("which_str")
-                    if(brand.isNotEmpty()) {
-                        (currentFragment as FilmRollFragment).currentFilter = Pair<Int, String>(2, brand)
-                        supportActionBar?.subtitle = getString(R.string.label_filter_by_film_brand) + ": " + brand
+                    val which = data.getIntExtra("which", -1)
+                    val dao = TrisquelDao(this)
+                    dao.connection()
+                    val brands = dao.availableFilmBrandList
+                    dao.close()
+                    if(which != -1) {
+                        (currentFragment as FilmRollFragment).currentFilter = Pair<Int, String>(2, brands[which].second)
+                        supportActionBar?.subtitle = "🎞 " + brands[which].second
                     }
                 }
             }
