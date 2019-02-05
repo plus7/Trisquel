@@ -338,13 +338,6 @@ class MainActivity : AppCompatActivity(),
             val intent = Intent(application, SettingsActivity::class.java)
             startActivity(intent)
             return true
-        } else if (id == R.id.action_backup_sqlite) {
-            val fragment = YesNoDialogFragment.Builder()
-                    .build(RETCODE_BACKUP_DB)
-            fragment.arguments?.putString("title", getString(R.string.title_backup))
-            fragment.arguments?.putString("message", getString(R.string.description_backup))
-            fragment.arguments?.putString("positive", getString(R.string.continue_))
-            fragment.showOn(this, "dialog")
         } else if (id == R.id.action_sort){
             val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)
             val arr = when(currentFragment){
@@ -626,6 +619,16 @@ class MainActivity : AppCompatActivity(),
             R.id.nav_settings ->{
                 val intent = Intent(application, SettingsActivity::class.java)
                 startActivity(intent)
+                drawer.closeDrawer(GravityCompat.START)
+                return true
+            }
+            R.id.nav_backup_sqlite -> {
+                val fragment = YesNoDialogFragment.Builder()
+                        .build(RETCODE_BACKUP_DB)
+                fragment.arguments?.putString("title", getString(R.string.title_backup))
+                fragment.arguments?.putString("message", getString(R.string.description_backup))
+                fragment.arguments?.putString("positive", getString(R.string.continue_))
+                fragment.showOn(this, "dialog")
                 drawer.closeDrawer(GravityCompat.START)
                 return true
             }
