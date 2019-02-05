@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.support.v4.app.Fragment
-import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
@@ -24,16 +23,19 @@ import java.util.*
  */
 class FilmRollFragment : Fragment() {
     // TODO: Customize parameters
-    private var mColumnCount = 1
+    //private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
     private var mRecyclerView: RecyclerViewEmptySupport? = null
     private var list: ArrayList<FilmRoll>? = null
     private var filmrollRecyclerViewAdapter: MyFilmRollRecyclerViewAdapter? = null
+    private var _currentFilter:Pair<Int, ArrayList<String>> = Pair(0, arrayListOf(""))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        mColumnCount = arguments?.getInt(ARG_COLUMN_COUNT) ?: 1
+        val filtertype = arguments?.getInt(ARG_FILTER_TYPE) ?: 0
+        val filterstr = arguments?.getStringArrayList(ARG_FILTER_VALUE) ?: arrayListOf("")
+        _currentFilter = Pair(filtertype, filterstr)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
@@ -41,7 +43,12 @@ class FilmRollFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_filmroll_list, container, false)
         val dao = TrisquelDao(this.context)
         dao.connection()
-        list = dao.allFilmRolls
+        list = when(_currentFilter.first){
+            0 -> dao.allFilmRolls
+            1 -> dao.getFilmRollsByCamera(_currentFilter.second.get(0).toInt())
+            2 -> dao.getFilmRollsByFilmBrand(_currentFilter.second[0], _currentFilter.second[1])
+            else -> dao.allFilmRolls
+        }
         dao.close()
 
         //ここでいいのか？
@@ -55,11 +62,11 @@ class FilmRollFragment : Fragment() {
             mRecyclerView = view
             mRecyclerView!!.setEmptyMessage(getString(R.string.warning_filmroll_not_registered))
             mRecyclerView!!.setEmptyView(container!!.findViewById(R.id.empty_view))
-            if (mColumnCount <= 1) {
+            //if (mColumnCount <= 1) {
                 mRecyclerView!!.layoutManager = LinearLayoutManager(context)
-            } else {
-                mRecyclerView!!.layoutManager = GridLayoutManager(context, mColumnCount)
-            }
+            //} else {
+            //    mRecyclerView!!.layoutManager = GridLayoutManager(context, mColumnCount)
+            //}
 
             filmrollRecyclerViewAdapter = MyFilmRollRecyclerViewAdapter(list!!, mListener)
         }
@@ -87,16 +94,15 @@ class FilmRollFragment : Fragment() {
 
     // 0: No filtering, 1: Filter by camera, 2: Filter by film brand
     // そのうち詳細なフィルタリングにも対応する
-    var _currentFilter:Pair<Int, String> = Pair<Int, String>(0, "")
-    var currentFilter:Pair<Int, String>
+    var currentFilter:Pair<Int, ArrayList<String>>
         get() = _currentFilter //filmrollRecyclerViewAdapter?.currentFilter ?: Pair<Int, String>(0, "")
         set(value) {
             val dao = TrisquelDao(this.context)
             dao.connection()
             list = when(value.first){
                 0 -> dao.allFilmRolls
-                1 -> dao.getFilmRollsByCamera(value.second.toInt())
-                2 -> dao.getFilmRollsByFilmBrand(value.second)
+                1 -> dao.getFilmRollsByCamera(value.second[0].toInt())
+                2 -> dao.getFilmRollsByFilmBrand(value.second[0], value.second[1])
                 else -> dao.allFilmRolls
             }
             dao.close()
@@ -213,15 +219,14 @@ class FilmRollFragment : Fragment() {
     }
 
     companion object {
+        private val ARG_FILTER_TYPE = "filter-type"
+        private val ARG_FILTER_VALUE = "filter-val"
 
-        // TODO: Customize parameter argument names
-        private val ARG_COLUMN_COUNT = "column-count"
-
-        // TODO: Customize parameter initialization
-        fun newInstance(columnCount: Int): FilmRollFragment {
+        fun newInstance(filterType: Int, filterValues: ArrayList<String>): FilmRollFragment {
             val fragment = FilmRollFragment()
             val args = Bundle()
-            args.putInt(ARG_COLUMN_COUNT, columnCount)
+            args.putInt(ARG_FILTER_TYPE, filterType)
+            args.putStringArrayList(ARG_FILTER_VALUE, filterValues)
             fragment.arguments = args
             return fragment
         }

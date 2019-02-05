@@ -2,6 +2,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="net.tnose.app.trisquel.MainActivity">
+
     <item
         android:id="@+id/action_filter"
         android:orderInCategory="99"
@@ -14,6 +15,14 @@
         android:title="@string/action_sort"
         android:icon="@drawable/ic_sort_white_24dp"
         app:showAsAction="ifRoom"/>
+    <item
+        android:id="@+id/action_pin_current_filter"
+        android:orderInCategory="100"
+        android:title="@string/action_pin_current_filter"/>
+    <item
+        android:id="@+id/action_unpin_current_filter"
+        android:orderInCategory="100"
+        android:title="@string/action_unpin_current_filter"/>
     <item
         android:id="@+id/action_backup_sqlite"
         android:orderInCategory="101"

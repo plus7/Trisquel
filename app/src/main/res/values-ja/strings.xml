@@ -3,6 +3,8 @@
     <string name="action_settings">設定</string>
     <string name="action_filter">絞り込み</string>
     <string name="action_sort">並べ替え</string>
+    <string name="action_pin_current_filter">現在のフィルタをピン留めする</string>
+    <string name="action_unpin_current_filter">現在のフィルタのピン留めを外す</string>
     <string name="action_releasenotes">リリースノート</string>
     <string name="title_activity_spec_editor">機材を編集</string>
     <string name="title_activity_camera_spec_editor">カメラを編集</string>

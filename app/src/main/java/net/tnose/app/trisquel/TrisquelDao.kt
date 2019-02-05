@@ -195,20 +195,20 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         return filmList
     }
 
-    fun getFilmRollsByFilmBrand(brand: String): ArrayList<FilmRoll>{
+    fun getFilmRollsByFilmBrand(manufacturer: String, brand: String): ArrayList<FilmRoll>{
         val filmList = ArrayList<FilmRoll>()
 
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from filmroll where brand = ? order by created desc;", arrayOf(brand))
+            cursor = mDb!!.rawQuery("select * from filmroll where brand = ? and manufacturer = ? order by created desc;", arrayOf(brand, manufacturer))
             while (cursor!!.moveToNext()) {
                 val id = cursor.getInt(cursor.getColumnIndex("_id"))
                 val name = cursor.getString(cursor.getColumnIndex("name"))
                 val created = cursor.getString(cursor.getColumnIndex("created"))
                 val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
                 val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                val brand = cursor.getString(cursor.getColumnIndex("brand"))
+                //val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
+                //val brand = cursor.getString(cursor.getColumnIndex("brand"))
                 val iso = cursor.getInt(cursor.getColumnIndex("iso"))
 
                 val f = FilmRoll(id, name, created, lastModified, getCamera(camera)!!, manufacturer, brand, iso, 36)

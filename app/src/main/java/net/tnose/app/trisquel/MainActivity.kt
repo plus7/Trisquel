@@ -30,6 +30,8 @@ import android.widget.Toast
 import net.rdrei.android.dirchooser.DirectoryChooserActivity
 import net.rdrei.android.dirchooser.DirectoryChooserConfig
 import net.tnose.app.trisquel.dummy.DummyContent
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -76,6 +78,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     private lateinit var currentFragment: Fragment
+    private val pinnedFilterViewId: ArrayList<Int> = arrayListOf()
 
     internal val PERMISSIONS = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
 
@@ -114,9 +117,22 @@ class MainActivity : AppCompatActivity(),
                 supportActionBar?.subtitle = ""
             }
             else -> {
-                currentFragment = FilmRollFragment()
+                val filtertype = savedInstanceState?.getInt("filmroll_filtertype") ?: 0
+                val filtervalue = savedInstanceState?.getStringArrayList("filmroll_filtervalue") ?: arrayListOf("")
+                currentFragment = FilmRollFragment.newInstance(filtertype, filtervalue)
                 setTitle(R.string.title_activity_filmroll_list)
-                supportActionBar?.subtitle = ""
+                val dao = TrisquelDao(this)
+                dao.connection()
+                val subtitle = when(filtertype){
+                    1 -> {
+                        val c = dao.getCamera(filtervalue[0].toInt())
+                        "📷 " + c?.manufacturer + " " + c?.modelName
+                    }
+                    2 -> "🎞 " + filtervalue.joinToString(" ")
+                    else -> ""
+                }
+                dao.close()
+                supportActionBar?.subtitle = subtitle
             }
         }
         //addではなくreplaceでないとonCreateが再び呼ばれたときに変になる（以前作ったfragmentの残骸が残って表示される）
@@ -198,6 +214,11 @@ class MainActivity : AppCompatActivity(),
             is FavoritePhotoFragment -> ID_FAVORITES
             else -> ID_FILMROLL
         })
+        if(currentFragment is FilmRollFragment){
+            val (filtertype, filtervalue) = (currentFragment as FilmRollFragment).currentFilter
+            outState.putInt("filmroll_filtertype", filtertype)
+            outState.putStringArrayList("filmroll_filtervalue", filtervalue)
+        }
     }
 
     override fun onBackPressed() {
@@ -213,6 +234,61 @@ class MainActivity : AppCompatActivity(),
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
+    }
+
+    fun getPinnedFilters(): ArrayList<Pair<Int, ArrayList<String>>>{
+        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        val prefstr = pref.getString("pinned_filters", "[]")
+        val array = JSONArray(prefstr)
+        val arrayOfFilter = ArrayList<Pair<Int, ArrayList<String>>>()
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            val filtertype = obj.getInt("type")
+            val jsonfiltervalues = obj.getJSONArray("values")
+            val filtervalues = ArrayList<String>()
+            for (j in 0 until jsonfiltervalues.length()){
+                filtervalues.add(jsonfiltervalues.getString(j))
+            }
+            arrayOfFilter.add(Pair(filtertype, filtervalues))
+        }
+        return arrayOfFilter
+    }
+
+    fun addPinnedFilter(newfilter: Pair<Int, ArrayList<String>>){
+        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        val prefstr = pref.getString("pinned_filters", "[]")
+        val array = JSONArray(prefstr)
+        val jsonfilter = JSONObject()
+        jsonfilter.put("type", newfilter.first)
+        jsonfilter.put("values", JSONArray(newfilter.second))
+        array.put(jsonfilter)
+        val e = pref.edit()
+        e.putString("pinned_filters", array.toString())
+        e.apply()
+    }
+
+    fun removePinnedFilter(filter: Pair<Int, ArrayList<String>>){
+        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        val prefstr = pref.getString("pinned_filters", "[]")
+        val array = JSONArray(prefstr)
+
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            val filtertype = obj.getInt("type")
+            val jsonfiltervalues = obj.getJSONArray("values")
+            val filtervalues = ArrayList<String>()
+            for (j in 0 until jsonfiltervalues.length()){
+                filtervalues.add(jsonfiltervalues.getString(j))
+            }
+            if(filtertype == filter.first && filtervalues.containsAll(filtervalues)){
+                array.remove(i)
+                break
+            }
+        }
+
+        val e = pref.edit()
+        e.putString("pinned_filters", array.toString())
+        e.apply()
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
@@ -232,6 +308,26 @@ class MainActivity : AppCompatActivity(),
             is FilmRollFragment -> true
             else -> false
         }
+
+        val pinfiltermenu = menu.findItem(R.id.action_pin_current_filter)
+        val unpinfiltermenu = menu.findItem(R.id.action_unpin_current_filter)
+        val filters = getPinnedFilters()
+        val currentFilter = (currentFragment as FilmRollFragment).currentFilter
+        pinfiltermenu.isVisible = when(currentFragment){
+            is FilmRollFragment -> {
+                currentFilter.first != 0 &&
+                        (filters.find {
+                            it.first == currentFilter.first &&
+                                    it.second.containsAll(currentFilter.second)
+                        } == null)
+            }
+            else -> false
+        }
+        unpinfiltermenu.isVisible = when(currentFragment){
+            is FilmRollFragment -> currentFilter.first != 0 && !pinfiltermenu.isVisible
+            else -> false
+        }
+
         return true
     }
 
@@ -294,13 +390,31 @@ class MainActivity : AppCompatActivity(),
             if (currentFragment is FilmRollFragment) {
                 nofilter_item.isVisible = (currentFragment as FilmRollFragment).currentFilter.first != 0
             }
+            val filters = getPinnedFilters()
+            val dao = TrisquelDao(this)
+            dao.connection()
+            while(filters.size > pinnedFilterViewId.size){
+                pinnedFilterViewId.add(View.generateViewId())
+            }
+            for((i,f) in filters.withIndex()){
+                when(f.first){
+                    1 -> {
+                        val c = dao.getCamera(f.second[0].toInt())
+                        if(c != null)
+                            popupMenu.menu.add(0, pinnedFilterViewId[i],0, c.manufacturer + " " + c.modelName)
+                    }
+                    2 -> {
+                        popupMenu.menu.add(0, pinnedFilterViewId[i],0,f.second.joinToString(" "))
+                    }
+                }
+            }
 
             //popupMenu.menu.add(R.id.group_recent_filter, View.generateViewId() , 0, "hogehoge")
             popupMenu.setOnMenuItemClickListener {
                 when (it.itemId) {
                     R.id.action_no_filtering ->
                         if (currentFragment is FilmRollFragment) {
-                            (currentFragment as FilmRollFragment).currentFilter = Pair<Int, String>(0, "")
+                            (currentFragment as FilmRollFragment).currentFilter = Pair(0, arrayListOf(""))
                             supportActionBar?.subtitle = ""
                         }
                     R.id.action_filter_by_camera ->
@@ -328,10 +442,33 @@ class MainActivity : AppCompatActivity(),
                             fragment.arguments?.putStringArray("items", fbs.map { it.first + " " +it.second }.toTypedArray())
                             fragment.showOn(this@MainActivity, "dialog")
                         }
+                    else -> {
+                        if(pinnedFilterViewId.contains(it.itemId) && currentFragment is FilmRollFragment){
+                            val index = pinnedFilterViewId.indexOf(it.itemId)
+                            val f = getPinnedFilters()[index]
+                            (currentFragment as FilmRollFragment).currentFilter = f
+                            val dao = TrisquelDao(this)
+                            dao.connection()
+                            val subtitle = when(f.first){
+                                1 -> {
+                                    val c = dao.getCamera(f.second[0].toInt())
+                                    "📷 " + c?.manufacturer + " " + c?.modelName
+                                }
+                                2 -> "🎞 " + f.second.joinToString(" ")
+                                else -> ""
+                            }
+                            supportActionBar?.subtitle = subtitle
+                            dao.close()
+                        }
+                    }
                 }
                 true
             }
             popupMenu.show()
+        } else if (id == R.id.action_pin_current_filter){
+            addPinnedFilter((currentFragment as FilmRollFragment).currentFilter)
+        } else if (id == R.id.action_unpin_current_filter){
+            removePinnedFilter((currentFragment as FilmRollFragment).currentFilter)
         }
 
         return super.onOptionsItemSelected(item)
@@ -763,13 +900,12 @@ class MainActivity : AppCompatActivity(),
                 if(currentFragment is FilmRollFragment) {
                     val cameraid = data.getIntExtra("which_id", -1)
                     if(cameraid != -1) {
-                        (currentFragment as FilmRollFragment).currentFilter = Pair<Int, String>(1, cameraid.toString())
+                        (currentFragment as FilmRollFragment).currentFilter = Pair(1, arrayListOf(cameraid.toString()))
                         val dao = TrisquelDao(this)
                         dao.connection()
                         val c = dao.getCamera(cameraid)
                         dao.close()
                         if(c != null) {
-                            //getString(R.string.label_filter_by_camera) +
                             supportActionBar?.subtitle = "📷 " + c.manufacturer + " " + c.modelName
                         }
                     }
@@ -783,7 +919,8 @@ class MainActivity : AppCompatActivity(),
                     val brands = dao.availableFilmBrandList
                     dao.close()
                     if(which != -1) {
-                        (currentFragment as FilmRollFragment).currentFilter = Pair<Int, String>(2, brands[which].second)
+                        (currentFragment as FilmRollFragment).currentFilter =
+                                Pair(2, arrayListOf(brands[which].first, brands[which].second))
                         supportActionBar?.subtitle = "🎞 " + brands[which].second
                     }
                 }
