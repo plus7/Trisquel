@@ -312,9 +312,9 @@ class MainActivity : AppCompatActivity(),
         val pinfiltermenu = menu.findItem(R.id.action_pin_current_filter)
         val unpinfiltermenu = menu.findItem(R.id.action_unpin_current_filter)
         val filters = getPinnedFilters()
-        val currentFilter = (currentFragment as FilmRollFragment).currentFilter
         pinfiltermenu.isVisible = when(currentFragment){
             is FilmRollFragment -> {
+                val currentFilter = (currentFragment as FilmRollFragment).currentFilter
                 currentFilter.first != 0 &&
                         (filters.find {
                             it.first == currentFilter.first &&
@@ -324,7 +324,7 @@ class MainActivity : AppCompatActivity(),
             else -> false
         }
         unpinfiltermenu.isVisible = when(currentFragment){
-            is FilmRollFragment -> currentFilter.first != 0 && !pinfiltermenu.isVisible
+            is FilmRollFragment -> (currentFragment as FilmRollFragment).currentFilter.first != 0 && !pinfiltermenu.isVisible
             else -> false
         }
 
