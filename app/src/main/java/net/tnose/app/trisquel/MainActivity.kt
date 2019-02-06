@@ -167,6 +167,16 @@ class MainActivity : AppCompatActivity(),
                 }
                 else -> {
                     intent = Intent(application, EditFilmRollActivity::class.java)
+                    if(currentFragment is FilmRollFragment){
+                        val filter = (currentFragment as FilmRollFragment).currentFilter
+                        when(filter.first){
+                            1 -> intent.putExtra("default_camera", filter.second[0].toInt())
+                            2 -> {
+                                intent.putExtra("default_manufacturer", filter.second[0])
+                                intent.putExtra("default_brand", filter.second[1])
+                            }
+                        }
+                    }
                     startActivityForResult(intent, REQCODE_ADD_FILMROLL)
                 }
             }

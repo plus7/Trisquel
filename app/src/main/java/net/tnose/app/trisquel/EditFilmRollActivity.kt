@@ -75,7 +75,17 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             edit_brand!!.setText(savedInstanceState.getString("brand"))
             edit_iso!!.setText(savedInstanceState.getString("iso"))
         }else{ //新規データ開きたて
-            //do nothing
+            val cameraid = data.getIntExtra("default_camera", -1)
+            if (cameraid != -1)
+                spinner_camera!!.position = cadapter!!.getPosition(cameraid)
+
+            val film_manufacturer = data.getStringExtra("default_manufacturer") ?: ""
+            if (film_manufacturer.isNotEmpty())
+                edit_manufacturer!!.setText(film_manufacturer)
+
+            val film_brand = data.getStringExtra("default_brand") ?: ""
+            if (film_brand.isNotEmpty())
+                edit_brand!!.setText(film_brand)
         }
     }
 
