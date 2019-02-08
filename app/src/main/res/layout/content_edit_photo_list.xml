@@ -18,57 +18,6 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:id="@+id/layout_filmroll"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/label_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/text_margin"
-                    android:layout_weight="0"
-                    android:text="TextView"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Title" />
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_weight="0"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/label_camera"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="@dimen/text_margin"
-                        android:layout_weight="1"
-                        android:text="@string/label_camera"
-                        android:textAppearance="@android:style/TextAppearance.Material.Medium" />
-
-                    <TextView
-                        android:id="@+id/label_filmbrand"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="@dimen/text_margin"
-                        android:layout_weight="1"
-                        android:text="@string/label_brand"
-                        android:textAppearance="@android:style/TextAppearance.Material.Medium" />
-                </LinearLayout>
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <LinearLayout
             android:id="@+id/container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

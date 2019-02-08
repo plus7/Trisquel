@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.*
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
-import android.graphics.Typeface
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
@@ -13,12 +12,10 @@ import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.LinearLayout
 import android.widget.Toast
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
-import kotlinx.android.synthetic.main.content_edit_photo_list.*
 import java.util.*
 
 class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {
@@ -83,6 +80,16 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             return sb.toString()
         }
 
+    fun setTitles(f: FilmRoll){
+        title = if (f.name.isEmpty()) {
+            getString(R.string.empty_name)
+        } else {
+            f.name
+        }
+        toolbar?.subtitle = f.camera.manufacturer + " " + f.camera.modelName + " / " +
+                f.manufacturer + " " + f.brand
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_photo_list)
@@ -110,26 +117,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         }
         dao.close()
 
-        if (mFilmRoll!!.name.isEmpty()) {
-            label_name!!.setText(R.string.empty_name)
-            label_name!!.setTypeface(Typeface.SANS_SERIF, Typeface.ITALIC)
-            setTitle(R.string.empty_name)
-        } else {
-            label_name!!.text = mFilmRoll!!.name
-            label_name!!.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL)
-            title = mFilmRoll!!.name
-        }
-        label_camera!!.text = mFilmRoll!!.camera.manufacturer + " " + mFilmRoll!!.camera.modelName
-        label_filmbrand!!.text = mFilmRoll!!.manufacturer + " " + mFilmRoll!!.brand
-        toolbar!!.subtitle = mFilmRoll!!.camera.manufacturer + " " + mFilmRoll!!.camera.modelName + " / " +
-                mFilmRoll!!.manufacturer + " " + mFilmRoll!!.brand
-
-        val filmroll_layout = findViewById<LinearLayout>(R.id.layout_filmroll)
-        filmroll_layout.setOnClickListener {
-            val intent = Intent(application, EditFilmRollActivity::class.java)
-            intent.putExtra("id", mFilmRoll!!.id)
-            startActivityForResult(intent, REQCODE_EDIT_FILMROLL)
-        }
+        setTitles(mFilmRoll!!)
 
         photo_fragment = PhotoFragment.newInstance(1, id)
         val transaction = supportFragmentManager.beginTransaction()
@@ -265,20 +253,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                         36
                 )
 
-                if (f.name.isEmpty()) {
-                    label_name!!.setText(R.string.empty_name)
-                    label_name!!.setTypeface(Typeface.SANS_SERIF, Typeface.ITALIC)
-                    setTitle(R.string.empty_name)
-                } else {
-                    label_name!!.text = f.name
-                    label_name!!.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL)
-                    title = f.name
-                }
-                label_camera!!.text = f.camera.manufacturer + " " + f.camera.modelName
-                label_filmbrand!!.text = f.manufacturer + " " + f.brand
-                toolbar!!.subtitle = f.camera.manufacturer + " " + f.camera.modelName + " / " +
-                        f.manufacturer + " " + f.brand
-                //TODO:
+                setTitles(f)
+
                 dao.updateFilmRoll(f)
                 dao.close()
             } else if (resultCode == Activity.RESULT_CANCELED) {
