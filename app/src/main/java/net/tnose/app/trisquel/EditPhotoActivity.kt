@@ -330,12 +330,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         return (if (bd2.signum() > 0) "+" else "") + bd2.toPlainString() + "EV"
     }
 
-    /*protected fun toHumanReadableCompensationAmount(value: Double):String{
-        val bd = BigDecimal(value)
-        val bd2 = bd.setScale(1, BigDecimal.ROUND_DOWN)
-        return (if (bd2.signum() > 0) "+" else "") + bd2.toPlainString() + "EV"
-    }*/
-
     protected fun setEventListeners() {
 
         spinner_lens.setOnClickListener {
