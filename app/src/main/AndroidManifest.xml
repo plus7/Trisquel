@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="net.tnose.app.trisquel">
-
     <!--
          The ACCESS_COARSE/FINE_LOCATION permissions are not required to use
          Google Maps Android API v2, but you must specify either coarse or fine
@@ -20,7 +19,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        tools:replace="android:theme"> <!-- なんかhttps://github.com/passy/Android-DirectoryChooserをbuild.gradleに入れたら衝突するようになったのでsuggestされたやつ -->
+        tools:replace="android:theme">
+        <activity
+            android:name=".TabbedActivity"
+            android:label="@string/title_activity_edit_photo"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
+        <!-- なんかhttps://github.com/passy/Android-DirectoryChooserをbuild.gradleに入れたら衝突するようになったのでsuggestされたやつ -->
         <activity
             android:name=".EditCameraActivity"
             android:label="@string/title_activity_reg_cam"
@@ -101,7 +105,7 @@
             android:name=".LicenseActivity"
             android:label="@string/title_activity_license"
             android:theme="@style/AppTheme.NoActionBar" />
-        <activity android:name=".FilterActivity"></activity>
+        <activity android:name=".FilterActivity" />
     </application>
 
 </manifest>

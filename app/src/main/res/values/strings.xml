@@ -114,6 +114,7 @@
     <string name="label_filter_by_camera">Filter by camera</string>
     <string name="label_filter_by_film_brand">Filter by film brand</string>
     <string name="label_filter_detail">Detailed filtering</string>
+    <string name="label_add">Add</string>
     <string name="title_dialog_select_accessories">Select accessories</string>
     <string name="title_dialog_edit_index">Modify the index value</string>
     <string name="title_dialog_shift_index">Shift the index values</string>

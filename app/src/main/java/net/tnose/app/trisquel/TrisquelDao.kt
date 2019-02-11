@@ -168,6 +168,26 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             return filmList
         }
 
+    val allTags: ArrayList<Tag>
+        get() {
+            val tagList = ArrayList<Tag>()
+
+            var cursor: Cursor? = null
+            try {
+                cursor = mDb!!.rawQuery("select * from tag;", null)
+                while (cursor!!.moveToNext()) {
+                    val id = cursor.getInt(cursor.getColumnIndex("_id"))
+                    val label = cursor.getString(cursor.getColumnIndex("label"))
+                    val refcnt = cursor.getInt(cursor.getColumnIndex("refcnt"))
+                    tagList.add(Tag(id, label, refcnt))
+                }
+            } finally {
+                cursor?.close()
+            }
+
+            return tagList
+        }
+
     fun getFilmRollsByCamera(cameraid: Int): ArrayList<FilmRoll>{
         val filmList = ArrayList<FilmRoll>()
 
@@ -654,6 +674,19 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     }
 
     fun deletePhoto(id: Int) {
+        val tagmaps = getTagMapsByPhoto(id)
+        val tags = resolveTagMaps(tagmaps)
+        for(tm in tagmaps) {
+            deleteTagMap(tm.id)
+        }
+        for(t in tags){
+            if(t.refcnt == 1){
+                deleteTag(t.id)
+            }else{
+                updateTag(Tag(t.id, t.label, t.refcnt - 1))
+            }
+        }
+
         val selectArgs = arrayOf(Integer.toString(id))
         mDb!!.delete("photo", "_id = ?", selectArgs)
     }
@@ -774,5 +807,154 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             cursor?.close()
         }
         return result
+    }
+
+    // add, get, delete, update
+    // 他とはちょっとインターフェースが違うぞい
+    fun addTag(t: Tag): Long{
+        val cval = ContentValues()
+        cval.put("label", t.label)
+        cval.put("refcnt", t.refcnt)
+        return mDb!!.insert("tag", null, cval)
+    }
+
+    fun updateTag(t: Tag): Int {
+        val selectArgs = arrayOf(Integer.toString(t.id))
+        val cval = ContentValues()
+        cval.put("label", t.label)
+        cval.put("refcnt", t.refcnt)
+        return mDb!!.update("tag",
+                cval,
+                "_id = ?",
+                selectArgs)
+    }
+
+    fun deleteTag(id: Int){
+        val selectArgs = arrayOf(Integer.toString(id))
+        mDb!!.delete("tag", "_id = ?", selectArgs)
+    }
+
+    fun addTagMap(tm: TagMap): Long{
+        val cval = ContentValues()
+        cval.put("tag_id", tm.tagId)
+        cval.put("photo_id", tm.photoId)
+        cval.put("filmroll_id", tm.filmRollId)
+        return mDb!!.insert("tagmap", null, cval)
+    }
+
+    fun deleteTagMap(tmid: Int){
+        val selectArgs = arrayOf(Integer.toString(tmid))
+        mDb!!.delete("tagmap", "_id = ?", selectArgs)
+    }
+
+    fun getTagById(tagid: Int): Tag?{
+        var t: Tag? = null
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.rawQuery("select * from tag where _id = ?;", arrayOf(Integer.toString(tagid)))
+            while (cursor!!.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndex("_id"))
+                val label = cursor.getString(cursor.getColumnIndex("label"))
+                val refcnt = cursor.getInt(cursor.getColumnIndex("refcnt"))
+                t = Tag(id, label, refcnt)
+            }
+        } finally {
+            cursor?.close()
+        }
+        return t
+    }
+
+    fun getTagByLabel(label: String): Tag?{
+        var t: Tag? = null
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.rawQuery("select * from tag where label = ?;", arrayOf(label))
+            while (cursor!!.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndex("_id"))
+                val label = cursor.getString(cursor.getColumnIndex("label"))
+                val refcnt = cursor.getInt(cursor.getColumnIndex("refcnt"))
+                t = Tag(id, label, refcnt)
+            }
+        } finally {
+            cursor?.close()
+        }
+        return t
+    }
+
+    fun tagPhoto(photoId: Int, filmRollId: Int, tags: ArrayList<String>): Boolean {
+        val currentTagMaps = getTagMapsByPhoto(photoId)
+        val currentTags = resolveTagMaps(currentTagMaps)
+        val createList = ArrayList<String>()
+        for(label in tags){
+            val existingTag = currentTags.find { it.label == label }
+            if (existingTag == null){
+                createList.add(label)
+            }else{
+                currentTags.remove(existingTag) //existingTagは現状維持の対象
+                for(tm in currentTagMaps){ // minSdkVersionが24からじゃないとremoveIfが使えない
+                    if(tm.tagId == existingTag.id){
+                        currentTagMaps.remove(tm)
+                        break
+                    }
+                }
+            }
+        }
+        //作成またはrefcntをインクリメント
+        for(label in createList){
+            val t = getTagByLabel(label)
+            if(t == null) {
+                val tagId = addTag(Tag(-1, label, 1))
+                addTagMap(TagMap(-1, photoId, filmRollId, tagId.toInt()))
+            }else{
+                updateTag(Tag(t.id, label, t.refcnt + 1))
+                addTagMap(TagMap(-1, photoId, filmRollId, t.id))
+            }
+        }
+
+        //currentTagsとcurrentTagMapsに残ったものはrefcntをデクリメントもしくは削除の対象
+        for(t in currentTags){
+            val tm = currentTagMaps.find { it.tagId == t.id }
+            if(tm != null) deleteTagMap(tm.id)
+            if(t.refcnt == 1){ // 削除対象
+                deleteTag(t.id)
+            }else{ // デクリメントだけ
+                updateTag(Tag(t.id, t.label, t.refcnt - 1))
+            }
+        }
+
+        return false
+    }
+
+    fun getTagMapsByPhoto(photoId: Int): ArrayList<TagMap>{
+        val tagMapList = ArrayList<TagMap>()
+
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.rawQuery("select * from tagmap where photo_id = ?;", arrayOf(Integer.toString(photoId)))
+            while (cursor!!.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndex("_id"))
+                val photoId = cursor.getInt(cursor.getColumnIndex("photo_id"))
+                val tagId = cursor.getInt(cursor.getColumnIndex("tag_id"))
+                val filmRollId = cursor.getInt(cursor.getColumnIndex("filmroll_id"))
+                tagMapList.add(TagMap(id, photoId, filmRollId, tagId))
+            }
+        } finally {
+            cursor?.close()
+        }
+        return tagMapList
+    }
+
+    fun resolveTagMaps(tml: ArrayList<TagMap>): ArrayList<Tag>{
+        val tagList = ArrayList<Tag>()
+        for(tm in tml){
+            val t = getTagById(tm.tagId)
+            if (t != null) tagList.add(t)
+        }
+        return tagList
+    }
+
+    fun getTagsByPhoto(photoId: Int): ArrayList<Tag>{
+        val tagMapList = getTagMapsByPhoto(photoId)
+        return resolveTagMaps(tagMapList)
     }
 }

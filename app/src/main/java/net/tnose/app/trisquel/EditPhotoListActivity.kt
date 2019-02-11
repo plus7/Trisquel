@@ -126,7 +126,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
 
         val fab = findViewById<FloatingActionButton>(R.id.fab)
         fab.setOnClickListener {
-            val intent = Intent(application, EditPhotoActivity::class.java)
+            val intent = Intent(application, TabbedActivity::class.java)
             intent.putExtra("filmroll", mFilmRoll!!.id)
             startActivityForResult(intent, REQCODE_ADD_PHOTO)
         }
@@ -189,55 +189,18 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             return
         }
 
+        val bundle = data.extras
+        val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
         when (requestCode) {
             REQCODE_ADD_PHOTO -> if (resultCode == Activity.RESULT_OK) {
-                val bundle = data.extras
-                val p = Photo(
-                        -1,
-                        bundle!!.getInt("filmroll"),
-                        bundle.getInt("frameIndex"),
-                        bundle.getString("date")!!,
-                        bundle.getInt("camera"),
-                        bundle.getInt("lens"),
-                        bundle.getDouble("focal_length"),
-                        bundle.getDouble("aperture"),
-                        bundle.getDouble("shutter_speed"),
-                        bundle.getDouble("exp_compensation"),
-                        bundle.getDouble("ttl_light_meter"),
-                        bundle.getString("location")!!,
-                        bundle.getDouble("latitude"),
-                        bundle.getDouble("longitude"),
-                        bundle.getString("memo")!!,
-                        bundle.getString("accessories")!!,
-                        bundle.getString("suppimgs")!!,
-                        bundle.getBoolean("favorite"))
-                photo_fragment!!.insertPhoto(p)
+                val p: Photo? = bundle!!.getParcelable("photo")
+                if(p != null) photo_fragment!!.insertPhoto(p, tags)
             }
             REQCODE_EDIT_PHOTO -> if (resultCode == Activity.RESULT_OK) {
-                val bundle = data.extras
-                val p = Photo(
-                        bundle.getInt("id"),
-                        bundle.getInt("filmroll"),
-                        bundle.getInt("frameIndex"),
-                        bundle.getString("date")!!,
-                        bundle.getInt("camera"),
-                        bundle.getInt("lens"),
-                        bundle.getDouble("focal_length"),
-                        bundle.getDouble("aperture"),
-                        bundle.getDouble("shutter_speed"),
-                        bundle.getDouble("exp_compensation"),
-                        bundle.getDouble("ttl_light_meter"),
-                        bundle.getString("location")!!,
-                        bundle.getDouble("latitude"),
-                        bundle.getDouble("longitude"),
-                        bundle.getString("memo")!!,
-                        bundle.getString("accessories")!!,
-                        bundle.getString("suppimgs")!!,
-                        bundle.getBoolean("favorite"))
-                photo_fragment!!.updatePhoto(p)
+                val p: Photo? = bundle!!.getParcelable("photo")
+                if(p != null) photo_fragment!!.updatePhoto(p, tags)
             }
             REQCODE_EDIT_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
-                val bundle = data.extras
                 val dao = TrisquelDao(this.applicationContext)
                 dao.connection()
                 val c = dao.getCamera(bundle!!.getInt("camera"))
@@ -264,7 +227,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 val p = thumbnailEditingPhoto
                 if(paths.size > 0 && p != null){
                     p.supplementalImages.add(paths[0])
-                    photo_fragment!!.updatePhoto(p)
+                    photo_fragment!!.updatePhoto(p, null)
                     thumbnailEditingPhoto = null
                 }
             }
@@ -279,7 +242,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.delete), getString(R.string.add_photo_same_index)))
             fragment.showOn(this, "dialog")
         } else {
-            val intent = Intent(application, EditPhotoActivity::class.java)
+            val intent = Intent(application, TabbedActivity::class.java)
             intent.putExtra("filmroll", mFilmRoll!!.id)
             intent.putExtra("id", item.id)
             intent.putExtra("frameIndex", item.frameIndex)
@@ -401,7 +364,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                     when (which) {
                         0 -> if (id != -1) photo_fragment!!.deletePhoto(id)
                         1 -> {
-                            val intent = Intent(application, EditPhotoActivity::class.java)
+                            val intent = Intent(application, TabbedActivity::class.java)
                             intent.putExtra("filmroll", mFilmRoll!!.id)
                             intent.putExtra("frameIndex", index)
                             startActivityForResult(intent, REQCODE_ADD_PHOTO)
@@ -420,7 +383,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 if(p != null) {
                     if(p.frameIndex == newindex) return
                     p.frameIndex = newindex
-                    photo_fragment!!.updatePhoto(p)
+                    photo_fragment!!.updatePhoto(p, null)
                 }
             }
             REQCODE_INDEX_SHIFT -> if (resultCode == DialogInterface.BUTTON_POSITIVE){

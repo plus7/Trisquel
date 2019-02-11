@@ -114,6 +114,7 @@
     <string name="label_filter_by_camera">カメラで絞り込み</string>
     <string name="label_filter_by_film_brand">フィルム銘柄で絞り込み</string>
     <string name="label_filter_detail">詳細な絞り込み</string>
+    <string name="label_add">追加</string>
     <string name="title_dialog_select_accessories">アクセサリを選択</string>
     <string name="title_dialog_edit_index">インデックス値を変更</string>
     <string name="title_dialog_shift_index">インデックス値をシフト</string>

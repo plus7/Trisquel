@@ -118,7 +118,7 @@ class PhotoFragment : Fragment() {
         dao.close()
     }
 
-    fun insertPhoto(p: Photo) {
+    fun insertPhoto(p: Photo, tags: ArrayList<String>?) {
             val pos: Int
             val dao = TrisquelDao(this.context)
             dao.connection()
@@ -142,6 +142,7 @@ class PhotoFragment : Fragment() {
             mPhotos.add(pos, p)
             val id = dao.addPhoto(p)
             p.id = id.toInt()
+            if(tags != null) dao.tagPhoto(p.id, mFilmRollId, tags)
             photoRecyclerViewAdapter!!.notifyItemInserted(pos)
             dao.close()
     }
@@ -161,7 +162,7 @@ class PhotoFragment : Fragment() {
         photoRecyclerViewAdapter!!.notifyItemChanged(curpos, p.favorite)
     }
 
-    fun updatePhoto(p: Photo) {
+    fun updatePhoto(p: Photo, tags: ArrayList<String>?) {
         for (i in mPhotos.indices) {
             if (mPhotos[i].id == p.id) {
                 val newpos = getInsertPos(p.frameIndex)
@@ -174,6 +175,7 @@ class PhotoFragment : Fragment() {
                 val dao = TrisquelDao(this.context)
                 dao.connection()
                 dao.updatePhoto(p)
+                if(tags != null) dao.tagPhoto(p.id, mFilmRollId, tags)
                 dao.close()
                 if(newpos < curpos || newpos > curpos+1) {
                     photoRecyclerViewAdapter!!.notifyItemMoved(curpos, newpos)

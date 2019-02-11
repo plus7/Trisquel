@@ -116,7 +116,8 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                 "create table tagmap ("
                         + "_id  integer primary key autoincrement not null,"
                         + "photo_id integer,"
-                        + "tag_id integer"
+                        + "tag_id integer,"
+                        + "filmroll_id integer"
                         + ");"
         )
     }
@@ -221,6 +222,10 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                             + ");"
             )
         }
+
+        if (oldVersion <= 15){
+            db.execSQL("alter table tagmap add column filmroll_id integer default 0 ;")
+        }
     }
 
     fun open(): SQLiteDatabase {
@@ -230,7 +235,7 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
     companion object {
         internal val DATABASE_NAME = "trisquel.db"
 
-        internal val DATABASE_VERSION = 15
+        internal val DATABASE_VERSION = 16
     }
 }
 

@@ -348,6 +348,10 @@ class MainActivity : AppCompatActivity(),
             val intent = Intent(application, SettingsActivity::class.java)
             startActivity(intent)
             return true
+        } else if (id == R.id.action_tabbed) {
+            val intent = Intent(application, TabbedActivity::class.java)
+            startActivity(intent)
+            return true
         } else if (id == R.id.action_sort){
             val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)
             val arr = when(currentFragment){
