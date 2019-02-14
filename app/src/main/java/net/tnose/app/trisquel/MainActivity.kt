@@ -2,6 +2,7 @@ package net.tnose.app.trisquel
 
 import android.Manifest
 import android.app.Activity
+import android.app.ActivityOptions
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -348,9 +349,9 @@ class MainActivity : AppCompatActivity(),
             val intent = Intent(application, SettingsActivity::class.java)
             startActivity(intent)
             return true
-        } else if (id == R.id.action_tabbed) {
-            val intent = Intent(application, TabbedActivity::class.java)
-            startActivity(intent)
+        } else if (id == R.id.action_search) {
+            val intent = Intent(application, SearchActivity::class.java)
+            startActivity(intent, ActivityOptions.makeCustomAnimation(this, R.anim.abc_fade_in, R.anim.abc_fade_out).toBundle())
             return true
         } else if (id == R.id.action_sort){
             val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)

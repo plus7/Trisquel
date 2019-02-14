@@ -20,11 +20,11 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:replace="android:theme">
+        <activity android:name=".SearchActivity"></activity>
         <activity
             android:name=".TabbedActivity"
             android:label="@string/title_activity_edit_photo"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
-        <!-- なんかhttps://github.com/passy/Android-DirectoryChooserをbuild.gradleに入れたら衝突するようになったのでsuggestされたやつ -->
+            android:theme="@style/AppTheme.NoActionBar" /> <!-- なんかhttps://github.com/passy/Android-DirectoryChooserをbuild.gradleに入れたら衝突するようになったのでsuggestされたやつ -->
         <activity
             android:name=".EditCameraActivity"
             android:label="@string/title_activity_reg_cam"

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="action_settings">設定</string>
+    <string name="action_search">検索</string>
     <string name="action_filter">絞り込み</string>
     <string name="action_sort">並べ替え</string>
     <string name="action_pin_current_filter">現在のフィルタをピン留めする</string>

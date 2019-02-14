@@ -10,6 +10,7 @@ import android.database.Cursor
 import android.database.Cursor.FIELD_TYPE_NULL
 import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
+import android.util.Log
 
 class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     protected val mContext = context
@@ -956,5 +957,93 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     fun getTagsByPhoto(photoId: Int): ArrayList<Tag>{
         val tagMapList = getTagMapsByPhoto(photoId)
         return resolveTagMaps(tagMapList)
+    }
+
+    fun makeArray(size: Int):String{
+        val sb = StringBuilder("?")
+        if(size == 1) return sb.toString()
+        for(i in 1.rangeTo(size-1)){
+            sb.append(",?")
+        }
+        return sb.toString()
+    }
+
+    fun getPhotoFromCursor(cursor: Cursor):Photo{
+        Log.d("getPhotoFromCursor", cursor.getInt(cursor.getColumnIndex("count(*)")).toString())
+        val id = cursor.getInt(cursor.getColumnIndex("_id"))
+        val filmroll = cursor.getInt(cursor.getColumnIndex("filmroll"))
+        val index = cursor.getInt(cursor.getColumnIndex("_index"))
+        val date = cursor.getString(cursor.getColumnIndex("date"))
+        val camera = cursor.getInt(cursor.getColumnIndex("camera"))
+        val lens = cursor.getInt(cursor.getColumnIndex("lens"))
+        val focalLength = cursor.getDouble(cursor.getColumnIndex("focal_length"))
+        val aperture = cursor.getDouble(cursor.getColumnIndex("aperture"))
+        val shutterSpeed = cursor.getDouble(cursor.getColumnIndex("shutter_speed"))
+        val ev = cursor.getDouble(cursor.getColumnIndex("exp_compensation"))
+        val ttl = cursor.getDouble(cursor.getColumnIndex("ttl_light_meter"))
+        val location = cursor.getString(cursor.getColumnIndex("location"))
+        val memo = cursor.getString(cursor.getColumnIndex("memo"))
+        val accessoriesStr = cursor.getString(cursor.getColumnIndex("accessories"))
+        val latitude: Double
+        val longitude: Double
+        if (cursor.getType(cursor.getColumnIndex("latitude")) == FIELD_TYPE_NULL) {
+            latitude = 999.0
+        } else {
+            latitude = cursor.getDouble(cursor.getColumnIndex("latitude"))
+        }
+        if (cursor.getType(cursor.getColumnIndex("longitude")) == FIELD_TYPE_NULL) {
+            longitude = 999.0
+        } else {
+            longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
+        }
+        val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
+        val favorite = cursor.getInt(cursor.getColumnIndex("favorite"))
+        return Photo(id, filmroll, index, date, camera, lens, focalLength,
+                aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo,
+                accessoriesStr, supplementalImgStr, favorite != 0)
+    }
+
+    fun getPhotosByAndQuery(tags: ArrayList<Tag>): ArrayList<Photo>{
+        val photos = ArrayList<Photo>()
+        var cursor: Cursor? = null
+        try {
+            val selectionArgs = tags.map { it.label }
+            cursor = mDb!!.rawQuery(
+                    "select p.*, count(*) from photo p, tagmap tm, tag t "+
+                            "where tm.tag_id = t._id "+
+                            "and (t.label in ("+makeArray(tags.size)+")) "+
+                            "and p._id = tm.photo_id "+
+                            "group by p._id "+
+                            "having count(*) = "+tags.size.toString()+";", selectionArgs.toTypedArray())
+                                               //having count(*) = ?ではダメらしい。
+            while (cursor!!.moveToNext()) {
+                photos.add(getPhotoFromCursor(cursor))
+            }
+        } finally {
+            cursor?.close()
+        }
+
+        return photos
+    }
+
+    fun getPhotosByOrQuery(tags: ArrayList<Tag>): ArrayList<Photo>{
+        val photos = ArrayList<Photo>()
+        var cursor: Cursor? = null
+        try {
+            val selectionArgs = tags.map { it.label }
+            cursor = mDb!!.rawQuery(
+                    "select p.* from photo p, tagmap tm, tag t "+
+                            "where tm.tag_id = t._id "+
+                            "and (t.label in ("+makeArray(tags.size)+")) "+
+                            "and p._id = tm.photo_id "+
+                            "group by p._id;", selectionArgs.toTypedArray())
+            while (cursor!!.moveToNext()) {
+                photos.add(getPhotoFromCursor(cursor))
+            }
+        } finally {
+            cursor?.close()
+        }
+
+        return photos
     }
 }
