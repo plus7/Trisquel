@@ -126,7 +126,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
 
         val fab = findViewById<FloatingActionButton>(R.id.fab)
         fab.setOnClickListener {
-            val intent = Intent(application, TabbedActivity::class.java)
+            val intent = Intent(application, EditPhotoActivity::class.java)
             intent.putExtra("filmroll", mFilmRoll!!.id)
             startActivityForResult(intent, REQCODE_ADD_PHOTO)
         }
@@ -242,7 +242,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.delete), getString(R.string.add_photo_same_index)))
             fragment.showOn(this, "dialog")
         } else {
-            val intent = Intent(application, TabbedActivity::class.java)
+            val intent = Intent(application, EditPhotoActivity::class.java)
             intent.putExtra("filmroll", mFilmRoll!!.id)
             intent.putExtra("id", item.id)
             intent.putExtra("frameIndex", item.frameIndex)
@@ -364,7 +364,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                     when (which) {
                         0 -> if (id != -1) photo_fragment!!.deletePhoto(id)
                         1 -> {
-                            val intent = Intent(application, TabbedActivity::class.java)
+                            val intent = Intent(application, EditPhotoActivity::class.java)
                             intent.putExtra("filmroll", mFilmRoll!!.id)
                             intent.putExtra("frameIndex", index)
                             startActivityForResult(intent, REQCODE_ADD_PHOTO)

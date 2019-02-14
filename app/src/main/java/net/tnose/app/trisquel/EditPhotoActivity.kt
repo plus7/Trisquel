@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.support.design.chip.Chip
 import android.support.media.ExifInterface
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.FileProvider
@@ -35,13 +36,15 @@ import java.util.*
 
 class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_GET_LOCATION = 100
-    internal val REQCODE_MOUNT_ADAPTERS = 103
-    internal val REQCODE_DATE = 104
-    internal val REQCODE_ACCESSORY = 105
+    internal val DIALOG_SAVE_OR_DISCARD = 101
+    internal val DIALOG_CONTINUE_OR_DISCARD = 102
+    internal val DIALOG_MOUNT_ADAPTERS = 103
+    internal val DIALOG_DATE = 104
+    internal val DIALOG_ACCESSORY = 105
     internal val REQCODE_IMAGES = 106
     internal val RETCODE_SDCARD_PERM_LOADIMG = 107
     internal val RETCODE_SDCARD_PERM_IMGPICKER = 108
-    internal val REQCODE_ASK_CREATE_LENS = 109
+    internal val DIALOG_ASK_CREATE_LENS = 109
     internal val REQCODE_ADD_LENS = 110
     private var evGrainSize = 3
     private var evWidth = 3
@@ -67,37 +70,50 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var selectedAccessories: ArrayList<Int> = ArrayList()
     private var supplementalImages: ArrayList<String> = ArrayList()
     private var supplementalImagesToLoad: ArrayList<String> = ArrayList()
+    private var allTags: ArrayList<String> = arrayListOf()
+    private var checkState: ArrayList<Boolean> = arrayListOf()
     private var favorite = false
     private var isResumed: Boolean = false
     private var isDirty: Boolean = false
 
-    val data: Intent
+    val newphoto: Photo
         get() {
-            val data = Intent()
-            data.putExtra("id", id)
-            data.putExtra("frameIndex", frameIndex)
-            data.putExtra("filmroll", filmroll!!.id)
-            data.putExtra("date", edit_date.text.toString())
-            data.putExtra("lens", lenslist[spinner_lens.position].id)
-            data.putExtra("focal_length", seek_focal_length.progress + focalLengthRange.first)
-            data.putExtra("aperture", Util.safeStr2Dobule(spinner_aperture.text.toString()))
-            data.putExtra("shutter_speed", Util.stringToDoubleShutterSpeed(spinner_ss.text.toString()))
-            data.putExtra("exp_compensation", expCompensation)
-            data.putExtra("ttl_light_meter", ttlLightMeter)
-            data.putExtra("location", edit_location.text.toString())
-            data.putExtra("latitude", latitude)
-            data.putExtra("longitude", longitude)
-            data.putExtra("memo", edit_memo.text.toString())
-            data.putExtra("suppimgs", JSONArray(supplementalImages).toString())
-            data.putExtra("favorite", favorite)
-
             val sb = StringBuilder("/")
             for (accessory in selectedAccessories) {
                 sb.append(accessory)
                 sb.append('/')
             }
-            data.putExtra("accessories", sb.toString())
-            return data
+            val accessories = sb.toString()
+
+            return Photo(
+                    id,
+                    filmroll!!.id,
+                    frameIndex,
+                    edit_date.text.toString(),
+                    0,
+                    lenslist[spinner_lens.position].id,
+                    seek_focal_length.progress + focalLengthRange.first,
+                    Util.safeStr2Dobule(spinner_aperture.text.toString()),
+                    Util.stringToDoubleShutterSpeed(spinner_ss.text.toString()),
+                    expCompensation, ttlLightMeter,
+                    edit_location.text.toString(),
+                    latitude, longitude,
+                    edit_memo.text.toString(),
+                    accessories, JSONArray(supplementalImages).toString(),
+                    favorite)
+        }
+
+    val resultData: Intent
+        get() {
+            val newdata = Intent()
+            newdata.putExtra("photo", newphoto)
+
+            val tags = ArrayList<String>()
+            for((i,v) in checkState.withIndex()){
+                if(v) tags.add(allTags[i])
+            }
+            newdata.putExtra("tags", tags)
+            return newdata
         }
 
     private val expCompensation: Double
@@ -244,6 +260,20 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
 
             favorite = photo!!.favorite
+
+            val tags = dao.getTagsByPhoto(id)
+            val alltags = dao.allTags.sortedBy { it.label }
+            for(t in alltags){
+                val chip = createNewChip(t.label)
+                allTags.add(t.label)
+                if (tags.find { it.id == t.id } != null){
+                    checkState.add(true)
+                    chip.isChecked = true
+                }else{
+                    checkState.add(false)
+                }
+            }
+
             checkPermAndAppendSupplementalImages(photo!!.supplementalImages)
 
         }else if(savedInstanceState != null){ //復帰データあり
@@ -273,6 +303,13 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
 
             favorite = savedInstanceState.getBoolean("favorite")
+
+            allTags = savedInstanceState.getStringArrayList("alltags") ?: arrayListOf()
+            checkState = ArrayList<Boolean>((savedInstanceState.getBooleanArray("checkstate") ?: BooleanArray(0)).asList())
+            for((i, v) in allTags.withIndex()){
+                val chip = createNewChip(v)
+                chip.isChecked = checkState[i]
+            }
 
             checkPermAndAppendSupplementalImages(savedInstanceState.getStringArrayList("suppimgs"))
         }else{ //未入力開きたて
@@ -335,7 +372,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         spinner_lens.setOnClickListener {
             if(spinner_lens.adapter.count == 0){
                 val fragment = YesNoDialogFragment.Builder()
-                        .build(REQCODE_ASK_CREATE_LENS)
+                        .build(DIALOG_ASK_CREATE_LENS)
                 fragment.arguments?.putString("message", getString(R.string.msg_ask_create_lens))
                 fragment.arguments?.putString("positive", getString(android.R.string.yes))
                 fragment.arguments?.putString("negative", getString(android.R.string.no))
@@ -497,7 +534,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
         btn_mount_adapters.setOnClickListener {
             val fragment = CheckListDialogFragment.Builder()
-                    .build(REQCODE_MOUNT_ADAPTERS)
+                    .build(DIALOG_MOUNT_ADAPTERS)
             val dao = TrisquelDao(applicationContext)
             dao.connection()
             val availableLensMounts = dao.availableMountList
@@ -524,6 +561,25 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             fragment.arguments?.putString("negative", getString(android.R.string.no))
             fragment.showOn(this@EditPhotoActivity, "dialog")
         }
+
+        button_add.isEnabled = false
+        button_add.setOnClickListener {
+            if(isResumed) isDirty = true
+            val label = edit_tagtext.text.toString()
+            allTags.add(label)
+            checkState.add(true)
+            val chip = createNewChip(label)
+            chip.isChecked = true
+            edit_tagtext.setText("")
+        }
+
+        edit_tagtext!!.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable) {
+                button_add.isEnabled = !allTags.contains(edit_tagtext.text.toString()) && edit_tagtext.text.isNotEmpty()
+            }
+        })
     }
 
     protected fun canSave(): Boolean {
@@ -660,6 +716,26 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         appendSupplementalImages(paths)
     }
 
+    fun createNewChip(label: String): Chip {
+        val newchip = Chip(this)
+        newchip.text = label
+        val chipLayoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT)
+        newchip.layoutParams = chipLayoutParams
+        newchip.isCheckable = true
+        newchip.setOnCheckedChangeListener{
+            buttonView, isChecked ->
+            val i = allTags.indexOf(label)
+            if(i >= 0) {
+                checkState[i] = isChecked
+                if (isResumed) isDirty = true
+            }
+        }
+        chip_group.addView(newchip)
+        return newchip
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_photo)
@@ -713,18 +789,20 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         outState.putString("memo", edit_memo.text.toString())
         outState.putStringArrayList("suppimgs", supplementalImages)
         outState.putBoolean("favorite", favorite)
+        outState.putStringArrayList("alltags", allTags)
+        outState.putBooleanArray("checkstate", checkState.toBooleanArray())
         super.onSaveInstanceState(outState)
     }
 
     internal fun showDateDialogOnActivity() {
         DatePickerFragment.Builder()
-                .build(REQCODE_DATE)
+                .build(DIALOG_DATE)
                 .showOn(this, "dialog")
     }
 
     internal fun showAccessoryDialogOnActivity() {
         val fragment = CheckListDialogFragment.Builder()
-                .build(REQCODE_ACCESSORY)
+                .build(DIALOG_ACCESSORY)
         val dao = TrisquelDao(applicationContext)
         dao.connection()
         val accessories = dao.accessories
@@ -761,7 +839,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
-            REQCODE_DATE -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+            DIALOG_DATE -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val year = data.getIntExtra(DatePickerFragment.EXTRA_YEAR, 1970)
                 val month = data.getIntExtra(DatePickerFragment.EXTRA_MONTH, 0)
                 val day = data.getIntExtra(DatePickerFragment.EXTRA_DAY, 0)
@@ -772,21 +850,20 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 val sdf = SimpleDateFormat("yyyy/MM/dd")
                 edit_date.setText(sdf.format(c.time))
             }
-            101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val resultData = this.data
+            DIALOG_SAVE_OR_DISCARD -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 setResult(Activity.RESULT_OK, resultData)
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
                 setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
-            102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                /* do nothing */
+            DIALOG_CONTINUE_OR_DISCARD -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                /* do nothing and continue editing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
                 setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
-            REQCODE_MOUNT_ADAPTERS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+            DIALOG_MOUNT_ADAPTERS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val bundle = data.extras
                 saveSuggestListSubPref("mount_adapters",
                         filmroll!!.camera.mount,
@@ -801,7 +878,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 dao.close()
                 spinner_lens.clearFocus() //こうしないとドロップダウンリストが更新されない…気がする。バグか？
             }
-            REQCODE_ACCESSORY -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+            DIALOG_ACCESSORY -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val bundle = data.extras
                 val tags = bundle!!.getIntegerArrayList("checked_tags")
                 if (!sameArrayList(tags!!, selectedAccessories)) {
@@ -812,7 +889,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     dao.close()
                 }
             }
-            REQCODE_ASK_CREATE_LENS -> if(resultCode == DialogInterface.BUTTON_POSITIVE){
+            DIALOG_ASK_CREATE_LENS -> if(resultCode == DialogInterface.BUTTON_POSITIVE){
                 intent = Intent(application, EditLensActivity::class.java)
                 startActivityForResult(intent, REQCODE_ADD_LENS)
             }
@@ -855,7 +932,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 return true
             }
             R.id.menu_save -> {
-                setResult(Activity.RESULT_OK, data)
+                setResult(Activity.RESULT_OK, resultData)
                 finish()
                 return true
             }
