@@ -22,6 +22,7 @@ import java.util.*
 import java.util.regex.Pattern
 
 class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
+    val DIALOG_CUSTOM_SHUTTER_SPEEDS = 100
     private var id: Int = -1
     private var type: Int = 0
     private var created: String = ""
@@ -29,10 +30,12 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
     private var ssAdapterOne: ArrayAdapter<CharSequence>? = null
     private var ssAdapterHalf: ArrayAdapter<CharSequence>? = null
     private var ssAdapterOneThird: ArrayAdapter<CharSequence>? = null
+    private var ssCustomSteps: ArrayList<String> = arrayListOf()
     private var fsAdapter: FStepAdapter? = null
     private var isDirty: Boolean = false
     private var isResumed: Boolean = false
     private var userIsInteracting = false
+    private var previousCheckedSsSteps = -1
 
     private val shutterSpeedRangeOk: Boolean
         get() {
@@ -70,14 +73,17 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             1
         } else if (radio_stop_half!!.isChecked) {
             2
-        } else {
+        } else if (radio_stop_one_third!!.isChecked){
             3
+        } else { // custom
+            0
         }
         set(value) =
             when (value) {
                 1 -> radio_stop_one!!.isChecked = true
                 2 -> radio_stop_half!!.isChecked = true
-                else -> radio_stop_one_third!!.isChecked = true
+                3 -> radio_stop_one_third!!.isChecked = true
+                else -> radio_stop_custom!!.isChecked = true
             }
 
     /*
@@ -97,7 +103,7 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
                     Util.stringToDoubleShutterSpeed(spinner_fastest_ss!!.text.toString()),
                     Util.stringToDoubleShutterSpeed(spinner_slowest_ss!!.text.toString()),
                     check_bulb_available!!.isChecked,
-                    "",
+                    ssCustomSteps.map{ Util.stringToDoubleShutterSpeed(it).toString() }.joinToString(","),
                     spinner_ev_grain_size!!.selectedItemPosition + 1,
                     spinner_ev_width!!.selectedItemPosition + 1)
             data.putExtra("cameraspec", c)
@@ -118,9 +124,13 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         } else if (radio_stop_half!!.isChecked) {
             spinner_fastest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterHalf)
             spinner_slowest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterHalf)
-        } else {
+        } else if (radio_stop_one_third!!.isChecked) {
             spinner_fastest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOneThird)
             spinner_slowest_ss!!.setAdapter<ArrayAdapter<CharSequence>>(ssAdapterOneThird)
+        } else {
+            val customSsAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, ssCustomSteps)
+            spinner_fastest_ss!!.setAdapter(customSsAdapter)
+            spinner_slowest_ss!!.setAdapter(customSsAdapter)
         }
     }
 
@@ -177,7 +187,9 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             edit_model!!.setText(c.modelName)
             if (c.format < 0) c.format = 0
             spinner_format!!.position = c.format
-            this.ssGrainSize = c.shutterSpeedGrainSize
+            ssGrainSize = c.shutterSpeedGrainSize
+            previousCheckedSsSteps = ssGrainSize
+            ssCustomSteps = ArrayList(c.shutterSpeedSteps.map { Util.doubleToStringShutterSpeed(it) })
             spinner_fastest_ss!!.setText(Util.doubleToStringShutterSpeed(c.fastestShutterSpeed!!))
             spinner_slowest_ss!!.setText(Util.doubleToStringShutterSpeed(c.slowestShutterSpeed!!))
             check_bulb_available!!.isChecked = c.bulbAvailable
@@ -198,6 +210,8 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             edit_model!!.setText(savedInstanceState.getString("model_name"))
             spinner_format!!.position = savedInstanceState.getInt("format_position")
             ssGrainSize = savedInstanceState.getInt("ss_grain_size")
+            previousCheckedSsSteps = savedInstanceState.getInt("previous_checked_ss_steps")
+            ssCustomSteps = savedInstanceState.getStringArrayList("ss_custom_steps") ?: arrayListOf()
             spinner_fastest_ss!!.setText(savedInstanceState.getString("fastest_ss"))
             spinner_slowest_ss!!.setText(savedInstanceState.getString("slowest_ss"))
             check_bulb_available!!.isChecked = savedInstanceState.getBoolean("bulb_available")
@@ -205,6 +219,7 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             spinner_ev_width!!.setSelection(savedInstanceState.getInt("ev_width") - 1, false)
         }else{ //未入力開きたて
             this.created = ""
+            previousCheckedSsSteps = 1
         }
 
         if (type == 1) gridview!!.adapter = fsAdapter
@@ -279,10 +294,43 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             }
         })
 
+        radio_stop_custom.setOnClickListener {
+            if(previousCheckedSsSteps == 0){
+                val fragment = ShutterSpeedCustomizeDialogFragment.Builder()
+                        .build(DIALOG_CUSTOM_SHUTTER_SPEEDS)
+                //fragment.arguments?.putInt("id", item.id)
+                fragment.arguments?.putString("title", getString(R.string.title_dialog_custom_ss))
+                fragment.arguments?.putString("message", getString(R.string.msg_dialog_custom_ss))
+                val default_value = if(ssCustomSteps.size == 0){
+                    resources.getStringArray(R.array.shutter_speeds_one).joinToString("\n")
+                }else{
+                    ssCustomSteps.joinToString("\n")
+                }
+                fragment.arguments?.putString("default_value", default_value)
+                fragment.showOn(this, "dialog")
+            }
+        }
+
         val rg = findViewById<RadioGroup>(R.id.radiogroup_ss_stop)
         rg.setOnCheckedChangeListener { group, checkedId ->
-            refreshShutterSpeedSpinners()
-            if(isResumed) isDirty = true
+            if(checkedId == R.id.radio_stop_custom){
+                val fragment = ShutterSpeedCustomizeDialogFragment.Builder()
+                        .build(DIALOG_CUSTOM_SHUTTER_SPEEDS)
+                //fragment.arguments?.putInt("id", item.id)
+                fragment.arguments?.putString("title", getString(R.string.title_dialog_custom_ss))
+                fragment.arguments?.putString("message", getString(R.string.msg_dialog_custom_ss))
+                val default_value = if(ssCustomSteps.size == 0){
+                    resources.getStringArray(R.array.shutter_speeds_one).joinToString("\n")
+                }else{
+                    ssCustomSteps.joinToString("\n")
+                }
+                fragment.arguments?.putString("default_value", default_value)
+                fragment.showOn(this, "dialog")
+            } else {
+                previousCheckedSsSteps = ssGrainSize
+                refreshShutterSpeedSpinners()
+                if (isResumed) isDirty = true
+            }
         }
 
         spinner_fastest_ss!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
@@ -449,6 +497,8 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         outState.putString("model_name", edit_model!!.text.toString())
         outState.putInt("format_position", spinner_format!!.position)
         outState.putInt("ss_grain_size", ssGrainSize)
+        outState.putInt("previous_checked_ss_steps", previousCheckedSsSteps)
+        outState.putStringArrayList("ss_custom_steps", ssCustomSteps)
         outState.putString("fastest_ss", spinner_fastest_ss!!.text.toString())
         outState.putString("slowest_ss", spinner_slowest_ss!!.text.toString())
         outState.putBoolean("bulb_available", check_bulb_available!!.isChecked)
@@ -526,10 +576,22 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
                 setResult(Activity.RESULT_CANCELED, Intent())
                 finish()
             }
+            DIALOG_CUSTOM_SHUTTER_SPEEDS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                val list = ArrayList(data.getStringExtra("value").split("\n").sortedBy { Util.stringToDoubleShutterSpeed(it) })
+                ssCustomSteps = list
+                refreshShutterSpeedSpinners()
+                previousCheckedSsSteps = 0
+                if (isResumed) isDirty = true
+            } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
+                ssGrainSize = previousCheckedSsSteps
+            }
         }
     }
 
     override fun onDialogCancelled(requestCode: Int) {
+        when(requestCode){
+            DIALOG_CUSTOM_SHUTTER_SPEEDS -> ssGrainSize = previousCheckedSsSteps
+        }
         // onDialogResult(requestCode, DialogInterface.BUTTON_NEUTRAL, null);
     }
 

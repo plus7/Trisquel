@@ -104,6 +104,12 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/label_shutter_speed_step_one_third" />
+
+                    <RadioButton
+                        android:id="@+id/radio_stop_custom"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_shutter_speed_step_custom" />
                 </RadioGroup>
 
             </LinearLayout>

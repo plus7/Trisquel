@@ -77,6 +77,7 @@
     <string name="label_shutter_speed_step_one">1段</string>
     <string name="label_shutter_speed_step_half">1/2段</string>
     <string name="label_shutter_speed_step_one_third">1/3段</string>
+    <string name="label_shutter_speed_step_custom">カスタム&#8230;</string>
     <string name="label_shutter_speed_range">シャッタースピード範囲</string>
     <string name="label_to">～</string>
     <string name="label_shutter_speed_slowest">最低速</string>
@@ -124,6 +125,8 @@
     <string name="hint_dialog_shift_index">有効値: %d以上</string>
     <string name="msg_cannot_remove_item">%s は既存のフィルム記録から参照されているため、削除することができません。</string>
     <string name="msg_confirm_remove_item">本当に %s を削除しますか？この操作は元に戻せません！</string>
+    <string name="title_dialog_custom_ss">カスタムシャッタースピード</string>
+    <string name="msg_dialog_custom_ss">シャッタースピードは 1/1000, 0.3 または 10 のような形式で各行に入力してください</string>
     <string name="error_flfactor_toosmall">1.0より大きい数字を入れてください</string>
     <string name="error_flfactor_toobig">1.0より小さい数字を入れてください</string>
     <string name="error_ss_inconsistent">矛盾した値です</string>

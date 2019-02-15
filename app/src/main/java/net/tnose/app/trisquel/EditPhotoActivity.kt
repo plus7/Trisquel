@@ -218,7 +218,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val ssArray = when (filmroll!!.camera.shutterSpeedGrainSize) {
             1 -> resources.getStringArray(R.array.shutter_speeds_one)
             2 -> resources.getStringArray(R.array.shutter_speeds_half)
-            else -> resources.getStringArray(R.array.shutter_speeds_one_third)
+            3 -> resources.getStringArray(R.array.shutter_speeds_one_third)
+            else -> filmroll!!.camera.shutterSpeedSteps.map { Util.doubleToStringShutterSpeed(it) }.toTypedArray() //なんか無駄な感じするけど…
         }.filter{ s ->
             val ssval = Util.stringToDoubleShutterSpeed(s)
             ssval <= filmroll!!.camera.slowestShutterSpeed!! && ssval >= filmroll!!.camera.fastestShutterSpeed!!

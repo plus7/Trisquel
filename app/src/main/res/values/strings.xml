@@ -75,8 +75,9 @@
     <string name="label_shutter_speed">Shutter speed</string>
     <string name="label_shutter_speed_step">Shutter speed step</string>
     <string name="label_shutter_speed_step_one">1 step</string>
-    <string name="label_shutter_speed_step_half">1/2 step</string>
-    <string name="label_shutter_speed_step_one_third">1/3 step</string>
+    <string name="label_shutter_speed_step_half">&#189; step</string>
+    <string name="label_shutter_speed_step_one_third">&#8531; step</string>
+    <string name="label_shutter_speed_step_custom">Custom&#8230;</string>
     <string name="label_shutter_speed_range">Shutter speed range</string>
     <string name="label_shutter_speed_slowest">Slowest</string>
     <string name="label_shutter_speed_fastest">Fastest</string>
@@ -124,6 +125,8 @@
     <string name="hint_dialog_shift_index">Allowed value: %d or more</string>
     <string name="msg_cannot_remove_item">%s cannot be removed because it is referenced by some film rolls.</string>
     <string name="msg_confirm_remove_item">Are you sure to remove %s? This action is not undoable!</string>
+    <string name="title_dialog_custom_ss">Custom shutter speeds</string>
+    <string name="msg_dialog_custom_ss">Input shutter speeds line-by-line in a format like 1/1000, 0.3 or 10</string>
     <string name="error_flfactor_toosmall">Input more than 1.0</string>
     <string name="error_flfactor_toobig">Input less than 1.0</string>
     <string name="error_ss_inconsistent">Inconsistent values</string>
