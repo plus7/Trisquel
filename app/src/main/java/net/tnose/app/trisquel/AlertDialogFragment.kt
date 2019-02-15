@@ -15,11 +15,6 @@ class AlertDialogFragment : AbstractDialogFragment() {
                 .create()
     }
 
-    override fun onPause() {
-        super.onPause()
-        dismiss()
-    }
-
     class Builder : AbstractDialogFragment.Builder() {
         override fun build(): AbstractDialogFragment {//build()から呼ぶとcheckArgumentsで死ぬと思う
             return AlertDialogFragment()
