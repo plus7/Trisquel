@@ -319,6 +319,11 @@ class MainActivity : AppCompatActivity(),
             is FilmRollFragment -> true
             else -> false
         }
+        val searchmenu = menu.findItem(R.id.action_search)
+        searchmenu.isVisible = when(currentFragment){
+            is FilmRollFragment -> true
+            else -> false
+        }
 
         val pinfiltermenu = menu.findItem(R.id.action_pin_current_filter)
         val unpinfiltermenu = menu.findItem(R.id.action_unpin_current_filter)
