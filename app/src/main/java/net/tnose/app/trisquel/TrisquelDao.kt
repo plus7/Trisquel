@@ -505,7 +505,10 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
     fun deleteFilmRoll(id: Int) {
         val selectArgs = arrayOf(Integer.toString(id))
-        mDb!!.delete("photo", "filmroll = ?", selectArgs)
+        val photos = getPhotosByFilmRollId(id)
+        for(p in photos){
+            deletePhoto(p.id) //tagのリファレンスカウントも管理する必要があるため
+        }
         mDb!!.delete("filmroll", "_id = ?", selectArgs)
     }
 
