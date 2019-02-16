@@ -2,7 +2,6 @@ package net.tnose.app.trisquel
 
 import android.Manifest
 import android.app.Activity
-import android.app.ActivityOptions
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -62,7 +61,9 @@ class MainActivity : AppCompatActivity(),
         const val REQCODE_EDIT_ACCESSORY = 8
         const val REQCODE_ADD_ACCESSORY = 9
         const val REQCODE_BACKUP_DIR_CHOSEN = 10
+        const val REQCODE_SEARCH = 11
 
+        const val RETCODE_ALERT = 200
         const val RETCODE_CAMERA_TYPE = 300
         const val RETCODE_OPEN_RELEASE_NOTES = 100
         const val RETCODE_DELETE_FILMROLL = 101
@@ -74,6 +75,7 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_SORT = 402
         const val RETCODE_FILTER_CAMERA = 403
         const val RETCODE_FILTER_FILM_BRAND = 404
+        const val RETCODE_SEARCH = 405
 
         const val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
     }
@@ -355,8 +357,15 @@ class MainActivity : AppCompatActivity(),
             startActivity(intent)
             return true
         } else if (id == R.id.action_search) {
-            val intent = Intent(application, SearchActivity::class.java)
-            startActivity(intent, ActivityOptions.makeCustomAnimation(this, R.anim.abc_fade_in, R.anim.abc_fade_out).toBundle())
+            val dao = TrisquelDao(this)
+            dao.connection()
+            val tags = dao.allTags
+            dao.close()
+
+            val fragment = SearchCondDialogFragment.Builder().build(RETCODE_SEARCH)
+            fragment.arguments?.putString("title", getString(R.string.title_dialog_search_by_tags))
+            fragment.arguments?.putStringArray("labels", tags.map { it.label }.toTypedArray())
+            fragment.showOn(this, "dialog")
             return true
         } else if (id == R.id.action_sort){
             val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)
@@ -620,6 +629,13 @@ class MainActivity : AppCompatActivity(),
 
                         Toast.makeText(this, "Wrote to " + backupDB.absolutePath, Toast.LENGTH_LONG).show()
                     }
+                }
+            }
+            REQCODE_SEARCH -> {
+                val bundle = data.extras
+                val dirtyFilmRolls = bundle?.getIntegerArrayList("dirtyFilmRolls") ?: ArrayList()
+                if(dirtyFilmRolls.size > 0 && currentFragment is FilmRollFragment){
+                    (currentFragment as FilmRollFragment).refreshAll(ArrayList(dirtyFilmRolls.filterNotNull()))
                 }
             }
             else -> {
@@ -946,6 +962,14 @@ class MainActivity : AppCompatActivity(),
                                 Pair(2, arrayListOf(brands[which].first, brands[which].second))
                         supportActionBar?.subtitle = "🎞 " + brands[which].second
                     }
+                }
+            }
+            RETCODE_SEARCH -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                val tags = data.getStringArrayListExtra("checked_labels")
+                if(tags.size > 0) {
+                    val intent = Intent(application, SearchActivity::class.java)
+                    intent.putExtra("tags", tags)
+                    startActivityForResult(intent, REQCODE_SEARCH)
                 }
             }
         }

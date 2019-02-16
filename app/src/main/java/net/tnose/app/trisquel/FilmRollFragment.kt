@@ -168,6 +168,13 @@ class FilmRollFragment : Fragment() {
         }
     }
 
+    fun refreshAll(filmrolls: ArrayList<Int>){
+        val uniqFilmRolls = filmrolls.distinct()
+        for(id in uniqFilmRolls){
+            refreshFilmRoll(id)
+        }
+    }
+
     fun refreshFilmRoll(id: Int) {
         if (list != null) {
             for (i in list!!.indices) {

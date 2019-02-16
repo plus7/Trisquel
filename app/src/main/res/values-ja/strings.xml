@@ -118,6 +118,7 @@
     <string name="label_filter_detail">詳細な絞り込み</string>
     <string name="label_add">追加</string>
     <string name="label_tags">タグ</string>
+    <string name="title_dialog_search_by_tags">タグによる検索</string>
     <string name="title_dialog_select_accessories">アクセサリを選択</string>
     <string name="title_dialog_edit_index">インデックス値を変更</string>
     <string name="title_dialog_shift_index">インデックス値をシフト</string>

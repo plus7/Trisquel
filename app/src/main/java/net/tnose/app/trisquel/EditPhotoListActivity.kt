@@ -26,6 +26,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     internal val REQCODE_EDIT_PHOTOINDEX = 104
     internal val REQCODE_INDEX_SHIFT = 105
     internal val RETCODE_SDCARD_PERM_IMGPICKER = 106
+    internal val DIALOG_OP_ON_PHOTO = 200
 
     private val PERMISSIONS = arrayOf(
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -237,7 +238,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     override fun onListFragmentInteraction(item: Photo, isLong: Boolean) {
         if (isLong) {
             val fragment = SelectDialogFragment.Builder()
-                    .build(200)
+                    .build(DIALOG_OP_ON_PHOTO)
             fragment.arguments?.putInt("id", item.id)
             fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.delete), getString(R.string.add_photo_same_index)))
             fragment.showOn(this, "dialog")
@@ -349,7 +350,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
-            200 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+            DIALOG_OP_ON_PHOTO -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 if (data != null) {
                     val which: Int
                     val id: Int
