@@ -203,6 +203,21 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         edit_accessories.setText(sb.toString())
     }
 
+    protected fun loadTags(id: Int, dao: TrisquelDao){
+        val tags = dao.getTagsByPhoto(id)
+        val alltags = dao.allTags.sortedBy { it.label }
+        for(t in alltags){
+            val chip = createNewChip(t.label)
+            allTags.add(t.label)
+            if (tags.find { it.id == t.id } != null){
+                checkState.add(true)
+                chip.isChecked = true
+            }else{
+                checkState.add(false)
+            }
+        }
+    }
+
     protected fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?) {
         this.id = data.getIntExtra("id", -1)
         this.frameIndex = data.getIntExtra("frameIndex", -1)
@@ -262,18 +277,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             favorite = photo!!.favorite
 
-            val tags = dao.getTagsByPhoto(id)
-            val alltags = dao.allTags.sortedBy { it.label }
-            for(t in alltags){
-                val chip = createNewChip(t.label)
-                allTags.add(t.label)
-                if (tags.find { it.id == t.id } != null){
-                    checkState.add(true)
-                    chip.isChecked = true
-                }else{
-                    checkState.add(false)
-                }
-            }
+            loadTags(id, dao)
 
             checkPermAndAppendSupplementalImages(photo!!.supplementalImages)
 
@@ -314,6 +318,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             checkPermAndAppendSupplementalImages(savedInstanceState.getStringArrayList("suppimgs"))
         }else{ //未入力開きたて
+            loadTags(-1, dao)
             seek_exp_compensation.progress = evWidth * evGrainSize
             label_ev_corr_amount.text = toHumanReadableCompensationAmount(0)
             seek_ttl_light_meter.progress = evWidth * evGrainSize
