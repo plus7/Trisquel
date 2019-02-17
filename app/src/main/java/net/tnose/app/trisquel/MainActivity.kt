@@ -364,7 +364,7 @@ class MainActivity : AppCompatActivity(),
 
             val fragment = SearchCondDialogFragment.Builder().build(RETCODE_SEARCH)
             fragment.arguments?.putString("title", getString(R.string.title_dialog_search_by_tags))
-            fragment.arguments?.putStringArray("labels", tags.map { it.label }.toTypedArray())
+            fragment.arguments?.putStringArray("labels", tags.sortedBy{ it.label }.map { it.label }.toTypedArray())
             fragment.showOn(this, "dialog")
             return true
         } else if (id == R.id.action_sort){
