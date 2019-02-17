@@ -119,6 +119,7 @@
     <string name="label_add">Add</string>
     <string name="label_tags">Tags</string>
     <string name="title_dialog_search_by_tags">Search by tags</string>
+    <string name="msg_error_no_tagged_items">There is no tagged photos</string>
     <string name="title_dialog_select_accessories">Select accessories</string>
     <string name="title_dialog_edit_index">Modify the index value</string>
     <string name="title_dialog_shift_index">Shift the index values</string>

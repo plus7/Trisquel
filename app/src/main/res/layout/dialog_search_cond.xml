@@ -14,6 +14,12 @@
         android:orientation="vertical"
         android:padding="12dp">
 
+        <TextView
+            android:id="@+id/errorMsg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"/>
+
         <android.support.design.chip.ChipGroup
             android:id="@+id/chip_group"
             android:layout_width="match_parent"

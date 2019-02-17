@@ -8,8 +8,10 @@ import android.support.design.chip.Chip
 import android.support.design.chip.ChipGroup
 import android.support.v7.app.AlertDialog
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.TextView
 
 class SearchCondDialogFragment : AbstractDialogFragment() {
     var labels: Array<String>? = null
@@ -39,7 +41,9 @@ class SearchCondDialogFragment : AbstractDialogFragment() {
         val items = arguments?.getStringArray("labels") ?: arrayOf()
         labels = items
         if(items.size == 0){
-            //TODO: show message
+            val textview = frame.findViewById<TextView>(R.id.errorMsg)
+            textview.visibility = View.VISIBLE
+            textview.text = getString(R.string.msg_error_no_tagged_items)
         }
         checkState = Array<Boolean>(items.size, {i -> false})
         val chip_group = frame.findViewById<ChipGroup>(R.id.chip_group)
