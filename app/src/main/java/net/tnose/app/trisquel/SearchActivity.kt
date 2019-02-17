@@ -72,6 +72,11 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
 
     override fun onListFragmentInteraction(item: Photo, isLong: Boolean) {
         if (isLong) {
+            val fragment = YesNoDialogFragment.Builder()
+                    .build(DIALOG_DELETE_PHOTO)
+            fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(getString(R.string.this_photo)))
+            fragment.arguments?.putInt("id", item.id)
+            fragment.showOn(this, "dialog")
         } else {
             val intent = Intent(application, EditPhotoActivity::class.java)
             intent.putExtra("filmroll", item.filmrollid)
@@ -172,7 +177,16 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
             DIALOG_DELETE_PHOTO -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                isDirty = true
+                val id = data.getIntExtra("id", -1)
+                val dao = TrisquelDao(this)
+                dao.connection()
+                val p = dao.getPhoto(id)
+                dao.close()
+                if(p != null) {
+                    dirtyFilmRolls.add(p.filmrollid)
+                    fragment!!.deletePhoto(id)
+                    isDirty = true
+                }
             }
             REQCODE_EDIT_PHOTOINDEX -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {}
             REQCODE_INDEX_SHIFT -> if (resultCode == DialogInterface.BUTTON_POSITIVE){}

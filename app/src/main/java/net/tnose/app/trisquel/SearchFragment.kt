@@ -153,13 +153,16 @@ class SearchFragment : Fragment() {
     }
 
     fun deletePhoto(id: Int) {
-        /*
         var deletedPos = -1
         val dao = TrisquelDao(this.context)
         dao.connection()
 
+        val p = dao.getPhoto(id)
+        if(p == null) { dao.close(); return }
+
         val localAdapter = mLocalAdapters[p.filmrollid]
         if(localAdapter == null) return
+
         for (i in 0.until(localAdapter.itemCount)) {
             if (localAdapter[i].id == id) {
                 deletedPos = i
@@ -167,14 +170,14 @@ class SearchFragment : Fragment() {
                 dao.deletePhoto(id)
                 // localAdapter.notifyItemRemoved(i) //不要？
                 // 日付をグルーピングしているように見える小細工がある都合で一個下にも通知が必要
-                // 上でremoveAtしてるから以下の判定式ではlocalAdapter.itemCount-1ではなく
+                // 上でremoveしてるから以下の判定式ではlocalAdapter.itemCount-1ではなく
                 // localAdapter.itemCountを使わなければならない
                 if(i != localAdapter.itemCount) localAdapter.notifyItemChanged(i)
                 break
             }
         }
+
         dao.close()
-        */
     }
 
     companion object {

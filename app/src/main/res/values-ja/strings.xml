@@ -127,6 +127,7 @@
     <string name="hint_dialog_shift_index">有効値: %d以上</string>
     <string name="msg_cannot_remove_item">%s は既存のフィルム記録から参照されているため、削除することができません。</string>
     <string name="msg_confirm_remove_item">本当に %s を削除しますか？この操作は元に戻せません！</string>
+    <string name="this_photo">この写真</string>
     <string name="title_dialog_custom_ss">カスタムシャッタースピード</string>
     <string name="msg_dialog_custom_ss">シャッタースピードは 1/1000, 0.3 または 10 のような形式で各行に入力してください</string>
     <string name="error_flfactor_toosmall">1.0より大きい数字を入れてください</string>
