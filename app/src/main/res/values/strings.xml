@@ -47,8 +47,7 @@
     <string name="action_license">Licenses</string>
     <string name="title_backup">Backup db file</string>
     <string name="description_backup">
-        Data of this application is saved in SQLite format.
-        You can backup this file to SD card in preparation
+        You can backup database file and supplemental images to SD card in preparation
         for data corruption bug or changing cell phone (currently import is not
         implemented but will be done in the future).
         Continue?

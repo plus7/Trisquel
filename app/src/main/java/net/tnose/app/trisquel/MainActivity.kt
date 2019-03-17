@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -13,6 +14,7 @@ import android.support.design.widget.FloatingActionButton
 import android.support.design.widget.NavigationView
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.Fragment
+import android.support.v4.content.LocalBroadcastManager
 import android.support.v4.view.GravityCompat
 import android.support.v4.widget.DrawerLayout
 import android.support.v7.app.ActionBarDrawerToggle
@@ -35,6 +37,8 @@ import org.json.JSONObject
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 class MainActivity : AppCompatActivity(),
         NavigationView.OnNavigationItemSelectedListener,
@@ -76,9 +80,16 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_FILTER_CAMERA = 403
         const val RETCODE_FILTER_FILM_BRAND = 404
         const val RETCODE_SEARCH = 405
+        const val RETCODE_BACKUP_PROGRESS = 406
 
+        const val ACTION_CLOSE_PROGRESS_DIALOG = "ACTION_CLOSE_PROGRESS_DIALOG"
+        const val ACTION_UPDATE_PROGRESS_DIALOG = "ACTION_UPDATE_PROGRESS_DIALOG"
         const val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
     }
+
+    private var localBroadcastManager: LocalBroadcastManager? = null
+    private var progressFilter: IntentFilter? = null
+    private var progressReceiver: ExportProgressReceiver? = null
 
     private lateinit var currentFragment: Fragment
     private val pinnedFilterViewId: ArrayList<Int> = arrayListOf()
@@ -87,6 +98,8 @@ class MainActivity : AppCompatActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
+
         setContentView(R.layout.activity_main2)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -216,6 +229,19 @@ class MainActivity : AppCompatActivity(),
         val e = pref.edit()
         e.putInt("last_version", Util.TRISQUEL_VERSION)
         e.apply()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        progressFilter = IntentFilter()
+        progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
+        progressReceiver = ExportProgressReceiver(this)
+        localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
+    }
+
+    override fun onStop(){
+        super.onStop()
+        localBroadcastManager?.unregisterReceiver(progressReceiver!!)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -496,6 +522,87 @@ class MainActivity : AppCompatActivity(),
         return super.onOptionsItemSelected(item)
     }
 
+    fun backupToZip(zipFile: File) {
+        val zos = ZipOutputStream(FileOutputStream(zipFile))
+        zos.setMethod(ZipOutputStream.DEFLATED)
+        val osw = OutputStreamWriter(zos, "UTF-8")
+        val dao = TrisquelDao(this)
+        dao.connection()
+
+        // Metadata
+        val ze = ZipEntry("metadata.json")
+        zos.putNextEntry(ze)
+        val metadata = JSONObject()
+        metadata.put("DB_VERSION", DatabaseHelper.DATABASE_VERSION)
+
+        osw.write(metadata.toString())
+        osw.flush()
+        zos.closeEntry()
+
+        val types = listOf("camera", "lens", "filmroll", "accessory", "tag", "tagmap")
+
+        for(type in types) {
+            val ze = ZipEntry(type + ".json")
+            zos.putNextEntry(ze)
+            val entries = dao.getAllEntriesJSON(type)
+            osw.write(entries.toString())
+            osw.flush()
+            zos.closeEntry()
+        }
+
+        val zep = ZipEntry("photo.json")
+        zos.putNextEntry(zep)
+        val entries = dao.getAllEntriesJSON("photo")
+        osw.write(entries.toString())
+        osw.flush()
+        zos.closeEntry()
+
+        val hs = HashSet<String>()
+        for (i in 0..entries.length()-1){
+            val e = entries.getJSONObject(i)
+            val s = e.getString("suppimgs")
+            if(s.isEmpty()) continue
+            val imgs = JSONArray(s)
+            for (j in 0..imgs.length() - 1) {
+                val path = imgs[j].toString()
+                if(hs.contains(path)) continue
+                hs.add(path)
+                val f = File(path)
+                if(!f.exists()) continue
+                val ze = ZipEntry("imgs" + path)
+                zos.putNextEntry(ze)
+                try {
+                    val buf = ByteArray(1024*128)
+                    val bis = BufferedInputStream(FileInputStream(f))
+                    while (true) {
+                        val len = bis.read(buf)
+                        if (len < 0) break
+                        zos.write(buf, 0, len)
+                    }
+                } catch (e: IOException) {
+                    Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
+                } finally {
+                    zos.closeEntry()
+                }
+            }
+        }
+
+        dao.close()
+        zos.close()
+    }
+
+    fun setProgressPercentage(percentage: Double, status: String){
+        val intent = Intent()
+        if(percentage >= 100.0){
+            intent.action = ACTION_CLOSE_PROGRESS_DIALOG
+        }else {
+            intent.action = ACTION_UPDATE_PROGRESS_DIALOG
+            intent.putExtra("percentage", percentage)
+        }
+        intent.putExtra("status", status)
+        sendBroadcast(intent)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if(data == null) return
@@ -606,17 +713,26 @@ class MainActivity : AppCompatActivity(),
                 if (sd.canWrite()) {
                     val calendar = Calendar.getInstance()
                     val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-                    val backupDB = File(sd, "trisquel-" + sdf.format(calendar.time) + ".db")
+                    //val backupDB = File(sd, "trisquel-" + sdf.format(calendar.time) + ".db")
+                    val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
+                    val backupZip = File(sd, backupZipFileName)
 
                     if (dbpath.exists()) {
+                        val fragment = ExportProgressDialog.Builder()
+                                .build(RETCODE_BACKUP_PROGRESS)
+                        fragment.showOn(this, "dialog")
+                        ExportIntentService.startExport(this, dir, backupZipFileName)
+                        /*
                         try {
-                            val src = FileInputStream(dbpath).channel
+                            backupToZip(backupZip)
+                            / *val src = FileInputStream(dbpath).channel
                             val dst = FileOutputStream(backupDB).channel
                             dst.transferFrom(src, 0, src.size())
                             src.close()
-                            dst.close()
+                            dst.close()* \/
+
                             // MediaScannerに教えないとすぐにはPCから見えない
-                            val contentUri = Uri.fromFile(backupDB)
+                            val contentUri = Uri.fromFile(backupZip)
                             val mediaScanIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, contentUri)
                             this.sendBroadcast(mediaScanIntent)
                         } catch (e: FileNotFoundException) {
@@ -627,7 +743,8 @@ class MainActivity : AppCompatActivity(),
                             return
                         }
 
-                        Toast.makeText(this, "Wrote to " + backupDB.absolutePath, Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Wrote to " + backupZip.absolutePath, Toast.LENGTH_LONG).show()
+                        */
                     }
                 }
             }

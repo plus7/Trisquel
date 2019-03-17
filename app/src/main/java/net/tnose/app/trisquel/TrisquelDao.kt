@@ -11,6 +11,8 @@ import android.database.Cursor.FIELD_TYPE_NULL
 import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import org.json.JSONArray
+import org.json.JSONObject
 
 class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     protected val mContext = context
@@ -50,6 +52,32 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             return cameraList
         }
+
+    fun getAllEntriesJSON(type: String): JSONArray {
+        val ja = JSONArray()
+
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.rawQuery("select * from "+type+" order by _id desc;", null)
+            while (cursor!!.moveToNext()) {
+                val obj = JSONObject()
+                for (i in 0..cursor.columnCount - 1) {
+                    val cname = cursor.getColumnName(i)
+                    val ctype = cursor.getType(i)
+                    when(ctype){
+                        Cursor.FIELD_TYPE_NULL -> obj.put(cname, null)
+                        Cursor.FIELD_TYPE_FLOAT -> obj.put(cname, cursor.getDouble(i))
+                        Cursor.FIELD_TYPE_INTEGER -> obj.put(cname, cursor.getInt(i))
+                        Cursor.FIELD_TYPE_STRING -> obj.put(cname, cursor.getString(i))
+                    }
+                }
+                ja.put(obj)
+            }
+        } finally {
+            cursor?.close()
+        }
+        return ja
+    }
 
     val allVisibleLenses: ArrayList<LensSpec>
         get() {

@@ -43,9 +43,8 @@
     <string name="title_activity_license">ライセンス</string>
     <string name="title_backup">データベースをバックアップ</string>
     <string name="description_backup">
-        本アプリのデータはSQLite形式で保存されています。
         バグによるデータ破壊への備えや端末の移行用（現在インポートは未実装ですがそのうち実装します）
-        に、このデータベースをSDカードにコピーすることができます。続行しますか？
+        に、データベースと補足画像をzipファイルにまとめてSDカードにコピーすることができます。続行しますか？
     </string>
     <string name="notify_copied">クリップボードにコピーしました</string>
     <string name="error_permission_denied_sdcard">SDカードにアクセスする許可が得られませんでした</string>
