@@ -9,10 +9,11 @@ import android.os.Bundle
 import android.support.v7.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 
-class ExportProgressDialog : AbstractDialogFragment() {
+class ProgressDialog : AbstractDialogFragment() {
     private val br = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val action = intent.action
@@ -49,9 +50,15 @@ class ExportProgressDialog : AbstractDialogFragment() {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val frame = LayoutInflater.from(context).inflate(R.layout.dialog_export_progress, view as ViewGroup?, false)
+        val frame = LayoutInflater.from(context).inflate(R.layout.dialog_progress, view as ViewGroup?, false)
+        val btnCancel = frame.findViewById<Button>(R.id.btnCancel)
+        btnCancel.setOnClickListener {
+            ExportIntentService.shouldContinue = false
+            closeDialog()
+        }
         val dialog = AlertDialog.Builder(activity!!)
                 .setView(frame)
+                .setTitle(arguments?.getString("title", "") ?: "")
                 .create()
         isCancelable = false
         return dialog
@@ -64,7 +71,7 @@ class ExportProgressDialog : AbstractDialogFragment() {
 
     class Builder : AbstractDialogFragment.Builder() {
         override fun build(): AbstractDialogFragment {//build()から呼ぶとcheckArgumentsで死ぬと思う
-            return ExportProgressDialog()
+            return ProgressDialog()
         }
     }
 }

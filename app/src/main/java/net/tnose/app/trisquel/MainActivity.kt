@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity(),
 
     private var localBroadcastManager: LocalBroadcastManager? = null
     private var progressFilter: IntentFilter? = null
-    private var progressReceiver: ExportProgressReceiver? = null
+    private var progressReceiver: ProgressReceiver? = null
 
     private lateinit var currentFragment: Fragment
     private val pinnedFilterViewId: ArrayList<Int> = arrayListOf()
@@ -235,7 +235,7 @@ class MainActivity : AppCompatActivity(),
         super.onStart()
         progressFilter = IntentFilter()
         progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
-        progressReceiver = ExportProgressReceiver(this)
+        progressReceiver = ProgressReceiver(this)
         localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
     }
 
@@ -718,9 +718,10 @@ class MainActivity : AppCompatActivity(),
                     val backupZip = File(sd, backupZipFileName)
 
                     if (dbpath.exists()) {
-                        val fragment = ExportProgressDialog.Builder()
+                        val fragment = ProgressDialog.Builder()
                                 .build(RETCODE_BACKUP_PROGRESS)
                         fragment.showOn(this, "dialog")
+                        ExportIntentService.shouldContinue = true
                         ExportIntentService.startExport(this, dir, backupZipFileName)
                         /*
                         try {
