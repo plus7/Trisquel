@@ -16,7 +16,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"/>
 
-        <android.support.design.widget.TextInputLayout
+        <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -24,13 +24,13 @@
             app:hintAnimationEnabled="true"
             app:hintEnabled="true">
 
-            <android.support.design.widget.TextInputEditText
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/input"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="hoge"
                 android:text="aaaaa" />
 
-        </android.support.design.widget.TextInputLayout>
+        </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 </FrameLayout>

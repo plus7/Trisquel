@@ -3,8 +3,8 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import android.support.design.chip.Chip
-import android.support.v4.app.Fragment
+import com.google.android.material.chip.Chip
+import androidx.fragment.app.Fragment
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -28,7 +28,7 @@ private const val ARG_PARAM2 = "param2"
  * create an instance of this fragment.
  *
  */
-class TagEditFragment : Fragment() {
+class TagEditFragment : androidx.fragment.app.Fragment() {
     // TODO: Rename and change types of parameters
     private var mFilmRollId: Int = -1
     private var mId: Int = -1
@@ -60,7 +60,7 @@ class TagEditFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_tag_edit, container, false)
     }
 
-    fun createNewChip(label: String): Chip{
+    fun createNewChip(label: String): Chip {
         val newchip = Chip(activity!!)
         newchip.text = label
         val chipLayoutParams = LinearLayout.LayoutParams(

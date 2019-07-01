@@ -7,8 +7,8 @@ import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
 import android.os.Bundle
-import android.support.v4.app.ActivityCompat
-import android.support.v4.app.FragmentActivity
+import androidx.core.app.ActivityCompat
+import androidx.fragment.app.FragmentActivity
 import android.util.Log
 import android.widget.Button
 import android.widget.Toast
@@ -24,7 +24,7 @@ import java.io.IOException
 import java.text.Normalizer
 import java.util.*
 
-class MapsActivity : FragmentActivity(), OnMapReadyCallback {
+class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallback {
     internal val RETCODE_LOC_PERM = 100
     internal val PERMISSIONS = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
     private var mMap: GoogleMap? = null

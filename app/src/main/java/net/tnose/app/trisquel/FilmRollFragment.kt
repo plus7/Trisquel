@@ -3,8 +3,8 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.support.v4.app.Fragment
-import android.support.v7.widget.LinearLayoutManager
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,7 +21,7 @@ import java.util.*
  * Mandatory empty constructor for the fragment manager to instantiate the
  * fragment (e.g. upon screen orientation changes).
  */
-class FilmRollFragment : Fragment() {
+class FilmRollFragment : androidx.fragment.app.Fragment() {
     // TODO: Customize parameters
     //private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
@@ -63,7 +63,7 @@ class FilmRollFragment : Fragment() {
             mRecyclerView!!.setEmptyMessage(getString(R.string.warning_filmroll_not_registered))
             mRecyclerView!!.setEmptyView(container!!.findViewById(R.id.empty_view))
             //if (mColumnCount <= 1) {
-                mRecyclerView!!.layoutManager = LinearLayoutManager(context)
+                mRecyclerView!!.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
             //} else {
             //    mRecyclerView!!.layoutManager = GridLayoutManager(context, mColumnCount)
             //}

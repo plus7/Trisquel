@@ -1,8 +1,8 @@
 package net.tnose.app.trisquel
 
 import android.content.Context
-import android.support.annotation.ColorInt
-import android.support.v7.widget.RecyclerView
+import androidx.annotation.ColorInt
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -78,7 +78,7 @@ class FavPhotoLocalAdapter(context: Context, @ColorInt val textColor: Int? = nul
         }
     }
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mFocalLengthView: TextView = mView.focallength
         val mApertureView: TextView = mView.aperture
         val mShutterSpeedView: TextView = mView.shutterspeed

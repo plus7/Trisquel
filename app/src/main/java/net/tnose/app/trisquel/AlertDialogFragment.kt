@@ -2,7 +2,7 @@ package net.tnose.app.trisquel
 
 import android.app.Dialog
 import android.os.Bundle
-import android.support.v7.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 
 class AlertDialogFragment : AbstractDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {

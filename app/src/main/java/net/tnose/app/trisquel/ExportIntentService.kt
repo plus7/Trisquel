@@ -9,8 +9,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.os.Handler
-import android.support.v4.app.NotificationCompat
-import android.support.v4.content.LocalBroadcastManager
+import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.Toast
 import org.json.JSONArray
@@ -53,7 +53,7 @@ class ExportIntentService : IntentService{
         intent.putExtra(PARAM_PERCENTAGE, percentage)
         intent.putExtra(PARAM_STATUS, status)
         intent.action = ACTION_EXPORT_PROGRESS
-        LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
     }
 
     fun backupToZip(zipFile: File): Boolean {

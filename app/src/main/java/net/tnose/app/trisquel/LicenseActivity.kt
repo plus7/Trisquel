@@ -2,7 +2,7 @@ package net.tnose.app.trisquel
 
 import android.content.res.Resources.NotFoundException
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_license.*
 import kotlinx.android.synthetic.main.content_license.*
 import org.xmlpull.v1.XmlPullParserException

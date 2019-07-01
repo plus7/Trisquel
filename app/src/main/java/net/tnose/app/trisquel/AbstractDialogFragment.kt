@@ -8,11 +8,11 @@ import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.support.v4.app.DialogFragment
-import android.support.v4.app.Fragment
-import android.support.v4.app.FragmentManager
-import android.support.v4.app.FragmentTransaction
-import android.support.v7.app.AppCompatActivity
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentTransaction
+import androidx.appcompat.app.AppCompatActivity
 import net.tnose.app.trisquel.AbstractDialogFragment.Builder
 import net.tnose.app.trisquel.AbstractDialogFragment.Callback
 
@@ -35,7 +35,7 @@ import net.tnose.app.trisquel.AbstractDialogFragment.Callback
  * [DialogFragment.show]
  * を使用することは推奨しません.
  */
-abstract class AbstractDialogFragment : DialogFragment() {
+abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
 
     private var requestCode: Int = 0
     private var callbackHostSpec: HostType? = null
@@ -237,7 +237,7 @@ abstract class AbstractDialogFragment : DialogFragment() {
     @Deprecated("本メソッドの使用は推奨しません。\n" +
             "      可能な限り {@link #showOn(Activity, String)}、  {@link #showOn(Fragment, String)}、\n" +
             "      {@link #showChildOn(Fragment, String)} の何れかのメソッドを使用して表示させてください。")
-    override fun show(transaction: FragmentTransaction, tag: String): Int {
+    override fun show(transaction: androidx.fragment.app.FragmentTransaction, tag: String): Int {
         return super.show(transaction, tag)
     }
 
@@ -252,7 +252,7 @@ abstract class AbstractDialogFragment : DialogFragment() {
     @Deprecated("本メソッドの使用は推奨しません。\n" +
             "      可能な限り {@link #showOn(Activity, String)}、  {@link #showOn(Fragment, String)}、\n" +
             "      {@link #showChildOn(Fragment, String)} の何れかのメソッドを使用して表示させてください。")
-    override fun show(manager: FragmentManager, tag: String) {
+    override fun show(manager: androidx.fragment.app.FragmentManager, tag: String) {
         super.show(manager, tag)
     }
 
@@ -290,7 +290,7 @@ abstract class AbstractDialogFragment : DialogFragment() {
      * @param host ダイアログの結果を通知するホスト
      * @param tag  ダイアログを識別するタグ
      */
-    fun showOn(host: Fragment, tag: String) {
+    fun showOn(host: androidx.fragment.app.Fragment, tag: String) {
         checkArguments(arguments)
 
         arguments?.putSerializable(ARG_CALLBACK_HOST, HostType.TARGET_FRAGMENT)
@@ -312,7 +312,7 @@ abstract class AbstractDialogFragment : DialogFragment() {
      * @param host ダイアログの結果を通知するホスト
      * @param tag  ダイアログを識別するタグ
      */
-    fun showChildOn(host: Fragment, tag: String) {
+    fun showChildOn(host: androidx.fragment.app.Fragment, tag: String) {
         checkArguments(arguments)
 
         arguments?.putSerializable(ARG_CALLBACK_HOST, HostType.PARENT_FRAGMENT)

@@ -1,7 +1,7 @@
 package net.tnose.app.trisquel
 
 
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,7 +23,7 @@ import java.util.*
 class MyFavPhotoRecyclerViewAdapter(
         private val mValues: ArrayList<Photo>,
         private val mListener: OnListFragmentInteractionListener?)
-    : RecyclerView.Adapter<MyFavPhotoRecyclerViewAdapter.ViewHolder>() {
+    : androidx.recyclerview.widget.RecyclerView.Adapter<MyFavPhotoRecyclerViewAdapter.ViewHolder>() {
 
     private val mOnClickListener: View.OnClickListener
 
@@ -91,7 +91,7 @@ class MyFavPhotoRecyclerViewAdapter(
 
     override fun getItemCount(): Int = mValues.size
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mTitleView: TextView = mView.title
         val mLensView: TextView = mView.lens
         val mParamsView: TextView = mView.params

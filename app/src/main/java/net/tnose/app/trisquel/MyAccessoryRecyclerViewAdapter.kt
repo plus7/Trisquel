@@ -1,6 +1,6 @@
 package net.tnose.app.trisquel
 
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,7 +9,7 @@ import android.widget.TextView
 
 import net.tnose.app.trisquel.AccessoryFragment.OnListFragmentInteractionListener
 
-class MyAccessoryRecyclerViewAdapter(private val mValues: List<Accessory>, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyAccessoryRecyclerViewAdapter.ViewHolder>() {
+class MyAccessoryRecyclerViewAdapter(private val mValues: List<Accessory>, private val mListener: OnListFragmentInteractionListener?) : androidx.recyclerview.widget.RecyclerView.Adapter<MyAccessoryRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -43,7 +43,7 @@ class MyAccessoryRecyclerViewAdapter(private val mValues: List<Accessory>, priva
         return mValues.size
     }
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mContentView: TextView
         val mIconView: ImageView
         var mItem: Accessory? = null

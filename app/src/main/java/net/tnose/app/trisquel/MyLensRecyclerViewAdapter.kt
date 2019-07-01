@@ -1,6 +1,6 @@
 package net.tnose.app.trisquel
 
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,7 +9,7 @@ import net.tnose.app.trisquel.LensFragment.OnListFragmentInteractionListener
 import java.util.*
 
 class MyLensRecyclerViewAdapter(
-        private val mValues: ArrayList<LensSpec>, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyLensRecyclerViewAdapter.ViewHolder>() {
+        private val mValues: ArrayList<LensSpec>, private val mListener: OnListFragmentInteractionListener?) : androidx.recyclerview.widget.RecyclerView.Adapter<MyLensRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -36,7 +36,7 @@ class MyLensRecyclerViewAdapter(
         return mValues.size
     }
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mManufacturerView: TextView
         val mModelNameView: TextView
         var mItem: LensSpec? = null

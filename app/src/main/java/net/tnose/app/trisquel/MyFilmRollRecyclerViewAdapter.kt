@@ -1,7 +1,7 @@
 package net.tnose.app.trisquel
 
 import android.graphics.Typeface
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,7 +10,7 @@ import net.tnose.app.trisquel.FilmRollFragment.OnListFragmentInteractionListener
 import java.util.*
 
 class MyFilmRollRecyclerViewAdapter(
-        private val mValues: ArrayList<FilmRoll>, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyFilmRollRecyclerViewAdapter.ViewHolder>() {
+        private val mValues: ArrayList<FilmRoll>, private val mListener: OnListFragmentInteractionListener?) : androidx.recyclerview.widget.RecyclerView.Adapter<MyFilmRollRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -56,7 +56,7 @@ class MyFilmRollRecyclerViewAdapter(
         return mValues.size
     }
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         //public final TextView mIdView;
         val mNameView: TextView
         val mCameraAndBrandView: TextView

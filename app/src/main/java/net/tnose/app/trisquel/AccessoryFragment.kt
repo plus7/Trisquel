@@ -3,9 +3,9 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.support.v4.app.Fragment
-import android.support.v7.widget.GridLayoutManager
-import android.support.v7.widget.LinearLayoutManager
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,7 +21,7 @@ import android.view.ViewGroup
  * Mandatory empty constructor for the fragment manager to instantiate the
  * fragment (e.g. upon screen orientation changes).
  */
-class AccessoryFragment : Fragment() {
+class AccessoryFragment : androidx.fragment.app.Fragment() {
     // TODO: Customize parameters
     private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
@@ -59,9 +59,9 @@ class AccessoryFragment : Fragment() {
             val emptyView : View = container?.findViewById(R.id.empty_view)!!
             view.setEmptyView(emptyView)
             if (mColumnCount <= 1) {
-                view.layoutManager = LinearLayoutManager(context)
+                view.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
             } else {
-                view.layoutManager = GridLayoutManager(context, mColumnCount)
+                view.layoutManager = androidx.recyclerview.widget.GridLayoutManager(context, mColumnCount)
             }
             this.accessoryRecyclerViewAdapter = MyAccessoryRecyclerViewAdapter(list!!, mListener)
             view.adapter = accessoryRecyclerViewAdapter

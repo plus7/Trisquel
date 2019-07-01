@@ -2,9 +2,9 @@ package net.tnose.app.trisquel
 
 import android.content.Context
 import android.os.Bundle
-import android.support.v4.app.Fragment
-import android.support.v7.widget.GridLayoutManager
-import android.support.v7.widget.RecyclerView
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,7 +17,7 @@ import com.github.chuross.recyclerviewadapters.SpanSizeLookupBuilder
  * Activities containing this fragment MUST implement the
  * [FavoritePhotoFragment.OnListFragmentInteractionListener] interface.
  */
-class FavoritePhotoFragment : Fragment() {
+class FavoritePhotoFragment : androidx.fragment.app.Fragment() {
 
     // TODO: Customize parameters
     private var columnCount = 3
@@ -37,7 +37,7 @@ class FavoritePhotoFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_favorite_photo_list, container, false)
 
         // Set the adapter
-        if (view is RecyclerView) {
+        if (view is androidx.recyclerview.widget.RecyclerView) {
             with(view) {
                 val dao = TrisquelDao(this.context)
                 dao.connection()
@@ -47,7 +47,7 @@ class FavoritePhotoFragment : Fragment() {
                 val list2 = map.values.sortedByDescending { it[0].date }
                 val compositeAdapter = CompositeRecyclerAdapter()
 
-                val glm = GridLayoutManager(context, columnCount)
+                val glm = androidx.recyclerview.widget.GridLayoutManager(context, columnCount)
                 val spans = SpanSizeLookupBuilder(compositeAdapter)
 
                 for(l in list2) {

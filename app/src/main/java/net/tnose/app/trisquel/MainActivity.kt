@@ -10,17 +10,17 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.preference.PreferenceManager
-import android.support.design.widget.FloatingActionButton
-import android.support.design.widget.NavigationView
-import android.support.v4.app.ActivityCompat
-import android.support.v4.app.Fragment
-import android.support.v4.content.LocalBroadcastManager
-import android.support.v4.view.GravityCompat
-import android.support.v4.widget.DrawerLayout
-import android.support.v7.app.ActionBarDrawerToggle
-import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.PopupMenu
-import android.support.v7.widget.Toolbar
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.navigation.NavigationView
+import androidx.core.app.ActivityCompat
+import androidx.fragment.app.Fragment
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
+import androidx.appcompat.widget.Toolbar
 import android.util.Log
 import android.view.Gravity
 import android.view.Menu
@@ -87,18 +87,18 @@ class MainActivity : AppCompatActivity(),
         const val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
     }
 
-    private var localBroadcastManager: LocalBroadcastManager? = null
+    private var localBroadcastManager: androidx.localbroadcastmanager.content.LocalBroadcastManager? = null
     private var progressFilter: IntentFilter? = null
     private var progressReceiver: ProgressReceiver? = null
 
-    private lateinit var currentFragment: Fragment
+    private lateinit var currentFragment: androidx.fragment.app.Fragment
     private val pinnedFilterViewId: ArrayList<Int> = arrayListOf()
 
     internal val PERMISSIONS = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
+        localBroadcastManager = androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
 
         setContentView(R.layout.activity_main2)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -109,7 +109,7 @@ class MainActivity : AppCompatActivity(),
             ID_FILMROLL
         }
 
-        val f: Fragment
+        val f: androidx.fragment.app.Fragment
         val transaction = supportFragmentManager.beginTransaction()
         when (currentFragmentId) {
             ID_CAMERA -> {
@@ -198,7 +198,7 @@ class MainActivity : AppCompatActivity(),
             }
         }
 
-        val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
+        val drawer = findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
         val toggle = ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
         drawer.addDrawerListener(toggle)
@@ -261,7 +261,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onBackPressed() {
-        val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
+        val drawer = findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START)
         } else {
@@ -606,7 +606,7 @@ class MainActivity : AppCompatActivity(),
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if(data == null) return
-        val frag : Fragment = currentFragment
+        val frag : androidx.fragment.app.Fragment = currentFragment
         when (requestCode) {
             REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
@@ -766,7 +766,7 @@ class MainActivity : AppCompatActivity(),
         val id = item.itemId
 
         val fab = findViewById<FloatingActionButton>(R.id.fab)
-        val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
+        val drawer = findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
         var titleRsc: Int = 0
         var fabRsc: Int = 0
         when(id) {
@@ -991,7 +991,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
-        val frag: Fragment = currentFragment
+        val frag: androidx.fragment.app.Fragment = currentFragment
         when (requestCode) {
             RETCODE_OPEN_RELEASE_NOTES -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val uri = Uri.parse(RELEASE_NOTES_URL)

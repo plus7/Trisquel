@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".TagEditFragment">
 
-    <android.support.v4.widget.NestedScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="false">
@@ -36,7 +36,7 @@
                     android:text="@string/label_add" />
             </LinearLayout>
 
-            <android.support.design.chip.ChipGroup
+            <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chip_group"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -46,5 +46,5 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:singleSelection="false" />
         </LinearLayout>
-    </android.support.v4.widget.NestedScrollView>
-</android.support.constraint.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

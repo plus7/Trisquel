@@ -2,10 +2,10 @@ package net.tnose.app.trisquel
 
 import android.content.Context
 import android.os.Bundle
-import android.support.v4.app.Fragment
-import android.support.v7.widget.GridLayoutManager
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,7 +22,7 @@ import java.util.*
  * Mandatory empty constructor for the fragment manager to instantiate the
  * fragment (e.g. upon screen orientation changes).
  */
-class PhotoFragment : Fragment() {
+class PhotoFragment : androidx.fragment.app.Fragment() {
     //private val id: Int = 0
     // TODO: Customize parameters
     private var mColumnCount = 1
@@ -50,12 +50,12 @@ class PhotoFragment : Fragment() {
         dao.close()
 
         // Set the adapter
-        if (view is RecyclerView) {
+        if (view is androidx.recyclerview.widget.RecyclerView) {
             val context = view.getContext()
             if (mColumnCount <= 1) {
-                view.layoutManager = LinearLayoutManager(context)
+                view.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
             } else {
-                view.layoutManager = GridLayoutManager(context, mColumnCount)
+                view.layoutManager = androidx.recyclerview.widget.GridLayoutManager(context, mColumnCount)
             }
             this.photoRecyclerViewAdapter = MyPhotoRecyclerViewAdapter(mPhotos, mFilmRollId, mListener)
             view.adapter = photoRecyclerViewAdapter

@@ -1,7 +1,7 @@
 package net.tnose.app.trisquel
 
 import android.content.Context
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -38,7 +38,7 @@ class FavPhotoHeader @JvmOverloads constructor(context: Context,
         return FavPhotoHeader(context, filmrollName, clickListener)
     }
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mLabelView: TextView = mView.findViewById(R.id.label_filmrollname)
 
         override fun toString(): String {

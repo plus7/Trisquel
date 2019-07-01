@@ -5,7 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.ReplacementSpan
@@ -69,7 +69,7 @@ class RoundedBackgroundSpan(private val context: Context,
 }
 
 class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
-                                 private val mFilmRollId: Int, private val mListener: OnListFragmentInteractionListener?) : RecyclerView.Adapter<MyPhotoRecyclerViewAdapter.ViewHolder>() {
+                                 private val mFilmRollId: Int, private val mListener: OnListFragmentInteractionListener?) : androidx.recyclerview.widget.RecyclerView.Adapter<MyPhotoRecyclerViewAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -198,7 +198,7 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         return mValues.size
     }
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mIdView: TextView
         val mDateView: TextView
         val mLensView: TextView

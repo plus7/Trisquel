@@ -4,7 +4,7 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.support.v7.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 
 class YesNoDialogFragment : AbstractDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {

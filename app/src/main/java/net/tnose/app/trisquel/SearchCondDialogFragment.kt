@@ -4,9 +4,9 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.support.design.chip.Chip
-import android.support.design.chip.ChipGroup
-import android.support.v7.app.AlertDialog
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
+import androidx.appcompat.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

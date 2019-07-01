@@ -4,7 +4,7 @@ package net.tnose.app.trisquel
 //import net.tnose.app.trisquel.dummy.DummyContent.DummyItem
 import android.content.Context
 import android.graphics.Color
-import android.support.v7.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.text.Spannable
 import android.text.SpannableString
 import android.view.LayoutInflater
@@ -161,7 +161,7 @@ class SearchLocalAdapter(context: Context, mListener: OnListFragmentInteractionL
         }
     }
 
-    inner class ViewHolder(val mView: View) : RecyclerView.ViewHolder(mView) {
+    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mIdView: TextView
         val mDateView: TextView
         val mLensView: TextView

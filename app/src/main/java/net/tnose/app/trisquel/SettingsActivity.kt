@@ -1,7 +1,7 @@
 package net.tnose.app.trisquel
 
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
 import android.view.MenuItem
 
 class SettingsActivity : AppCompatActivity(), GeneralPreferenceFragment.OnFragmentInteractionListener {

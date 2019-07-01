@@ -3,7 +3,7 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import android.support.v4.app.Fragment
+import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -28,7 +28,7 @@ private const val ARG_PARAM_SUPPIMGIDX = "suppImgIdx"
  * create an instance of this fragment.
  *
  */
-class GalleryImageFragment : Fragment() {
+class GalleryImageFragment : androidx.fragment.app.Fragment() {
     // TODO: Rename and change types of parameters
     private var photoId: Int? = 0
     private var suppImgIdx: Int? = 0

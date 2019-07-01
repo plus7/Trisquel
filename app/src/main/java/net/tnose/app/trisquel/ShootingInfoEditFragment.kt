@@ -11,11 +11,11 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.support.media.ExifInterface
-import android.support.v4.app.ActivityCompat
-import android.support.v4.app.Fragment
-import android.support.v4.content.FileProvider
-import android.support.v7.app.AppCompatActivity
+import androidx.exifinterface.media.ExifInterface
+import androidx.core.app.ActivityCompat
+import androidx.fragment.app.Fragment
+import androidx.core.content.FileProvider
+import androidx.appcompat.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -36,7 +36,7 @@ import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
 
-class ShootingInfoEditFragment : Fragment(), AbstractDialogFragment.Callback {
+class ShootingInfoEditFragment : androidx.fragment.app.Fragment(), AbstractDialogFragment.Callback {
     private var listener: OnFragmentInteractionListener? = null
     private var mFilmRollId: Int = -1
     private var mId: Int = -1
@@ -877,15 +877,15 @@ class ShootingInfoEditFragment : Fragment(), AbstractDialogFragment.Callback {
                     Pair(150, 150)
         try {
             // 枠を回転させるかどうか考える
-            val exifInterface = ExifInterface(path)
+            val exifInterface = androidx.exifinterface.media.ExifInterface(path)
             val orientation = exifInterface.getAttributeInt(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_UNDEFINED)
+                    androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
+                    androidx.exifinterface.media.ExifInterface.ORIENTATION_UNDEFINED)
             when (orientation) {
-                ExifInterface.ORIENTATION_ROTATE_90,
-                ExifInterface.ORIENTATION_TRANSVERSE,
-                ExifInterface.ORIENTATION_TRANSPOSE,
-                ExifInterface.ORIENTATION_ROTATE_270 -> {
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90,
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_TRANSVERSE,
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_TRANSPOSE,
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> {
                     val tmp = h
                     h = w
                     w = tmp

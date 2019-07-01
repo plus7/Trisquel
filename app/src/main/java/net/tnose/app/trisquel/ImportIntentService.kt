@@ -4,7 +4,7 @@ import android.app.IntentService
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
-import android.support.v4.content.LocalBroadcastManager
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.Toast
 import org.json.JSONArray
@@ -60,7 +60,7 @@ class ImportIntentService : IntentService {
         intent.putExtra(PARAM_PERCENTAGE, percentage)
         intent.putExtra(PARAM_STATUS, status)
         intent.action = ACTION_IMPORT_PROGRESS
-        LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
     }
 
     fun compareZipEntryAndFile(zis: ZipInputStream, ze: ZipEntry, file: File){

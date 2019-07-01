@@ -2,9 +2,9 @@ package net.tnose.app.trisquel
 
 import android.content.Context
 import android.os.Bundle
-import android.support.v4.app.Fragment
-import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,7 +16,7 @@ import com.github.chuross.recyclerviewadapters.CompositeRecyclerAdapter
  * Activities containing this fragment MUST implement the
  * [FavoritePhotoFragment.OnListFragmentInteractionListener] interface.
  */
-class SearchFragment : Fragment() {
+class SearchFragment : androidx.fragment.app.Fragment() {
     private var mTags: ArrayList<String> = arrayListOf()
     private var listener: OnListFragmentInteractionListener? = null
     private var mCompositeAdapter: CompositeRecyclerAdapter? = null
@@ -34,7 +34,7 @@ class SearchFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_search_list, container, false)
 
         // Set the adapter
-        if (view is RecyclerView) {
+        if (view is androidx.recyclerview.widget.RecyclerView) {
             with(view) {
                 val dao = TrisquelDao(this.context)
                 dao.connection()
@@ -45,7 +45,7 @@ class SearchFragment : Fragment() {
                 val list2 = map.values.sortedByDescending { it[0].date }
                 val compositeAdapter = CompositeRecyclerAdapter()
 
-                val llm = LinearLayoutManager(context)
+                val llm = androidx.recyclerview.widget.LinearLayoutManager(context)
 
                 for(l in list2) {
                     val localAdapter = SearchLocalAdapter(context, listener)
