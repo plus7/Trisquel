@@ -79,6 +79,161 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         return ja
     }
 
+    fun mergeCameraJSON(obj: JSONObject): Pair<Int, Int>{
+        var oldId: Int = -1
+        val cval = ContentValues()
+        for(key in obj.keys()){
+            if(key == "_id") oldId = obj.getInt(key)
+            else{
+                val value = obj.get(key)
+                when(value){
+                    is Int -> cval.put(key, obj.getInt(key))
+                    is Double -> cval.put(key, obj.getDouble(key))
+                    is String -> cval.put(key, obj.getString(key))
+                }
+            }
+        }
+
+        val newId = mDb!!.insert("camera", null, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    fun mergeLensJSON(obj: JSONObject, cameraOld2NewId: Map<Int, Int>): Pair<Int, Int>{
+        var oldId: Int = -1
+        val cval = ContentValues()
+        for(key in obj.keys()){
+            if(key == "_id") oldId = obj.getInt(key)
+            else if(key == "body") cval.put("body", cameraOld2NewId[obj.getInt(key)])
+            else{
+                val value = obj.get(key)
+                when(value){
+                    is Int -> cval.put(key, obj.getInt(key))
+                    is Double -> cval.put(key, obj.getDouble(key))
+                    is String -> cval.put(key, obj.getString(key))
+                }
+            }
+        }
+
+        val newId = mDb!!.insert("lens", null, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    fun mergeAccessoryJSON(obj: JSONObject): Pair<Int, Int>{
+        var oldId: Int = -1
+        val cval = ContentValues()
+        for(key in obj.keys()){
+            if(key == "_id") oldId = obj.getInt(key)
+            else{
+                val value = obj.get(key)
+                when(value){
+                    is Int -> cval.put(key, obj.getInt(key))
+                    is Double -> cval.put(key, obj.getDouble(key))
+                    is String -> cval.put(key, obj.getString(key))
+                }
+            }
+        }
+
+        val newId = mDb!!.insert("accessory", null, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    fun mergeFilmRollJSON(obj: JSONObject, cameraOld2NewId: Map<Int, Int>): Pair<Int, Int>{
+        var oldId: Int = -1
+        val cval = ContentValues()
+        for(key in obj.keys()){
+            if(key == "_id") oldId = obj.getInt(key)
+            else if(key == "camera") cval.put("camera", cameraOld2NewId[obj.getInt(key)])
+            else{
+                val value = obj.get(key)
+                when(value){
+                    is Int -> cval.put(key, obj.getInt(key))
+                    is Double -> cval.put(key, obj.getDouble(key))
+                    is String -> cval.put(key, obj.getString(key))
+                }
+            }
+        }
+
+        val newId = mDb!!.insert("filmroll", null, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    fun mergePhotoJSON(obj: JSONObject,
+                       cameraOld2NewId: Map<Int, Int>,
+                       lensOld2NewId: Map<Int, Int>,
+                       filmrollOld2NewId: Map<Int, Int>,
+                       accessoryOld2NewId: Map<Int, Int>): Pair<Int, Int>{
+        var oldId: Int = -1
+        val cval = ContentValues()
+        for(key in obj.keys()){
+            if(key == "_id") oldId = obj.getInt(key)
+            else if(key == "camera") cval.put(key, cameraOld2NewId[obj.getInt(key)])
+            else if(key == "lens") cval.put(key, lensOld2NewId[obj.getInt(key)])
+            else if(key == "filmroll") cval.put(key, filmrollOld2NewId[obj.getInt(key)])
+            else if(key == "accessories"){ //アクセサリは少し特殊。横着してLIKEで検索できるようにしたかったため。
+                val accessories = obj.getString(key)
+                        .split(Photo.splitter)
+                        .toTypedArray()
+                        .filterNot { it.isEmpty() }
+                        .map { Integer.parseInt(it) }
+                        .map { accessoryOld2NewId[it] }
+                        .map { it.toString() }.joinToString("/","/", "/")
+                cval.put(key, accessories)
+            }
+            else{
+                val value = obj.get(key)
+                when(value){
+                    is Int -> cval.put(key, obj.getInt(key))
+                    is Double -> cval.put(key, obj.getDouble(key))
+                    is String -> cval.put(key, obj.getString(key))
+                }
+            }
+        }
+
+        val newId = mDb!!.insert("lens", null, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    //tagはそれなりに特殊
+    fun mergeTagMapJSON(tagmaps: JSONArray, tags: JSONArray,
+                        filmrollOld2NewId: Map<Int, Int>, photoOld2NewId: Map<Int, Int>){
+        val tagOldId2Label: HashMap<Int, String> = HashMap()
+        for(i in 0 until tags.length()){
+            val tag = tags.getJSONObject(i)
+            tagOldId2Label.put(tag.getInt("_id"), tag.getString("label"))
+        }
+
+        val tagmapsArray: ArrayList<Triple<Int, Int, String>> = ArrayList()
+        for(i in 0 until tagmaps.length()){
+            val tagmap = tagmaps.getJSONObject(i)
+            tagmapsArray.add(Triple(photoOld2NewId[tagmap.getInt("photo_id")] ?: -1,
+                                    filmrollOld2NewId[tagmap.getInt("filmroll_id")] ?: -1,
+                                    tagOldId2Label[tagmap.getInt("tag_id")] ?: ""))
+        }
+
+        for(group in tagmapsArray.groupBy { it.first }){ // group by photo_id
+            if(group.key == -1){
+                Log.d("mergeTagMapJSON", "invalid photo_id")
+                continue
+            }
+            val filmrolls = group.value.distinctBy { it.second } // filmroll_id must be same
+            if(filmrolls.size > 1 || filmrolls[0].second == -1){
+                continue
+            }
+            tagPhoto(group.key, group.value[0].second, ArrayList(group.value.map { it.third }))
+        }
+    }
+
+    fun deleteAll(){
+        for(table in listOf("camera", "lens", "filmroll", "photo", "accessory", "tag", "tagmap")) {
+            mDb!!.delete(table, "*", null)
+
+            //reset autoincrement
+            val cval = ContentValues()
+            cval.put("seq", 0)
+            mDb!!.update("sqlite_sequence", cval, "name = ?", arrayOf(table))
+        }
+    }
+
     val allVisibleLenses: ArrayList<LensSpec>
         get() {
             val lensList = ArrayList<LensSpec>()
