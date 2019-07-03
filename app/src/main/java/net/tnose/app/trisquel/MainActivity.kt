@@ -10,17 +10,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.preference.PreferenceManager
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.navigation.NavigationView
-import androidx.core.app.ActivityCompat
-import androidx.fragment.app.Fragment
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.appcompat.app.ActionBarDrawerToggle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.PopupMenu
-import androidx.appcompat.widget.Toolbar
 import android.util.Log
 import android.view.Gravity
 import android.view.Menu
@@ -29,6 +18,14 @@ import android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM
 import android.view.MenuItem.SHOW_AS_ACTION_NEVER
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
+import androidx.appcompat.widget.Toolbar
+import androidx.core.app.ActivityCompat
+import androidx.core.view.GravityCompat
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.navigation.NavigationView
 import net.rdrei.android.dirchooser.DirectoryChooserActivity
 import net.rdrei.android.dirchooser.DirectoryChooserConfig
 import net.tnose.app.trisquel.dummy.DummyContent
@@ -99,6 +96,10 @@ class MainActivity : AppCompatActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         localBroadcastManager = androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
+        progressFilter = IntentFilter()
+        progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
+        progressReceiver = ProgressReceiver(this)
+        localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
 
         setContentView(R.layout.activity_main2)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -231,17 +232,9 @@ class MainActivity : AppCompatActivity(),
         e.apply()
     }
 
-    override fun onStart() {
-        super.onStart()
-        progressFilter = IntentFilter()
-        progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
-        progressReceiver = ProgressReceiver(this)
-        localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
-    }
-
-    override fun onStop(){
-        super.onStop()
+    override fun onDestroy() {
         localBroadcastManager?.unregisterReceiver(progressReceiver!!)
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
