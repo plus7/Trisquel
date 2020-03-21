@@ -71,13 +71,14 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_DELETE_CAMERA = 102
         const val RETCODE_DELETE_LENS = 103
         const val RETCODE_DELETE_ACCESSORY = 104
-        const val RETCODE_BACKUP_DB = 400
+        const val RETCODE_EXPORT_DB = 400
         const val RETCODE_SDCARD_PERM = 401
         const val RETCODE_SORT = 402
         const val RETCODE_FILTER_CAMERA = 403
         const val RETCODE_FILTER_FILM_BRAND = 404
         const val RETCODE_SEARCH = 405
         const val RETCODE_BACKUP_PROGRESS = 406
+        const val RETCODE_IMPORT_DB = 407
 
         const val ACTION_CLOSE_PROGRESS_DIALOG = "ACTION_CLOSE_PROGRESS_DIALOG"
         const val ACTION_UPDATE_PROGRESS_DIALOG = "ACTION_UPDATE_PROGRESS_DIALOG"
@@ -98,6 +99,7 @@ class MainActivity : AppCompatActivity(),
         localBroadcastManager = androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
         progressFilter = IntentFilter()
         progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
+        progressFilter?.addAction(ImportIntentService.ACTION_IMPORT_PROGRESS)
         progressReceiver = ProgressReceiver(this)
         localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
 
@@ -771,7 +773,7 @@ class MainActivity : AppCompatActivity(),
             }
             R.id.nav_backup_sqlite -> {
                 val fragment = YesNoDialogFragment.Builder()
-                        .build(RETCODE_BACKUP_DB)
+                        .build(RETCODE_EXPORT_DB)
                 fragment.arguments?.putString("title", getString(R.string.title_backup))
                 fragment.arguments?.putString("message", getString(R.string.description_backup))
                 fragment.arguments?.putString("positive", getString(R.string.continue_))
@@ -991,7 +993,7 @@ class MainActivity : AppCompatActivity(),
                 val i = Intent(Intent.ACTION_VIEW, uri)
                 startActivity(i)
             }
-            RETCODE_BACKUP_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+            RETCODE_EXPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 checkPermAndExportDB()
             }
             RETCODE_DELETE_FILMROLL -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
