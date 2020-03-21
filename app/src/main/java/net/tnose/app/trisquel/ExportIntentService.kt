@@ -3,16 +3,16 @@ package net.tnose.app.trisquel
 import android.R
 import android.app.IntentService
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.os.Handler
-import androidx.core.app.NotificationCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.*
@@ -208,6 +208,19 @@ class ExportIntentService : IntentService{
                     })
                 } else {
                     handler?.post(Runnable {
+                        val i2 = Intent(applicationContext, MainActivity::class.java)
+                        val pi = PendingIntent.getActivity(this, 0, i2, 0)
+
+                        val builder = NotificationCompat.Builder(this)
+
+                        //Foreground Service
+                        val n = builder.setContentIntent(pi)
+                                .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
+                                .setAutoCancel(true).setContentTitle("Wrote to " + backupZip.absolutePath)
+                                .setContentText("Trisquel").build()
+
+                        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        nm.notify(1, n)
                         Toast.makeText(this, "Wrote to " + backupZip.absolutePath, Toast.LENGTH_LONG).show()
                     })
                 }
