@@ -5,10 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.preference.PreferenceManager
-import androidx.preference.Preference
-import androidx.preference.PreferenceFragmentCompat
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.preference.Preference
+import androidx.preference.PreferenceFragmentCompat
 
 /**
  * Created by user on 2018/07/12.
@@ -31,12 +31,12 @@ class GeneralPreferenceFragment : PreferenceFragmentCompat(), AbstractDialogFrag
         }
     }
 
-    override fun onAttach(context: Context?) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is OnFragmentInteractionListener) {
             mListener = context
         } else {
-            throw RuntimeException(context!!.toString() + " must implement OnFragmentInteractionListener")
+            throw RuntimeException(context.toString() + " must implement OnFragmentInteractionListener")
         }
     }
 
@@ -47,8 +47,8 @@ class GeneralPreferenceFragment : PreferenceFragmentCompat(), AbstractDialogFrag
 
     interface OnFragmentInteractionListener
 
-    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-        val id = item!!.itemId
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val id = item.itemId
         if (id == android.R.id.home) {
             startActivity(Intent(activity, SettingsActivity::class.java))
             return true

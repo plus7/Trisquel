@@ -6,12 +6,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
-import androidx.appcompat.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 
 class ProgressDialog : AbstractDialogFragment() {
     private val br = object : BroadcastReceiver() {
@@ -34,10 +34,10 @@ class ProgressDialog : AbstractDialogFragment() {
     }
 
     private fun setPercentage(percentage: Double, status: String){
-        val pb = dialog.findViewById<ProgressBar>(R.id.progressBar)
-        pb.progress = (10.0*percentage).toInt()
-        val tv = dialog.findViewById<TextView>(R.id.textView)
-        tv.text = "%5.2f%%: %s".format(percentage, status)
+        val pb = dialog?.findViewById<ProgressBar>(R.id.progressBar)
+        pb?.progress = (10.0*percentage).toInt()
+        val tv = dialog?.findViewById<TextView>(R.id.textView)
+        tv?.text = "%5.2f%%: %s".format(percentage, status)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

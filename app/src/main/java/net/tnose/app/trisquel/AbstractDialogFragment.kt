@@ -8,11 +8,9 @@ import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentTransaction
-import androidx.appcompat.app.AppCompatActivity
 import net.tnose.app.trisquel.AbstractDialogFragment.Builder
 import net.tnose.app.trisquel.AbstractDialogFragment.Callback
 
@@ -85,7 +83,7 @@ abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
     }
 
 
-    override fun onCancel(dialog: DialogInterface?) {
+    override fun onCancel(dialog: DialogInterface) {
         super.onCancel(dialog)
         notifyDialogCancelled()
     }
@@ -237,7 +235,7 @@ abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
     @Deprecated("本メソッドの使用は推奨しません。\n" +
             "      可能な限り {@link #showOn(Activity, String)}、  {@link #showOn(Fragment, String)}、\n" +
             "      {@link #showChildOn(Fragment, String)} の何れかのメソッドを使用して表示させてください。")
-    override fun show(transaction: androidx.fragment.app.FragmentTransaction, tag: String): Int {
+    override fun show(transaction: androidx.fragment.app.FragmentTransaction, tag: String?): Int {
         return super.show(transaction, tag)
     }
 
@@ -252,7 +250,7 @@ abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
     @Deprecated("本メソッドの使用は推奨しません。\n" +
             "      可能な限り {@link #showOn(Activity, String)}、  {@link #showOn(Fragment, String)}、\n" +
             "      {@link #showChildOn(Fragment, String)} の何れかのメソッドを使用して表示させてください。")
-    override fun show(manager: androidx.fragment.app.FragmentManager, tag: String) {
+    override fun show(manager: androidx.fragment.app.FragmentManager, tag: String?) {
         super.show(manager, tag)
     }
 
@@ -298,7 +296,7 @@ abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
         setTargetFragment(host, arguments?.getInt(ARG_REQUEST_CODE) ?: 0)
 
         val manager = host.fragmentManager
-        super.show(manager, tag)
+        super.show(manager!!, tag)
     }
 
     /**

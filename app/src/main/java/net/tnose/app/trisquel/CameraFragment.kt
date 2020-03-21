@@ -3,9 +3,6 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.os.Bundle
 import android.preference.PreferenceManager
-import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -69,12 +66,12 @@ class CameraFragment : androidx.fragment.app.Fragment() {
         return view
     }
 
-    override fun onAttach(context: Context?) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is OnListFragmentInteractionListener) {
             mListener = context
         } else {
-            throw RuntimeException(context!!.toString() + " must implement OnListFragmentInteractionListener")
+            throw RuntimeException(context.toString() + " must implement OnListFragmentInteractionListener")
         }
     }
 

@@ -1,12 +1,8 @@
 package net.tnose.app.trisquel
 
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentPagerAdapter
-
 class GalleryFragmentPagerAdapter(fm: androidx.fragment.app.FragmentManager, var photo: Photo, var favList: ArrayList<Photo>) : androidx.fragment.app.FragmentPagerAdapter(fm) {
 
-    override fun getItem(position: Int): androidx.fragment.app.Fragment? {
+    override fun getItem(position: Int): androidx.fragment.app.Fragment {
         var currentPhotoPos = 0
         var photoIdx = 0
         for(i in favList.indices){

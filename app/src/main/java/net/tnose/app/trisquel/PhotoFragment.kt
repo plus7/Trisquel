@@ -2,10 +2,6 @@ package net.tnose.app.trisquel
 
 import android.content.Context
 import android.os.Bundle
-import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -63,12 +59,12 @@ class PhotoFragment : androidx.fragment.app.Fragment() {
         return view
     }
 
-    override fun onAttach(context: Context?) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is OnListFragmentInteractionListener) {
             mListener = context
         } else {
-            throw RuntimeException(context!!.toString() + " must implement OnListFragmentInteractionListener")
+            throw RuntimeException(context.toString() + " must implement OnListFragmentInteractionListener")
         }
     }
 

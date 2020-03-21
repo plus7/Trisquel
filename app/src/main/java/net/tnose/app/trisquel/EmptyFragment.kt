@@ -3,10 +3,10 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 
 
 /**
@@ -44,12 +44,12 @@ class EmptyFragment : androidx.fragment.app.Fragment() {
         }
     }
 
-    override fun onAttach(context: Context?) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is OnFragmentInteractionListener) {
             mListener = context
         } else {
-            throw RuntimeException(context!!.toString() + " must implement OnFragmentInteractionListener")
+            throw RuntimeException(context.toString() + " must implement OnFragmentInteractionListener")
         }
     }
 
