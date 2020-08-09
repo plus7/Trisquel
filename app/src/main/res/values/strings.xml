@@ -45,12 +45,49 @@
     <string name="menu_category_gears">Gears</string>
     <string name="action_backup_sqlite">Backup db file</string>
     <string name="action_license">Licenses</string>
-    <string name="title_backup">Backup db file</string>
+    <string name="title_backup">Backup</string>
+    <string name="title_import">Import</string>
     <string name="description_backup">
         You can backup database file and supplemental images to SD card in preparation
         for data corruption bug or changing cell phone (currently import is not
         implemented but will be done in the future).
         Continue?
+    </string>
+    <string name="title_backup_mode_selection">
+        Select backup mode
+    </string>
+    <string name="title_slim_backup">
+        Slim backup
+    </string>
+    <string name="description_slim_backup">
+        Back up the database as a zip file. Supplemental image files are excluded and only the filenames and checksums of them are recorded.
+    </string>
+    <string name="title_whole_backup">
+        Whole backup
+    </string>
+    <string name="description_whole_backup">
+        Back up the database and supplemental image files as a zip file. This mode spends a lot of storage capacity. Choose this mode for factory reset of this device or device transition.
+    </string>
+    <string name="title_import_mode_selection">
+        Select import mode
+    </string>
+    <string name="title_merge_zip">
+        Merge a .zip file to the database of Trisquel
+    </string>
+    <string name="description_merge_zip">
+        Existing data in the database will be reserved.
+    </string>
+    <string name="title_import_zip">
+        Replace the database with a .zip file
+    </string>
+    <string name="description_import_zip">
+        WARNING: Existing data in the database will be removed!
+    </string>
+    <string name="title_import_db">
+        Replace the database with a .db file backed up by an older version of Trisquel
+    </string>
+    <string name="description_import_db">
+        WARNING: Existing data in the database will be removed!
     </string>
     <string name="error_permission_denied_sdcard">Could not get permission to access SD card</string>
     <string name="error_permission_location">No location permissions granted</string>

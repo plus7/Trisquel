@@ -41,10 +41,39 @@
     <string name="action_backup_sqlite">データベースをバックアップ</string>
     <string name="action_license">ライセンス</string>
     <string name="title_activity_license">ライセンス</string>
-    <string name="title_backup">データベースをバックアップ</string>
+    <string name="title_backup">バックアップ</string>
+    <string name="title_import">インポート</string>
     <string name="description_backup">
         バグによるデータ破壊への備えや端末の移行用（現在インポートは未実装ですがそのうち実装します）
         に、データベースと補足画像をzipファイルにまとめてSDカードにコピーすることができます。続行しますか？
+    </string>
+    <string name="title_backup_mode_selection">バックアップ方法を選択してください</string>
+    <string name="title_slim_backup">スリムバックアップ</string>
+    <string name="description_slim_backup">
+        データベースをzipファイルとしてバックアップします。補足画像ファイルは含まず、ファイル名とチェックサムのみが記録されます。
+    </string>
+    <string name="title_whole_backup">全体バックアップ</string>
+    <string name="description_whole_backup">
+        データベースと補足画像ファイルをzipファイルとしてバックアップします。ファイルサイズが巨大になります。端末初期化や移行の場合はこちらを使用してください。
+    </string>
+    <string name="title_import_mode_selection">インポート方法を選択してください</string>
+    <string name="title_merge_zip">
+        zipファイルの内容を既存のデータベースに統合
+    </string>
+    <string name="description_merge_zip">
+        既存のデータベース内のデータは保持されます。
+    </string>
+    <string name="title_import_zip">
+        zipファイルの内容で既存のデータベースを置換
+    </string>
+    <string name="description_import_zip">
+        警告: 既存のデータベース内のデータは消去されます！
+    </string>
+    <string name="title_import_db">
+        古いバージョンのTrisquelでバックアップされた.dbファイルで既存のデータベースを置換
+    </string>
+    <string name="description_import_db">
+        警告: 既存のデータベース内のデータは消去されます！
     </string>
     <string name="notify_copied">クリップボードにコピーしました</string>
     <string name="error_permission_denied_sdcard">SDカードにアクセスする許可が得られませんでした</string>
