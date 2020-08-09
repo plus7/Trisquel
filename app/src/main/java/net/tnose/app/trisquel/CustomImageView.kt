@@ -1,5 +1,6 @@
 package net.tnose.app.trisquel
 import android.content.Context
+import android.net.Uri
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
@@ -43,17 +44,17 @@ class CustomImageView @JvmOverloads constructor(context: Context, attrs: Attribu
             // それだと妙に小さくなる。なおこの半端な実装はgitの履歴には残していない。
             if(mPath.isNotEmpty() &&
                     oldBottom - oldTop != bottom - top &&
-                    oldRight - oldLeft != right - left){
-                val file = File(mPath)
-                Glide.with(civ_image_view.context)
-                        .load(file)
-                        .apply(RequestOptions()
-                                .placeholder(R.drawable.general_image_gray)
-                                .centerCrop()
-                                .error(R.drawable.ic_error_circle)
-                                .timeout(5000)
-                        )
-                        .into(civ_image_view)
+                    oldRight - oldLeft != right - left) {
+                val rb = if (mPath.startsWith("/")) {
+                    Glide.with(civ_image_view.context).load(File(mPath))
+                }else{
+                    Glide.with(civ_image_view.context).load(Uri.parse(mPath))
+                }
+                rb.apply(RequestOptions()
+                         .placeholder(R.drawable.general_image_gray)
+                         .centerCrop()
+                         .error(R.drawable.ic_error_circle)
+                         .timeout(5000)).into(civ_image_view)
             }
         }
         civ_close_button.setOnClickListener {

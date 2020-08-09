@@ -1232,4 +1232,51 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
         return photos
     }
+
+    fun getConversionState() : Int {
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.rawQuery("select path_conv_done from trisquel_metadata;", null,null)
+            if(cursor.moveToFirst()){
+                return cursor.getInt(cursor.getColumnIndex("path_conv_done"))
+            }
+        } finally {
+            cursor?.close()
+        }
+        return 0
+    }
+
+    fun setConversionState(value : Int){
+        val cval = ContentValues()
+        cval.put("path_conv_done", value)
+        mDb!!.update("trisquel_metadata", cval, "rowid = ?", arrayOf("1"))
+    }
+
+    // suppImgは生の絶対パスが入っているが、これはAndroid11では使えなくなるので、content://に変換する必要がある
+    fun getPhotos4Conversion() : ArrayList<Photo>{
+        val photoList = ArrayList<Photo>()
+        var cursor: Cursor? = null
+        try {
+            // ["/path/to/file"] となっているものは変換する必要がある。先頭の ["\/ で判定可能。
+            cursor = mDb!!.rawQuery("select _id from photo where suppimgs like ? || '%';", arrayOf("[\"\\/"),null)
+            while (cursor!!.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndex("_id"))
+                photoList.add(getPhoto(id)!!)
+            }
+        } finally {
+            cursor?.close()
+        }
+
+        return photoList
+    }
+
+    fun doPhotoConversion(p: Photo){
+        val selectArgs = arrayOf(Integer.toString(p.id))
+        val cval = ContentValues()
+        cval.put("suppimgs", p.supplementalImagesStr)
+        mDb!!.update("photo",
+                cval,
+                "_id = ?",
+                selectArgs)
+    }
 }

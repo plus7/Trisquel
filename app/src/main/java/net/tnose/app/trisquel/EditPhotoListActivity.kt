@@ -6,13 +6,13 @@ import android.content.*
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import androidx.core.app.ActivityCompat
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.core.app.ActivityCompat
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
@@ -224,10 +224,11 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_SELECT_THUMBNAIL -> if (resultCode == RESULT_OK) {
-                val paths = Matisse.obtainPathResult(data)
+                //val paths = Matisse.obtainPathResult(data)
+                val uris = Matisse.obtainResult(data)
                 val p = thumbnailEditingPhoto
-                if(paths.size > 0 && p != null){
-                    p.supplementalImages.add(paths[0])
+                if(uris.size > 0 && p != null){
+                    p.supplementalImages.add(uris[0].toString())
                     photo_fragment!!.updatePhoto(p, null)
                     thumbnailEditingPhoto = null
                 }

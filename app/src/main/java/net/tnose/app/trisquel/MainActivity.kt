@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.preference.PreferenceManager
@@ -18,6 +19,7 @@ import android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM
 import android.view.MenuItem.SHOW_AS_ACTION_NEVER
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
@@ -79,6 +81,7 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_SEARCH = 405
         const val RETCODE_BACKUP_PROGRESS = 406
         const val RETCODE_IMPORT_DB = 407
+        const val RETCODE_DBCONV_PROGRESS = 408
 
         const val ACTION_CLOSE_PROGRESS_DIALOG = "ACTION_CLOSE_PROGRESS_DIALOG"
         const val ACTION_UPDATE_PROGRESS_DIALOG = "ACTION_UPDATE_PROGRESS_DIALOG"
@@ -100,6 +103,7 @@ class MainActivity : AppCompatActivity(),
         progressFilter = IntentFilter()
         progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
         progressFilter?.addAction(ImportIntentService.ACTION_IMPORT_PROGRESS)
+        progressFilter?.addAction(DbConvIntentService.ACTION_DBCONV_PROGRESS)
         progressReceiver = ProgressReceiver(this)
         localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
 
@@ -213,6 +217,22 @@ class MainActivity : AppCompatActivity(),
 
     override fun onResume() {
         super.onResume()
+
+        val dao = TrisquelDao(this)
+        dao.connection()
+        val dbConvForAndroid11Done = dao.getConversionState() >= 1
+        dao.close()
+
+        if(!dbConvForAndroid11Done) {
+            val fragment = ProgressDialog.Builder()
+                    .build(RETCODE_DBCONV_PROGRESS)
+            fragment.arguments?.putString("title", "Updating DB")
+            fragment.arguments?.putBoolean("cancellable", false)
+            fragment.showOn(this, "dialog")
+            DbConvIntentService.shouldContinue = true
+            DbConvIntentService.startExport(this)
+            return
+        }
 
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val lastVersion = pref.getInt("last_version", 0)

@@ -3,10 +3,10 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import it.sephiroth.android.library.imagezoom.ImageViewTouchBase
@@ -64,14 +64,16 @@ class GalleryImageFragment : androidx.fragment.app.Fragment() {
                     .load(R.drawable.general_image_gray)
                     .into(imageView)
         }else {
-            val file = File(p.supplementalImages[suppImgIdx!!])
-            Glide.with(imageView.context)
-                    .load(file)
-                    .apply(RequestOptions()
-                            .centerInside()
-                            .error(R.drawable.ic_error_circle)
-                    )
-                    .into(imageView)
+            val path = p.supplementalImages[suppImgIdx!!]
+            val rb = if(path.startsWith("/")){
+                Glide.with(imageView.context).load(File(path))
+            }else{
+                Glide.with(imageView.context).load(Uri.parse(path))
+            }
+            rb.apply(RequestOptions()
+                    .centerInside()
+                    .error(R.drawable.ic_error_circle))
+            .into(imageView)
         }
 
         return view

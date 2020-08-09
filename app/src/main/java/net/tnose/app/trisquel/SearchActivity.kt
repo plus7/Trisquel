@@ -7,10 +7,10 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.core.app.ActivityCompat
-import androidx.appcompat.app.AppCompatActivity
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
@@ -215,10 +215,11 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
                 }
             }
             REQCODE_SELECT_THUMBNAIL -> if (resultCode == RESULT_OK) {
-                val paths = Matisse.obtainPathResult(data)
+                //val paths = Matisse.obtainPathResult(data)
+                val uris = Matisse.obtainResult(data)
                 val p = thumbnailEditingPhoto
-                if(paths.size > 0 && p != null){
-                    p.supplementalImages.add(paths[0])
+                if(uris.size > 0 && p != null){
+                    p.supplementalImages.add(uris[0].toString())
                     fragment!!.updatePhoto(p, null)
                     thumbnailEditingPhoto = null
                     //dirtyFilmRolls.add(p.filmrollid) // 今の所不要

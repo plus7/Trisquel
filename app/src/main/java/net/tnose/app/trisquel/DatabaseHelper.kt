@@ -120,6 +120,9 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                         + "filmroll_id integer"
                         + ");"
         )
+
+        db.execSQL( "create table trisquel_metadata( path_conv_done integer );" )
+        db.execSQL( "insert into trisquel_metadata values(1);" )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -226,6 +229,11 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
         if (oldVersion <= 15){
             db.execSQL("alter table tagmap add column filmroll_id integer default 0 ;")
         }
+
+        if (oldVersion <= 16){
+            db.execSQL( "create table trisquel_metadata( path_conv_done integer );" )
+            db.execSQL( "insert into trisquel_metadata values(0);" )
+        }
     }
 
     fun open(): SQLiteDatabase {
@@ -235,7 +243,7 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
     companion object {
         internal val DATABASE_NAME = "trisquel.db"
 
-        internal val DATABASE_VERSION = 16
+        internal val DATABASE_VERSION = 17
     }
 }
 

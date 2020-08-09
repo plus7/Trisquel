@@ -5,7 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
-import androidx.recyclerview.widget.RecyclerView
+import android.net.Uri
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.ReplacementSpan
@@ -83,14 +83,17 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
                     .load(R.drawable.ic_add_image_gray)
                     .into(view)
         }else {
-            val file = File(paths[0])
-            Glide.with(view.context)
-                    .load(file)
-                    .apply(RequestOptions()
-                            .placeholder(R.drawable.general_image_gray)
-                            .centerCrop()
-                            .error(R.drawable.ic_error_circle)
-                    )
+            val rb = if(paths[0].startsWith("/")){
+                Glide.with(view.context)
+                        .load(File(paths[0]))
+            }else{
+                Glide.with(view.context)
+                        .load(Uri.parse(paths[0]))
+            }
+            rb.apply(RequestOptions()
+                    .placeholder(R.drawable.general_image_gray)
+                    .centerCrop()
+                    .error(R.drawable.ic_error_circle))
                     .into(view)
         }
     }

@@ -1,12 +1,13 @@
 package net.tnose.app.trisquel
 
 
-import androidx.recyclerview.widget.RecyclerView
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import kotlinx.android.synthetic.main.fragment_favorite_photo.view.*
@@ -72,14 +73,17 @@ class MyFavPhotoRecyclerViewAdapter(
                     .load(R.drawable.general_image_gray)
                     .into(holder.mImageView)
         }else {
-            val file = File(item.supplementalImages[0])
-            Glide.with(holder.mImageView.context)
-                    .load(file)
-                    .apply(RequestOptions()
-                            .placeholder(R.drawable.general_image_gray)
-                            .centerCrop()
-                            .error(R.drawable.ic_error_circle)
-                    )
+            val rb = if(item.supplementalImages[0].startsWith("/")){ //旧仕様
+                Glide.with(holder.mImageView.context)
+                        .load(File(item.supplementalImages[0]))
+            }else{ // content:// Android11以降対応
+                Glide.with(holder.mImageView.context)
+                        .load(Uri.parse(item.supplementalImages[0]))
+            }
+            rb.apply(RequestOptions()
+                        .placeholder(R.drawable.general_image_gray)
+                        .centerCrop()
+                        .error(R.drawable.ic_error_circle))
                     .into(holder.mImageView)
         }
 

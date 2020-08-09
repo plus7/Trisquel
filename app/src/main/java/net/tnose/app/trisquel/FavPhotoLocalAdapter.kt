@@ -1,13 +1,13 @@
 package net.tnose.app.trisquel
 
 import android.content.Context
-import androidx.annotation.ColorInt
-import androidx.recyclerview.widget.RecyclerView
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.annotation.ColorInt
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.github.chuross.recyclerviewadapters.ItemAdapter
@@ -47,15 +47,18 @@ class FavPhotoLocalAdapter(context: Context, @ColorInt val textColor: Int? = nul
 
             val path = photo.supplementalImages[0]
 
-            val file = File(path)
-            Glide.with(holder.mImageView.context)
-                    .load(file)
-                    .apply(RequestOptions()
-                            .placeholder(R.drawable.general_image_gray)
-                            .centerCrop()
-                            .error(R.drawable.ic_error_circle)
-                    )
-                    .into(holder.mImageView)
+            val rb = if(path.startsWith("/")){
+                Glide.with(holder.mImageView.context)
+                        .load(File(path))
+            }else{
+                Glide.with(holder.mImageView.context)
+                        .load(Uri.parse(path))
+            }
+            rb.apply(RequestOptions()
+                    .placeholder(R.drawable.general_image_gray)
+                    .centerCrop()
+                    .error(R.drawable.ic_error_circle)
+            ).into(holder.mImageView)
 
             holder.mImageView.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
                 // 大きさが確定してから描画しないといけない。

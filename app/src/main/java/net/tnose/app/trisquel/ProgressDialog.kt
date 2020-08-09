@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ProgressBar
@@ -52,10 +53,13 @@ class ProgressDialog : AbstractDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val frame = LayoutInflater.from(context).inflate(R.layout.dialog_progress, view as ViewGroup?, false)
         val btnCancel = frame.findViewById<Button>(R.id.btnCancel)
+        val isCancellableByBtn = arguments?.getBoolean("cancellable", true) ?: true
         btnCancel.setOnClickListener {
             ExportIntentService.shouldContinue = false
             closeDialog()
         }
+        btnCancel.isEnabled = isCancellableByBtn
+        btnCancel.visibility = if(isCancellableByBtn) View.VISIBLE else View.GONE
         val dialog = AlertDialog.Builder(activity!!)
                 .setView(frame)
                 .setTitle(arguments?.getString("title", "") ?: "")

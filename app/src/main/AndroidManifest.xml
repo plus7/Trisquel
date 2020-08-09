@@ -9,6 +9,7 @@
     -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
 
@@ -107,6 +108,7 @@
             android:theme="@style/AppTheme.NoActionBar" />
         <activity android:name=".FilterActivity" />
         <service android:name="ExportIntentService"></service>
+        <service android:name="DbConvIntentService"></service>
     </application>
 
 </manifest>

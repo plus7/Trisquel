@@ -6,13 +6,9 @@ import android.content.*
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
-import com.google.android.material.chip.Chip
-import androidx.exifinterface.media.ExifInterface
-import androidx.core.app.ActivityCompat
-import androidx.core.content.FileProvider
-import androidx.appcompat.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -22,6 +18,11 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.FileProvider
+import androidx.exifinterface.media.ExifInterface
+import com.google.android.material.chip.Chip
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
@@ -712,7 +713,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         openImagePicker()
     }
 
-    fun checkPermAndAppendSupplementalImages(paths: ArrayList<String>) {
+    fun checkPermAndAppendSupplementalImages(paths: ArrayList<String>?) {
+        if(paths == null) return
         if(paths.size == 0) return
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             supplementalImagesToLoad = paths
@@ -948,7 +950,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     return true
                 }
                 val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                cm.primaryClip = ClipData.newPlainText("", s)
+                cm.setPrimaryClip(ClipData.newPlainText("", s))
                 Toast.makeText(this, getString(R.string.notify_copied), Toast.LENGTH_SHORT).show()
                 return true
             }
@@ -1002,12 +1004,29 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         for(s in paths) appendSupplementalImage(s)
     }
 
+    private fun dateToTimestamp(day: Int, month: Int, year: Int): Long =
+            SimpleDateFormat("dd.MM.yyyy").let { formatter ->
+                formatter.parse("$day.$month.$year")?.time ?: 0
+            }
+
     private fun appendSupplementalImage(path: String){
         if(path in this.supplementalImages) return
         val options = BitmapFactory.Options()
 
         options.inJustDecodeBounds = true
-        var bmp = BitmapFactory.decodeFile(path, options)
+        var bmp = if(path.startsWith("/")){
+            BitmapFactory.decodeFile(path, options)
+        } else {
+            val input = contentResolver.openInputStream(Uri.parse(path))
+            if(input != null) {
+                val bitmap = BitmapFactory.decodeStream(input, null, options)
+                input.close()
+                bitmap
+            }else{
+                null
+            }
+        }
+
         var (w, h) =
                 if(options.outWidth > 0 && options.outHeight > 0)
                     Pair(options.outWidth, options.outHeight)
@@ -1015,7 +1034,12 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     Pair(150, 150)
         try {
             // 枠を回転させるかどうか考える
-            val exifInterface = androidx.exifinterface.media.ExifInterface(path)
+            val exifInterface = if(path.startsWith("/")){
+                ExifInterface(path)
+            } else {
+                val ist = contentResolver.openInputStream(Uri.parse(path))
+                ExifInterface(ist!!)
+            }
             val orientation = exifInterface.getAttributeInt(
                     androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
                     androidx.exifinterface.media.ExifInterface.ORIENTATION_UNDEFINED)
@@ -1054,9 +1078,13 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 if(view is CustomImageView){
                     Log.v("debug", "clicked" + view.path)
                     val intent = Intent()
-                    val file = File(view.path)
-                    // android.os.FileUriExposedException回避
-                    val photoURI = FileProvider.getUriForFile(this@EditPhotoActivity, this@EditPhotoActivity.applicationContext.packageName + ".provider", file)
+                    val photoURI = if(view.path.startsWith("/")) {
+                        val file = File(view.path)
+                        // android.os.FileUriExposedException回避
+                        FileProvider.getUriForFile(this@EditPhotoActivity, this@EditPhotoActivity.applicationContext.packageName + ".provider", file)
+                    }else{
+                        Uri.parse(view.path)
+                    }
                     intent.action = android.content.Intent.ACTION_VIEW
                     intent.setDataAndType(photoURI, "image/*")
                     intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -1085,10 +1113,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 setLatLng(999.0, 999.0)
             }
             REQCODE_IMAGES -> if (resultCode == RESULT_OK) {
-                val paths = Matisse.obtainPathResult(data)
-                for(p in paths){
-                    if(p != null){
-                        appendSupplementalImage(p)
+                val uris = Matisse.obtainResult(data)
+                for(uri in uris){
+                    if(uri != null){
+                        appendSupplementalImage(uri.toString())
                     }else{
                         Toast.makeText(this, "Failed to obtain an image. The result was null.", Toast.LENGTH_LONG).show()
                     }

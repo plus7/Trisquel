@@ -4,7 +4,7 @@ package net.tnose.app.trisquel
 //import net.tnose.app.trisquel.dummy.DummyContent.DummyItem
 import android.content.Context
 import android.graphics.Color
-import androidx.recyclerview.widget.RecyclerView
+import android.net.Uri
 import android.text.Spannable
 import android.text.SpannableString
 import android.view.LayoutInflater
@@ -150,14 +150,18 @@ class SearchLocalAdapter(context: Context, mListener: OnListFragmentInteractionL
                     .into(view)
         }else {
             val file = File(paths[0])
-            Glide.with(view.context)
-                    .load(file)
-                    .apply(RequestOptions()
-                            .placeholder(R.drawable.general_image_gray)
-                            .centerCrop()
-                            .error(R.drawable.ic_error_circle)
-                    )
-                    .into(view)
+            val rb = if(paths[0].startsWith("/")){
+                Glide.with(view.context)
+                        .load(File(paths[0]))
+            }else{
+                Glide.with(view.context)
+                        .load(Uri.parse(paths[0]))
+            }
+            rb.apply(RequestOptions()
+                    .placeholder(R.drawable.general_image_gray)
+                    .centerCrop()
+                    .error(R.drawable.ic_error_circle)
+            ).into(view)
         }
     }
 
