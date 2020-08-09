@@ -605,7 +605,7 @@ class MainActivity : AppCompatActivity(),
         when (requestCode) {
             REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val c = bundle!!.getParcelable<CameraSpec>("cameraspec")
+                val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
                 if(frag is CameraFragment && c != null) frag.insertCamera(c)
                 if (c.type == 1) {
                     val l = bundle.getParcelable<LensSpec>("fixed_lens")
@@ -619,12 +619,12 @@ class MainActivity : AppCompatActivity(),
             }
             REQCODE_EDIT_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val c = bundle!!.getParcelable<CameraSpec>("cameraspec")
+                val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
                 if(frag is CameraFragment && c != null) frag.updateCamera(c)
                 if (c.type == 1) {
                     val dao = TrisquelDao(this)
                     dao.connection()
-                    val l = bundle.getParcelable<LensSpec>("fixed_lens")
+                    val l = bundle.getParcelable<LensSpec>("fixed_lens")!!
                     val lensid = dao.getFixedLensIdByBody(c.id)
                     l.id = lensid
                     dao.updateLens(l)
