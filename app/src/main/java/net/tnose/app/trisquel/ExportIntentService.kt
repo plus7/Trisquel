@@ -8,11 +8,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Environment
 import android.os.Handler
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.exifinterface.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.*
@@ -33,12 +34,14 @@ class ExportIntentService : IntentService{
         val PARAM_ZIPFILE = "zipfile"
         val PARAM_PERCENTAGE = "percentage"
         val PARAM_STATUS = "status"
+        val PARAM_MODE = "mode"
 
-        internal fun startExport(context: Context, dir: String, zipfile: String){
+        internal fun startExport(context: Context, dir: String, zipfile: String, mode: Int){
             val intent = Intent(context, ExportIntentService::class.java)
             intent.action = ACTION_START_EXPORT
             intent.putExtra(PARAM_DIR, dir)
             intent.putExtra(PARAM_ZIPFILE, zipfile)
+            intent.putExtra(PARAM_MODE, mode)
             context.startService(intent)
         }
     }
@@ -56,7 +59,7 @@ class ExportIntentService : IntentService{
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
     }
 
-    fun backupToZip(zipFile: File): Boolean {
+    fun backupToZip(zipFile: File, mode: Int): Boolean {
         val zos = ZipOutputStream(FileOutputStream(zipFile))
         zos.setMethod(ZipOutputStream.DEFLATED)
         val osw = OutputStreamWriter(zos, "UTF-8")
@@ -73,8 +76,7 @@ class ExportIntentService : IntentService{
             zos.putNextEntry(ze)
             val metadata = JSONObject()
             metadata.put("DB_VERSION", DatabaseHelper.DATABASE_VERSION)
-            metadata.put("EXPORT_MODE", 1) //0: DB Only, 1: DB+IMAGES
-            metadata.put("EXTERNAL_STORAGE_PATH", Environment.getExternalStorageDirectory().absolutePath)
+            metadata.put("EXPORT_MODE", mode) //0: DB Only, 1: DB+IMAGES
 
             osw.write(metadata.toString())
             osw.flush()
@@ -101,10 +103,54 @@ class ExportIntentService : IntentService{
             val zep = ZipEntry("photo.json")
             zos.putNextEntry(zep)
             val entries = dao.getAllEntriesJSON("photo")
+            val checkSumPercentage = (100.0 - percentage)/3
+            for (i in 0..entries.length() - 1) {
+                val e = entries.getJSONObject(i)
+                val s = e.getString("suppimgs")
+                if (s.isEmpty()) continue
+                val imgs = JSONArray(s)
+                val suppimgs_date_taken = JSONArray()
+                val suppimgs_file_name = JSONArray()
+                val suppimgs_md5sum = JSONArray()
+                for(j in 0 until imgs.length()){
+                    val di = i.toDouble()
+                    val dj = j.toDouble()
+                    bcastProgress(percentage +
+                            checkSumPercentage * (di + dj / imgs.length().toDouble()) / entries.length().toDouble()
+                            , "Writing checksum for supplemental images...")
+                    val path = imgs.getString(j)
+                    if(path.isEmpty()){
+                        suppimgs_date_taken.put(j, "")
+                        suppimgs_file_name.put(j, "")
+                        suppimgs_md5sum.put(j, "")
+                        continue
+                    }
+                    var datetaken = ""
+                    var md5str = ""
+                    try {
+                        val ist1 = CompatibilityUtil.pathToInputStream(contentResolver, path, false)
+                        val exifInterface = if(ist1 != null) ExifInterface(ist1) else null
+                        datetaken = exifInterface?.getAttribute(TAG_DATETIME_ORIGINAL) ?: ""
+
+                        val ist2 = CompatibilityUtil.pathToInputStream(contentResolver, path, true)
+                        md5str = if(ist2 != null) MD5Util.digestAsStr(ist2) else ""
+                    } catch (e: Exception){}
+                    val displayname = CompatibilityUtil.pathToDisplayName(contentResolver, path)
+                    suppimgs_date_taken.put(j, datetaken)
+                    suppimgs_file_name.put(j, displayname)
+                    suppimgs_md5sum.put(j, md5str)
+                }
+                e.put("suppimgs_date_taken", suppimgs_date_taken)
+                e.put("suppimgs_file_name", suppimgs_file_name)
+                e.put("suppimgs_md5sum", suppimgs_md5sum)
+                //bcastProgress(percentage, "Writing checksum for supplemental images...")
+                if (!shouldContinue){ throw InterruptedException() }
+            }
+
             osw.write(entries.toString())
             osw.flush()
             zos.closeEntry()
-            percentage += 1.0
+            percentage += checkSumPercentage
             if (!shouldContinue){ throw InterruptedException() }
 
             val hs = HashSet<String>()
@@ -112,29 +158,37 @@ class ExportIntentService : IntentService{
             for (i in 0..entries.length() - 1) {
                 bcastProgress(percentage + photosPercentage * i.toDouble() / entries.length().toDouble(), "")
                 val e = entries.getJSONObject(i)
-                val s = e.getString("suppimgs")
-                if (s.isEmpty()) continue
-                val imgs = JSONArray(s)
-                for (j in 0..imgs.length() - 1) {
+                val si = e.getString("suppimgs")
+                if (si.isEmpty()) continue
+                val imgs = JSONArray(si)
+                val sf = e.getString("suppimgs_file_name")
+                val fileNames = JSONArray(sf)
+                val sc = e.getString("suppimgs_md5sum")
+                val checkSums = JSONArray(sc)
+                for (j in 0 until imgs.length()) {
                     val path = imgs[j].toString()
-                    if (hs.contains(path)) continue
-                    hs.add(path)
-                    val f = File(path)
+                    val fileName = fileNames[j].toString()
+                    val checkSum = checkSums[j].toString()
+                    if (hs.contains(checkSum)) continue
+                    hs.add(checkSum)
+
+                    val ist = CompatibilityUtil.pathToInputStream(contentResolver, path, true)
+                    //val f = File(path)
 
                     val di = i.toDouble()
                     val dj = j.toDouble()
                     bcastProgress(percentage +
                             photosPercentage * (di + dj / imgs.length().toDouble()) / entries.length().toDouble()
-                            , f.name)
+                            , fileName)
 
-                    if (!f.exists()) continue
+                    if (ist == null) continue
                     if (!shouldContinue){ throw InterruptedException() }
 
-                    val ze = ZipEntry("imgs" + path)
+                    val ze = ZipEntry("imgs/" + checkSum)
                     zos.putNextEntry(ze)
                     try {
                         val buf = ByteArray(1024 * 128)
-                        val bis = BufferedInputStream(FileInputStream(f))
+                        val bis = BufferedInputStream(ist)
                         while (true) {
                             val len = bis.read(buf)
                             if (len < 0) break
@@ -197,9 +251,10 @@ class ExportIntentService : IntentService{
 
                 val dir = intent.getStringExtra(PARAM_DIR)
                 val zipfile = intent.getStringExtra(PARAM_ZIPFILE)
+                val mode = intent.getIntExtra(PARAM_MODE, 0)
                 val sd = File(dir!!)
                 val backupZip = File(sd, zipfile!!)
-                val backupSuccess = backupToZip(backupZip)
+                val backupSuccess = backupToZip(backupZip, mode)
                 notifyMediaScanner(backupZip)
 
                 if(!backupSuccess) {

@@ -63,8 +63,9 @@ class MainActivity : AppCompatActivity(),
         const val REQCODE_EDIT_PHOTO_LIST = 7
         const val REQCODE_EDIT_ACCESSORY = 8
         const val REQCODE_ADD_ACCESSORY = 9
-        const val REQCODE_BACKUP_DIR_CHOSEN = 10
-        const val REQCODE_SEARCH = 11
+        const val REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX = 10
+        const val REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX = 11
+        const val REQCODE_SEARCH = 12
 
         const val RETCODE_ALERT = 200
         const val RETCODE_CAMERA_TYPE = 300
@@ -82,6 +83,11 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_BACKUP_PROGRESS = 406
         const val RETCODE_IMPORT_DB = 407
         const val RETCODE_DBCONV_PROGRESS = 408
+        const val RETCODE_SDCARD_PERM_FOR_SLIMEX = 409 /* 汚い実装だがこうするしかないか？ */
+        const val RETCODE_SDCARD_PERM_FOR_FULLEX = 410
+        const val RETCODE_SDCARD_PERM_FOR_MERGEIP = 411
+        const val RETCODE_SDCARD_PERM_FOR_REPLIP = 412
+        const val RETCODE_SDCARD_PERM_FOR_REPLDB = 413
 
         const val ACTION_CLOSE_PROGRESS_DIALOG = "ACTION_CLOSE_PROGRESS_DIALOG"
         const val ACTION_UPDATE_PROGRESS_DIALOG = "ACTION_UPDATE_PROGRESS_DIALOG"
@@ -95,7 +101,11 @@ class MainActivity : AppCompatActivity(),
     private lateinit var currentFragment: androidx.fragment.app.Fragment
     private val pinnedFilterViewId: ArrayList<Int> = arrayListOf()
 
-    internal val PERMISSIONS = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
+    internal val PERMISSIONS = arrayOf(
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.ACCESS_MEDIA_LOCATION
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -719,7 +729,8 @@ class MainActivity : AppCompatActivity(),
                 if(frag is AccessoryFragment) frag.updateAccessory(a)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
-            REQCODE_BACKUP_DIR_CHOSEN -> if (resultCode == DirectoryChooserActivity.RESULT_CODE_DIR_SELECTED) {
+            REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX,
+            REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX -> if (resultCode == DirectoryChooserActivity.RESULT_CODE_DIR_SELECTED) {
                 val bundle = data.extras
                 val dir = bundle!!.getString(DirectoryChooserActivity.RESULT_SELECTED_DIR)
                 val sd = File(dir!!)
@@ -731,13 +742,14 @@ class MainActivity : AppCompatActivity(),
                     //val backupDB = File(sd, "trisquel-" + sdf.format(calendar.time) + ".db")
                     val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
                     val backupZip = File(sd, backupZipFileName)
+                    val mode = if(requestCode == REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX) 0 else 1
 
                     if (dbpath.exists()) {
                         val fragment = ProgressDialog.Builder()
                                 .build(RETCODE_BACKUP_PROGRESS)
                         fragment.showOn(this, "dialog")
                         ExportIntentService.shouldContinue = true
-                        ExportIntentService.startExport(this, dir, backupZipFileName)
+                        ExportIntentService.startExport(this, dir, backupZipFileName, mode)
                         /*
                         try {
                             backupToZip(backupZip)
@@ -776,6 +788,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         // Handle navigation view item clicks here.
         val id = item.itemId
@@ -792,12 +805,41 @@ class MainActivity : AppCompatActivity(),
                 return true
             }
             R.id.nav_backup_sqlite -> {
-                val fragment = YesNoDialogFragment.Builder()
+                val fragment = RichSelectionDialogFragment.Builder()
                         .build(RETCODE_EXPORT_DB)
-                fragment.arguments?.putString("title", getString(R.string.title_backup))
-                fragment.arguments?.putString("message", getString(R.string.description_backup))
-                fragment.arguments?.putString("positive", getString(R.string.continue_))
-                fragment.showOn(this, "dialog")
+                fragment.arguments?.putInt("id", -1) //dummy value
+                fragment.arguments?.putString("title", getString(R.string.title_backup_mode_selection))
+                fragment.arguments?.putIntegerArrayList("items_icon",
+                        arrayListOf(R.drawable.ic_export,
+                                R.drawable.ic_export_img))
+                fragment.arguments?.putStringArray("items_title",
+                        arrayOf(getString(R.string.title_slim_backup),
+                                getString(R.string.title_whole_backup)))
+                fragment.arguments?.putStringArray("items_desc",
+                        arrayOf(getString(R.string.description_slim_backup),
+                                getString(R.string.description_whole_backup)))
+                fragment.showOn(this@MainActivity, "dialog")
+                drawer.closeDrawer(GravityCompat.START)
+                return true
+            }
+            R.id.nav_import -> {
+                val fragment = RichSelectionDialogFragment.Builder()
+                        .build(RETCODE_IMPORT_DB)
+                fragment.arguments?.putInt("id", -1) //dummy value
+                fragment.arguments?.putString("title", getString(R.string.title_import_mode_selection))
+                fragment.arguments?.putIntegerArrayList("items_icon",
+                        arrayListOf(R.drawable.ic_merge,
+                                R.drawable.ic_restore,
+                                R.drawable.ic_db_restore))
+                fragment.arguments?.putStringArray("items_title",
+                        arrayOf(getString(R.string.title_merge_zip),
+                                getString(R.string.title_import_zip),
+                                getString(R.string.title_import_db)))
+                fragment.arguments?.putStringArray("items_desc",
+                        arrayOf(getString(R.string.description_merge_zip),
+                                getString(R.string.description_import_zip),
+                                getString(R.string.description_import_db)))
+                fragment.showOn(this@MainActivity, "dialog")
                 drawer.closeDrawer(GravityCompat.START)
                 return true
             }
@@ -970,29 +1012,52 @@ class MainActivity : AppCompatActivity(),
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == RETCODE_SDCARD_PERM) {
-            onRequestSDCardAccessPermissionsResult(permissions, grantResults)
+        when(requestCode){
+            RETCODE_SDCARD_PERM_FOR_SLIMEX,
+            RETCODE_SDCARD_PERM_FOR_FULLEX
+                -> onRequestSDCardAccessPermissionsResult(requestCode, permissions, grantResults)
+            else -> {}
         }
     }
 
-    internal fun onRequestSDCardAccessPermissionsResult(permissions: Array<String>, grantResults: IntArray) {
-        val granted = intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED)
+    internal fun onRequestSDCardAccessPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        val granted = intArrayOf(
+                PackageManager.PERMISSION_GRANTED,
+                PackageManager.PERMISSION_GRANTED,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    PackageManager.PERMISSION_GRANTED
+                }else{
+                    PackageManager.PERMISSION_DENIED //バージョンが低いとDenied扱いになる
+                }
+        )
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
-            exportDBDialog()
+            val mode = if(requestCode == RETCODE_SDCARD_PERM_FOR_SLIMEX) 0 else 1
+            exportDBDialog(mode)
         } else {
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
         }
     }
 
-    fun checkPermAndExportDB() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM)
+    fun checkPermAndExportDB(mode: Int) { // 0: Slim 1: Whole
+        val writeDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val mediaLocDenied =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
+                }else{
+                    false
+                }
+
+        if (writeDenied || mediaLocDenied){
+            val retcode =
+                    if(mode == 0) RETCODE_SDCARD_PERM_FOR_SLIMEX
+                    else RETCODE_SDCARD_PERM_FOR_FULLEX
+            ActivityCompat.requestPermissions(this, PERMISSIONS, retcode)
             return
         }
-        exportDBDialog()
+        exportDBDialog(mode)
     }
 
-    fun exportDBDialog() {
+    fun exportDBDialog(mode: Int) {
         val chooserIntent = Intent(this, DirectoryChooserActivity::class.java)
         Log.d("path", Environment.getExternalStorageDirectory().absolutePath)
         val config = DirectoryChooserConfig.builder()
@@ -1002,7 +1067,10 @@ class MainActivity : AppCompatActivity(),
                 .initialDirectory(Environment.getExternalStorageDirectory().absolutePath)
                 .build()
         chooserIntent.putExtra(DirectoryChooserActivity.EXTRA_CONFIG, config)
-        startActivityForResult(chooserIntent, REQCODE_BACKUP_DIR_CHOSEN)
+        val reqcode =
+                if(mode==0) REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX
+                else        REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX
+        startActivityForResult(chooserIntent, reqcode)
     }
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
@@ -1014,7 +1082,8 @@ class MainActivity : AppCompatActivity(),
                 startActivity(i)
             }
             RETCODE_EXPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                checkPermAndExportDB()
+                val mode = data.getIntExtra("which", 0)
+                checkPermAndExportDB(mode)
             }
             RETCODE_DELETE_FILMROLL -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val id = data.getIntExtra("id", -1)
