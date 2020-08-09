@@ -43,8 +43,12 @@
             android:title="@string/action_settings" />
         <item
             android:id="@+id/nav_backup_sqlite"
-            android:icon="@drawable/ic_import_export_black_24dp"
-            android:title="@string/action_backup_sqlite"/>
+            android:icon="@drawable/ic_export"
+            android:title="@string/title_backup" />
+        <item
+            android:id="@+id/nav_import"
+            android:icon="@drawable/ic_import"
+            android:title="@string/title_import" />
     </group>
     <group>
         <item
