@@ -162,7 +162,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             }
             R.id.menu_copy -> {
                 val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                cm.primaryClip = ClipData.newPlainText("", filmRollText)
+                cm.setPrimaryClip(ClipData.newPlainText("", filmRollText))
                 Toast.makeText(this, getString(R.string.notify_copied), Toast.LENGTH_SHORT).show()
                 return true
             }

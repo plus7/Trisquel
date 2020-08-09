@@ -5,7 +5,6 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.preference.PreferenceManager
-import androidx.appcompat.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
@@ -13,6 +12,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_edit_accessory.*
 import org.json.JSONArray
 import org.json.JSONException
@@ -66,7 +66,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
             spinner_accessory_type?.position = (a.type + 4) % 5
             refreshUIforType(a.type)
         }else if(savedInstanceState != null){ //復帰データあり
-            this.created = savedInstanceState.getString("created")
+            this.created = savedInstanceState.getString("created") ?: ""
 
             edit_name!!.setText(savedInstanceState.getString("name"))
 

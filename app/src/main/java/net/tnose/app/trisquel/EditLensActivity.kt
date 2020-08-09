@@ -5,7 +5,6 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.preference.PreferenceManager
-import androidx.appcompat.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
@@ -13,6 +12,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_edit_lens.*
 import org.json.JSONArray
 import org.json.JSONException
@@ -86,12 +86,12 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             edit_focal_length!!.setText(l.focalLength)
             fsAdapter!!.setCheckedState(l.fSteps)
         }else if(savedInstanceState != null){ //復帰データあり
-            this.created = savedInstanceState.getString("created")
+            this.created = savedInstanceState.getString("created")?:""
             edit_manufacturer!!.setText(savedInstanceState.getString("manufacturer"))
             edit_mount!!.setText(savedInstanceState.getString("mount"))
             edit_model!!.setText(savedInstanceState.getString("model_name"))
             edit_focal_length!!.setText(savedInstanceState.getString("focal_length"))
-            fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString"))
+            fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString")?:"")
         }else{ //未入力開きたて
             this.created = ""
         }

@@ -1098,7 +1098,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             REQCODE_ADD_LENS -> if (resultCode == Activity.RESULT_OK) {
                 if(data != null) {
                     val bundle = data.extras
-                    val l = bundle!!.getParcelable<LensSpec>("lensspec")
+                    val l = bundle!!.getParcelable<LensSpec>("lensspec")!!
                     val dao = TrisquelDao(this)
                     dao.connection()
                     l.id = dao.addLens(l).toInt()

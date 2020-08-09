@@ -5,7 +5,6 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.preference.PreferenceManager
-import androidx.appcompat.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
@@ -13,6 +12,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_edit_film_roll.*
 import org.json.JSONArray
 import org.json.JSONException
@@ -405,7 +405,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 if(data != null) {
                     val bundle = data.extras
-                    val c = bundle!!.getParcelable<CameraSpec>("cameraspec")
+                    val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
                     val dao = TrisquelDao(this)
                     dao.connection()
                     c.id = dao.addCamera(c).toInt()

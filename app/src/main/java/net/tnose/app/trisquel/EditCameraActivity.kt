@@ -5,7 +5,6 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.preference.PreferenceManager
-import androidx.appcompat.app.AppCompatActivity
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
@@ -15,6 +14,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.RadioGroup
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_edit_camera.*
 import org.json.JSONArray
 import org.json.JSONException
@@ -197,13 +197,13 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             spinner_ev_width!!.setSelection(c.evWidth - 1, false)
         }else if(savedInstanceState != null){ //復帰データあり
             if (type == 1) {
-                fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString"))
+                fsAdapter!!.setCheckedState(savedInstanceState.getString("FStepsString")?:"")
                 //EditTextは勝手に復元するので処理不要
                 //edit_lens_name_flc!!.setText(savedInstanceState.getString("fixedlens_name"))
                 //edit_focal_length_flc!!.setText(savedInstanceState.getString("fixedlens_focal_length"))
             }
 
-            this.created = savedInstanceState.getString("created")
+            this.created = savedInstanceState.getString("created")?:""
 
             edit_mount!!.setText(savedInstanceState.getString("mount"))
             edit_manufacturer!!.setText(savedInstanceState.getString("manufacturer"))
