@@ -59,6 +59,144 @@ class ExportIntentService : IntentService{
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
     }
 
+    fun doMetadataWrite(mode: Int, zos: ZipOutputStream, osw: OutputStreamWriter, dao: TrisquelDao){
+        // Metadata
+        val ze = ZipEntry("metadata.json")
+        zos.putNextEntry(ze)
+        val metadata = JSONObject()
+        metadata.put("DB_VERSION", DatabaseHelper.DATABASE_VERSION)
+        metadata.put("EXPORT_MODE", mode) //0: DB Only, 1: DB+IMAGES
+
+        osw.write(metadata.toString())
+        osw.flush()
+        zos.closeEntry()
+    }
+
+    fun doDatabaseWrite(percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter, dao: TrisquelDao): Double{
+        val types = listOf("camera", "lens", "filmroll", "accessory", "tag", "tagmap")
+        var mypercentage = percentage
+        for (type in types) {
+            val ze = ZipEntry(type + ".json")
+            zos.putNextEntry(ze)
+            val entries = dao.getAllEntriesJSON(type)
+            osw.write(entries.toString())
+            osw.flush()
+            zos.closeEntry()
+            mypercentage += 1.0
+            bcastProgress(mypercentage, "Writing database entries...")
+            if (!shouldContinue){ throw InterruptedException() }
+        }
+        return mypercentage
+    }
+
+    fun doPhotoInfoWrite(mode: Int, percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter, dao: TrisquelDao, entries: JSONArray): Double {
+        val zep = ZipEntry("photo.json")
+        zos.putNextEntry(zep)
+        val checkSumPercentage = if(mode == 1) (99.99 - percentage)/4 else 99.99 - percentage
+        for (i in 0..entries.length() - 1) {
+            val e = entries.getJSONObject(i)
+            val s = e.getString("suppimgs")
+            if (s.isEmpty()) continue
+            val imgs = JSONArray(s)
+            val suppimgs_date_taken = JSONArray()
+            val suppimgs_file_name = JSONArray()
+            val suppimgs_md5sum = JSONArray()
+            for(j in 0 until imgs.length()){
+                val di = i.toDouble()
+                val dj = j.toDouble()
+                bcastProgress(percentage +
+                        checkSumPercentage * (di + dj / imgs.length().toDouble()) / entries.length().toDouble()
+                        , "Writing checksum for supplemental images...")
+                val path = imgs.getString(j)
+                if(path.isEmpty()){
+                    suppimgs_date_taken.put(j, "")
+                    suppimgs_file_name.put(j, "")
+                    suppimgs_md5sum.put(j, "")
+                    continue
+                }
+                var datetaken = ""
+                var md5str = ""
+                try {
+                    val ist1 = CompatibilityUtil.pathToInputStream(contentResolver, path, false)
+                    val exifInterface = if(ist1 != null) ExifInterface(ist1) else null
+                    datetaken = exifInterface?.getAttribute(TAG_DATETIME_ORIGINAL) ?: ""
+
+                    val ist2 = CompatibilityUtil.pathToInputStream(contentResolver, path, true)
+                    md5str = if(ist2 != null) MD5Util.digestAsStr(ist2) else ""
+                } catch (e: Exception){}
+                val displayname = CompatibilityUtil.pathToDisplayName(contentResolver, path)
+                suppimgs_date_taken.put(j, datetaken)
+                suppimgs_file_name.put(j, displayname)
+                suppimgs_md5sum.put(j, md5str)
+            }
+            e.put("suppimgs_date_taken", suppimgs_date_taken)
+            e.put("suppimgs_file_name", suppimgs_file_name)
+            e.put("suppimgs_md5sum", suppimgs_md5sum)
+            //bcastProgress(percentage, "Writing checksum for supplemental images...")
+            if (!shouldContinue){ throw InterruptedException() }
+        }
+
+        osw.write(entries.toString())
+        osw.flush()
+        zos.closeEntry()
+        if (!shouldContinue){ throw InterruptedException() }
+        return percentage + checkSumPercentage
+    }
+
+    fun doPhotoContentWrite(percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter, dao: TrisquelDao, entries: JSONArray): Double {
+        val hs = HashSet<String>()
+        val photosPercentage = 99.99 - percentage
+        for (i in 0..entries.length() - 1) {
+            bcastProgress(percentage + photosPercentage * i.toDouble() / entries.length().toDouble(), "")
+            val e = entries.getJSONObject(i)
+            val si = e.getString("suppimgs")
+            if (si.isEmpty()) continue
+            val imgs = JSONArray(si)
+            val sf = e.getString("suppimgs_file_name")
+            val fileNames = JSONArray(sf)
+            val sc = e.getString("suppimgs_md5sum")
+            val checkSums = JSONArray(sc)
+            for (j in 0 until imgs.length()) {
+                val path = imgs[j].toString()
+                val fileName = fileNames[j].toString()
+                val checkSum = checkSums[j].toString()
+                if (hs.contains(checkSum)) continue
+                hs.add(checkSum)
+
+                val ist = CompatibilityUtil.pathToInputStream(contentResolver, path, true)
+                //val f = File(path)
+
+                val di = i.toDouble()
+                val dj = j.toDouble()
+                bcastProgress(percentage +
+                        photosPercentage * (di + dj / imgs.length().toDouble()) / entries.length().toDouble()
+                        , fileName)
+
+                if (ist == null) continue
+                if (!shouldContinue){ throw InterruptedException() }
+
+                val ze = ZipEntry("imgs/" + checkSum)
+                zos.putNextEntry(ze)
+                try {
+                    val buf = ByteArray(1024 * 128)
+                    val bis = BufferedInputStream(ist)
+                    while (true) {
+                        val len = bis.read(buf)
+                        if (len < 0) break
+                        zos.write(buf, 0, len)
+
+                        if (!shouldContinue){ throw InterruptedException() }
+                    }
+                } catch (e: IOException) {
+                    Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
+                } finally {
+                    zos.closeEntry()
+                }
+            }
+        }
+        return percentage + photosPercentage
+    }
+
     fun backupToZip(zipFile: File, mode: Int): Boolean {
         val zos = ZipOutputStream(FileOutputStream(zipFile))
         zos.setMethod(ZipOutputStream.DEFLATED)
@@ -71,137 +209,18 @@ class ExportIntentService : IntentService{
         try {
             bcastProgress(0.0, "Writing metadata...")
 
-            // Metadata
-            val ze = ZipEntry("metadata.json")
-            zos.putNextEntry(ze)
-            val metadata = JSONObject()
-            metadata.put("DB_VERSION", DatabaseHelper.DATABASE_VERSION)
-            metadata.put("EXPORT_MODE", mode) //0: DB Only, 1: DB+IMAGES
-
-            osw.write(metadata.toString())
-            osw.flush()
-            zos.closeEntry()
-
+            doMetadataWrite(mode, zos, osw, dao)
             if (!shouldContinue){ throw InterruptedException() }
 
             var percentage = 1.0
-
             bcastProgress(percentage, "Writing database entries...")
-            val types = listOf("camera", "lens", "filmroll", "accessory", "tag", "tagmap")
-            for (type in types) {
-                val ze = ZipEntry(type + ".json")
-                zos.putNextEntry(ze)
-                val entries = dao.getAllEntriesJSON(type)
-                osw.write(entries.toString())
-                osw.flush()
-                zos.closeEntry()
-                percentage += 1.0
-                bcastProgress(percentage, "Writing database entries...")
-                if (!shouldContinue){ throw InterruptedException() }
-            }
 
-            val zep = ZipEntry("photo.json")
-            zos.putNextEntry(zep)
+            percentage = doDatabaseWrite(percentage, zos, osw, dao)
+
             val entries = dao.getAllEntriesJSON("photo")
-            val checkSumPercentage = (100.0 - percentage)/3
-            for (i in 0..entries.length() - 1) {
-                val e = entries.getJSONObject(i)
-                val s = e.getString("suppimgs")
-                if (s.isEmpty()) continue
-                val imgs = JSONArray(s)
-                val suppimgs_date_taken = JSONArray()
-                val suppimgs_file_name = JSONArray()
-                val suppimgs_md5sum = JSONArray()
-                for(j in 0 until imgs.length()){
-                    val di = i.toDouble()
-                    val dj = j.toDouble()
-                    bcastProgress(percentage +
-                            checkSumPercentage * (di + dj / imgs.length().toDouble()) / entries.length().toDouble()
-                            , "Writing checksum for supplemental images...")
-                    val path = imgs.getString(j)
-                    if(path.isEmpty()){
-                        suppimgs_date_taken.put(j, "")
-                        suppimgs_file_name.put(j, "")
-                        suppimgs_md5sum.put(j, "")
-                        continue
-                    }
-                    var datetaken = ""
-                    var md5str = ""
-                    try {
-                        val ist1 = CompatibilityUtil.pathToInputStream(contentResolver, path, false)
-                        val exifInterface = if(ist1 != null) ExifInterface(ist1) else null
-                        datetaken = exifInterface?.getAttribute(TAG_DATETIME_ORIGINAL) ?: ""
-
-                        val ist2 = CompatibilityUtil.pathToInputStream(contentResolver, path, true)
-                        md5str = if(ist2 != null) MD5Util.digestAsStr(ist2) else ""
-                    } catch (e: Exception){}
-                    val displayname = CompatibilityUtil.pathToDisplayName(contentResolver, path)
-                    suppimgs_date_taken.put(j, datetaken)
-                    suppimgs_file_name.put(j, displayname)
-                    suppimgs_md5sum.put(j, md5str)
-                }
-                e.put("suppimgs_date_taken", suppimgs_date_taken)
-                e.put("suppimgs_file_name", suppimgs_file_name)
-                e.put("suppimgs_md5sum", suppimgs_md5sum)
-                //bcastProgress(percentage, "Writing checksum for supplemental images...")
-                if (!shouldContinue){ throw InterruptedException() }
-            }
-
-            osw.write(entries.toString())
-            osw.flush()
-            zos.closeEntry()
-            percentage += checkSumPercentage
-            if (!shouldContinue){ throw InterruptedException() }
-
-            val hs = HashSet<String>()
-            val photosPercentage = 100.0 - percentage
-            for (i in 0..entries.length() - 1) {
-                bcastProgress(percentage + photosPercentage * i.toDouble() / entries.length().toDouble(), "")
-                val e = entries.getJSONObject(i)
-                val si = e.getString("suppimgs")
-                if (si.isEmpty()) continue
-                val imgs = JSONArray(si)
-                val sf = e.getString("suppimgs_file_name")
-                val fileNames = JSONArray(sf)
-                val sc = e.getString("suppimgs_md5sum")
-                val checkSums = JSONArray(sc)
-                for (j in 0 until imgs.length()) {
-                    val path = imgs[j].toString()
-                    val fileName = fileNames[j].toString()
-                    val checkSum = checkSums[j].toString()
-                    if (hs.contains(checkSum)) continue
-                    hs.add(checkSum)
-
-                    val ist = CompatibilityUtil.pathToInputStream(contentResolver, path, true)
-                    //val f = File(path)
-
-                    val di = i.toDouble()
-                    val dj = j.toDouble()
-                    bcastProgress(percentage +
-                            photosPercentage * (di + dj / imgs.length().toDouble()) / entries.length().toDouble()
-                            , fileName)
-
-                    if (ist == null) continue
-                    if (!shouldContinue){ throw InterruptedException() }
-
-                    val ze = ZipEntry("imgs/" + checkSum)
-                    zos.putNextEntry(ze)
-                    try {
-                        val buf = ByteArray(1024 * 128)
-                        val bis = BufferedInputStream(ist)
-                        while (true) {
-                            val len = bis.read(buf)
-                            if (len < 0) break
-                            zos.write(buf, 0, len)
-
-                            if (!shouldContinue){ throw InterruptedException() }
-                        }
-                    } catch (e: IOException) {
-                        Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
-                    } finally {
-                        zos.closeEntry()
-                    }
-                }
+            percentage = doPhotoInfoWrite(mode, percentage, zos, osw, dao, entries)
+            if(mode == 1) {
+                percentage = doPhotoContentWrite(percentage, zos, osw, dao, entries)
             }
             completed = true
         } catch (e: InterruptedException){
