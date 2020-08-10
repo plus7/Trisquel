@@ -5,7 +5,9 @@ import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -97,6 +99,7 @@ class MainActivity : AppCompatActivity(),
     private var localBroadcastManager: androidx.localbroadcastmanager.content.LocalBroadcastManager? = null
     private var progressFilter: IntentFilter? = null
     private var progressReceiver: ProgressReceiver? = null
+    private var isIntentServiceWorking: Int = 0 //0: None, 1: DB conversion
 
     private lateinit var currentFragment: androidx.fragment.app.Fragment
     private val pinnedFilterViewId: ArrayList<Int> = arrayListOf()
@@ -124,6 +127,12 @@ class MainActivity : AppCompatActivity(),
             savedInstanceState.getInt("current_fragment")
         } else {
             ID_FILMROLL
+        }
+
+        isIntentServiceWorking = if (savedInstanceState != null){
+            savedInstanceState.getInt("is_intent_service_working")
+        } else {
+            0
         }
 
         val f: androidx.fragment.app.Fragment
@@ -225,6 +234,19 @@ class MainActivity : AppCompatActivity(),
         navigationView.setNavigationItemSelectedListener(this)
     }
 
+    fun fixOrientation(){
+        val config = resources.configuration
+        if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    fun releaseOrientation(){
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    }
+
     override fun onResume() {
         super.onResume()
 
@@ -233,7 +255,10 @@ class MainActivity : AppCompatActivity(),
         val dbConvForAndroid11Done = dao.getConversionState() >= 1
         dao.close()
 
-        if(!dbConvForAndroid11Done) {
+        if(!dbConvForAndroid11Done && isIntentServiceWorking == 0) {
+            fixOrientation() // 画面回転時のDialogの挙動が怪しいので一時的にこうする
+            isIntentServiceWorking = 1
+
             val fragment = ProgressDialog.Builder()
                     .build(RETCODE_DBCONV_PROGRESS)
             fragment.arguments?.putString("title", "Updating DB")
@@ -283,6 +308,7 @@ class MainActivity : AppCompatActivity(),
             outState.putInt("filmroll_filtertype", filtertype)
             outState.putStringArrayList("filmroll_filtervalue", filtervalue)
         }
+        outState.putInt("is_intent_service_working", isIntentServiceWorking)
     }
 
     override fun onBackPressed() {
@@ -619,13 +645,17 @@ class MainActivity : AppCompatActivity(),
     fun setProgressPercentage(percentage: Double, status: String){
         val intent = Intent()
         if(percentage >= 100.0){
+            isIntentServiceWorking = 0
             intent.action = ACTION_CLOSE_PROGRESS_DIALOG
+            intent.putExtra("status", status)
+            sendBroadcast(intent)
+            releaseOrientation()
         }else {
             intent.action = ACTION_UPDATE_PROGRESS_DIALOG
             intent.putExtra("percentage", percentage)
+            intent.putExtra("status", status)
+            sendBroadcast(intent)
         }
-        intent.putExtra("status", status)
-        sendBroadcast(intent)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -748,6 +778,8 @@ class MainActivity : AppCompatActivity(),
                         val fragment = ProgressDialog.Builder()
                                 .build(RETCODE_BACKUP_PROGRESS)
                         fragment.showOn(this, "dialog")
+                        isIntentServiceWorking = 2
+                        fixOrientation()
                         ExportIntentService.shouldContinue = true
                         ExportIntentService.startExport(this, dir, backupZipFileName, mode)
                         /*
