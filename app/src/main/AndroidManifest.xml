@@ -7,22 +7,23 @@
          Google Maps Android API v2, but you must specify either coarse or fine
          location permissions for the 'MyLocation' functionality. 
     -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.CAMERA" />
-
     <application
+        android:name="androidx.multidex.MultiDexApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        tools:replace="android:theme"
-        android:requestLegacyExternalStorage="true">
-        <activity android:name=".SearchActivity"></activity>
+        tools:replace="android:theme">
+        <activity android:name=".RestartActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:process=":restart_process"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity android:name=".SearchActivity" />
         <activity
             android:name=".TabbedActivity"
             android:label="@string/title_activity_edit_photo"
@@ -67,15 +68,12 @@
              Note that the API key is linked to the encryption key used to sign the APK.
              You need a different API key for each encryption key, including the release key that is used to
              sign the APK for publishing.
-             You can define the keys for the debug and release targets in src/debug/ and src/release/. 
+             You can define the keys for the debug and release targets in src/debug/ and src/release/.
         -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key" />
-
         <activity
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps" />
+
         <activity
             android:name="net.rdrei.android.dirchooser.DirectoryChooserActivity"
             android:label="@string/title_activity_dirchooser" />
@@ -84,7 +82,21 @@
             android:name=".PrintPreviewActivity"
             android:label="@string/title_activity_print_preview"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".GalleryActivity"
+            android:label="@string/title_activity_gallery"
+            android:theme="@style/AppTheme.NoActionBar" />
 
+        <activity
+            android:name=".LicenseActivity"
+            android:label="@string/title_activity_license"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <activity android:name=".FilterActivity" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
@@ -94,22 +106,20 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
+        <service android:name=".ExportIntentService" />
 
+        <service android:name=".ImportIntentService" />
+        <service android:name=".DbConvIntentService" />
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />
-
-        <activity
-            android:name=".GalleryActivity"
-            android:label="@string/title_activity_gallery"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name=".LicenseActivity"
-            android:label="@string/title_activity_license"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity android:name=".FilterActivity" />
-        <service android:name="ExportIntentService"></service>
-        <service android:name="DbConvIntentService"></service>
     </application>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
 </manifest>

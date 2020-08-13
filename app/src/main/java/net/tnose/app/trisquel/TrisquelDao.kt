@@ -158,6 +158,8 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     }
 
     fun mergePhotoJSON(obj: JSONObject,
+                       newpaths: ArrayList<String>,
+                       importErrorStr: String,
                        cameraOld2NewId: Map<Int, Int>,
                        lensOld2NewId: Map<Int, Int>,
                        filmrollOld2NewId: Map<Int, Int>,
@@ -179,6 +181,23 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
                         .map { it.toString() }.joinToString("/","/", "/")
                 cval.put(key, accessories)
             }
+            else if(key == "suppimgs"){
+                // newpathsで置換
+                cval.put(key, JSONArray(newpaths).toString())
+            }
+            else if(key.startsWith("suppimgs_")){
+                // do nothing
+            }
+            else if(key == "memo"){
+                val value = obj.getString(key)
+                val appendStr =
+                        if(!importErrorStr.isEmpty()){
+                            (if(value.isEmpty()) "" else "\n") + importErrorStr
+                        }else{
+                            ""
+                        }
+                cval.put(key, value + appendStr)
+            }
             else{
                 val value = obj.get(key)
                 when(value){
@@ -189,7 +208,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             }
         }
 
-        val newId = mDb!!.insert("lens", null, cval)
+        val newId = mDb!!.insert("photo", null, cval)
         return Pair(oldId, newId.toInt())
     }
 
@@ -225,7 +244,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
     fun deleteAll(){
         for(table in listOf("camera", "lens", "filmroll", "photo", "accessory", "tag", "tagmap")) {
-            mDb!!.delete(table, "*", null)
+            mDb!!.delete(table, null, null)
 
             //reset autoincrement
             val cval = ContentValues()
@@ -1274,6 +1293,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         val selectArgs = arrayOf(Integer.toString(p.id))
         val cval = ContentValues()
         cval.put("suppimgs", p.supplementalImagesStr)
+        cval.put("memo", p.memo)
         mDb!!.update("photo",
                 cval,
                 "_id = ?",

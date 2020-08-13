@@ -1,19 +1,18 @@
 package net.tnose.app.trisquel
 
 import android.R
-import android.app.IntentService
-import android.app.Notification
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import java.io.File
 
 class DbConvIntentService : IntentService {
     companion object {
@@ -72,6 +71,7 @@ class DbConvIntentService : IntentService {
 
     fun doConvert(): Boolean {
         val dao = TrisquelDao(this)
+        var status = false
         try {
             dao.connection()
             val photoList = dao.getPhotos4Conversion()
@@ -79,24 +79,51 @@ class DbConvIntentService : IntentService {
             for(p in photoList){
                 for(i in 0..p.supplementalImages.size-1) {
                     val before = p.supplementalImages[i]
-                    p.supplementalImages[i] = pathConversion(p.supplementalImages[i])
+                    val newpath = pathConversion(p.supplementalImages[i])
+                    p.supplementalImages[i] = newpath
+                    if(newpath.isEmpty()){
+                        val f = File(before)
+                        val prefix = if(p.memo.isEmpty()) "" else "\n"
+                        if(f.exists()){
+                            p.memo += prefix + "path conversion failed: %s".format(f.name)
+                        }
+                    }
                     Log.d("CONV", "before:" + before +" after:" + p.supplementalImages[i])
                 }
                 dao.doPhotoConversion(p)
                 processedCount += 1.0
-                bcastProgress( processedCount / (photoList.size + 1) * 100, "updating...")
+                bcastProgress( processedCount / (photoList.size + 1) * 100, getString(net.tnose.app.trisquel.R.string.description_update_dialog))
             }
+            status = true
         }finally {
-            dao.setConversionState(1)
+            if (status == true){
+                dao.setConversionState(1)
+            }
             dao.close()
         }
-        return true
+        return status
     }
 
     override fun onHandleIntent(intent: Intent?) {
         if (intent == null) return
         when(intent.action){
             DbConvIntentService.ACTION_START_DBCONV -> {
+                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                // グループ生成
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
+                    nm.createNotificationChannelGroups(arrayListOf(g))
+                    val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
+                    ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                    nm.createNotificationChannel(ch)
+                }
+                val channelId =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            "trisquel_ch"
+                        } else {
+                            ""
+                        }
+
                 bcastProgress(0.0, "Starting DB conversion...")
                 // Notificationのインスタンス化
                 var notification = Notification()
@@ -104,10 +131,11 @@ class DbConvIntentService : IntentService {
                 val pi = PendingIntent.getActivity(this, 0, i,
                         PendingIntent.FLAG_CANCEL_CURRENT)
 
-                val builder = NotificationCompat.Builder(this)
+                val builder = NotificationCompat.Builder(this, channelId)
 
                 //Foreground Service
                 notification = builder.setContentIntent(pi)
+                        .setGroup("trisquel_ch_grp")
                         .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
                         .setAutoCancel(true).setContentTitle("Converting database")
                         .setContentText("Trisquel").build()
@@ -127,15 +155,15 @@ class DbConvIntentService : IntentService {
                         val i2 = Intent(applicationContext, MainActivity::class.java)
                         val pi = PendingIntent.getActivity(this, 0, i2, 0)
 
-                        val builder = NotificationCompat.Builder(this)
+                        val builder = NotificationCompat.Builder(this, channelId)
 
                         //Foreground Service
                         val n = builder.setContentIntent(pi)
+                                .setGroup("trisquel_ch_grp")
                                 .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
                                 .setAutoCancel(true).setContentTitle("Conversion finished")
                                 .setContentText("Trisquel").build()
 
-                        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                         nm.notify(1, n)
                     })
                 }

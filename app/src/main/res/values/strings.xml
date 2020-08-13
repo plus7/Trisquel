@@ -68,6 +68,12 @@
     <string name="description_whole_backup">
         Back up the database and supplemental image files as a zip file. This mode spends a lot of storage capacity. Choose this mode for factory reset of this device or device transition.
     </string>
+    <string name="title_backup_help">
+        Read the help on importing/exporting
+    </string>
+    <string name="description_backup_help">
+        Open a web browser to read detailed descriptions on importing/exporting.
+    </string>
     <string name="title_import_mode_selection">
         Select import mode
     </string>
@@ -198,6 +204,7 @@
     <!-- Strings related to Settings -->
 
     <!-- Example General settings -->
+    <string name="description_update_dialog">Updating DB for the new version. Wait a moment…</string>
     <string name="pref_header_general">General</string>
     <string name="pref_title_autocomplete_from_previous_shot">Copy lens from the previous shot</string>
     <string name="pref_description_autocomplete_from_previous_shot">

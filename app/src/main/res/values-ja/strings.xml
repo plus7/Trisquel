@@ -56,6 +56,12 @@
     <string name="description_whole_backup">
         データベースと補足画像ファイルをzipファイルとしてバックアップします。ファイルサイズが巨大になります。端末初期化や移行の場合はこちらを使用してください。
     </string>
+    <string name="title_backup_help">
+        インポート/エクスポートに関するヘルプを読む
+    </string>
+    <string name="description_backup_help">
+        ウェブブラウザを開き、インポート/エクスポートに関する詳細な説明を表示します
+    </string>
     <string name="title_import_mode_selection">インポート方法を選択してください</string>
     <string name="title_merge_zip">
         zipファイルの内容を既存のデータベースに統合
@@ -180,6 +186,8 @@
     <string name="msg_ask_create_lens">使用可能なレンズがありません。作成しますか？</string>
     <string name="msg_ask_create_camera">使用可能なカメラがありません。作成しますか？</string>
     <string name="empty_name">(名前なし)</string>
+    <string name="description_update_dialog">データベースを新バージョン向けにアップデートしています。お待ち下さい…</string>
+
     <!-- Strings related to Settings -->
 
     <!-- Example General settings -->

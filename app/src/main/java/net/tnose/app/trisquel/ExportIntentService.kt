@@ -1,13 +1,11 @@
 package net.tnose.app.trisquel
 
 import android.R
-import android.app.IntentService
-import android.app.Notification
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.util.Log
 import android.widget.Toast
@@ -250,16 +248,32 @@ class ExportIntentService : IntentService{
         if (intent == null) return
         when(intent.action){
             ACTION_START_EXPORT -> {
+                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                // グループ生成
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
+                    nm.createNotificationChannelGroups(arrayListOf(g))
+                    val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
+                    ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                    nm.createNotificationChannel(ch)
+                }
+                val channelId =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            "trisquel_ch"
+                        } else {
+                            ""
+                        }
                 // Notificationのインスタンス化
                 var notification = Notification()
                 val i = Intent(applicationContext, MainActivity::class.java)
                 val pi = PendingIntent.getActivity(this, 0, i,
                         PendingIntent.FLAG_CANCEL_CURRENT)
 
-                val builder = NotificationCompat.Builder(this)
+                val builder = NotificationCompat.Builder(this, channelId)
 
                 //Foreground Service
                 notification = builder.setContentIntent(pi)
+                        .setGroup("trisquel_ch_grp")
                         .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
                         .setAutoCancel(true).setContentTitle("Exporting")
                         .setContentText("Trisquel").build()
@@ -285,10 +299,11 @@ class ExportIntentService : IntentService{
                         val i2 = Intent(applicationContext, MainActivity::class.java)
                         val pi = PendingIntent.getActivity(this, 0, i2, 0)
 
-                        val builder = NotificationCompat.Builder(this)
+                        val builder = NotificationCompat.Builder(this, channelId)
 
                         //Foreground Service
                         val n = builder.setContentIntent(pi)
+                                .setGroup("trisquel_ch_grp")
                                 .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
                                 .setAutoCancel(true).setContentTitle("Wrote to " + backupZip.absolutePath)
                                 .setContentText("Trisquel").build()

@@ -68,6 +68,9 @@ class MainActivity : AppCompatActivity(),
         const val REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX = 10
         const val REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX = 11
         const val REQCODE_SEARCH = 12
+        const val REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP = 13
+        const val REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP = 14
+        const val REQCODE_DBFILE_CHOSEN_FOR_REPLDB = 15
 
         const val RETCODE_ALERT = 200
         const val RETCODE_CAMERA_TYPE = 300
@@ -90,6 +93,7 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_SDCARD_PERM_FOR_MERGEIP = 411
         const val RETCODE_SDCARD_PERM_FOR_REPLIP = 412
         const val RETCODE_SDCARD_PERM_FOR_REPLDB = 413
+        const val RETCODE_IMPORT_PROGRESS = 414
 
         const val ACTION_CLOSE_PROGRESS_DIALOG = "ACTION_CLOSE_PROGRESS_DIALOG"
         const val ACTION_UPDATE_PROGRESS_DIALOG = "ACTION_UPDATE_PROGRESS_DIALOG"
@@ -808,6 +812,43 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
             }
+            REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP,
+            REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> if(resultCode == Activity.RESULT_OK){
+                val uri: Uri? = data.data
+                Log.d("ZipFile", uri.toString())
+
+                val fragment = ProgressDialog.Builder()
+                        .build(RETCODE_IMPORT_PROGRESS)
+                fragment.showOn(this, "dialog")
+                isIntentServiceWorking = 3
+                fixOrientation()
+                ImportIntentService.shouldContinue = true
+                val mode = when(requestCode){
+                    REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP -> 0
+                    REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> 1
+                    else -> 2
+                }
+                ImportIntentService.startImport(this, uri!!, mode)
+            }
+            REQCODE_DBFILE_CHOSEN_FOR_REPLDB -> if(resultCode == Activity.RESULT_OK){
+                val uri: Uri? = data.data
+                Log.d("DBFile", uri.toString())
+                val dbpath = this.getDatabasePath("trisquel.db")
+                if(uri != null){
+                    val pfd = contentResolver.openFileDescriptor(uri, "r")
+                    if (pfd == null) throw FileNotFoundException(uri.toString())
+                    val fis = FileInputStream(pfd.fileDescriptor)
+
+                    val src = fis.channel
+                    val dst = FileOutputStream(dbpath).channel
+                    dst.transferFrom(src, 0, src.size())
+                    src.close()
+                    dst.close()
+                    //再起動する。一般ユーザーであればDB_VERSION=16以前のデータしか持っていないので、データ変換処理が走るはず
+                    val intent: Intent = RestartActivity.createIntent(applicationContext)
+                    startActivity(intent)
+                }
+            }
             REQCODE_SEARCH -> {
                 val bundle = data.extras
                 val dirtyFilmRolls = bundle?.getIntegerArrayList("dirtyFilmRolls") ?: ArrayList()
@@ -843,13 +884,16 @@ class MainActivity : AppCompatActivity(),
                 fragment.arguments?.putString("title", getString(R.string.title_backup_mode_selection))
                 fragment.arguments?.putIntegerArrayList("items_icon",
                         arrayListOf(R.drawable.ic_export,
-                                R.drawable.ic_export_img))
+                                R.drawable.ic_export_img,
+                                R.drawable.ic_help))
                 fragment.arguments?.putStringArray("items_title",
                         arrayOf(getString(R.string.title_slim_backup),
-                                getString(R.string.title_whole_backup)))
+                                getString(R.string.title_whole_backup),
+                                getString(R.string.title_backup_help)))
                 fragment.arguments?.putStringArray("items_desc",
                         arrayOf(getString(R.string.description_slim_backup),
-                                getString(R.string.description_whole_backup)))
+                                getString(R.string.description_whole_backup),
+                                getString(R.string.description_backup_help)))
                 fragment.showOn(this@MainActivity, "dialog")
                 drawer.closeDrawer(GravityCompat.START)
                 return true
@@ -862,15 +906,18 @@ class MainActivity : AppCompatActivity(),
                 fragment.arguments?.putIntegerArrayList("items_icon",
                         arrayListOf(R.drawable.ic_merge,
                                 R.drawable.ic_restore,
-                                R.drawable.ic_db_restore))
+                                R.drawable.ic_db_restore,
+                                R.drawable.ic_help))
                 fragment.arguments?.putStringArray("items_title",
                         arrayOf(getString(R.string.title_merge_zip),
                                 getString(R.string.title_import_zip),
-                                getString(R.string.title_import_db)))
+                                getString(R.string.title_import_db),
+                                getString(R.string.title_backup_help)))
                 fragment.arguments?.putStringArray("items_desc",
                         arrayOf(getString(R.string.description_merge_zip),
                                 getString(R.string.description_import_zip),
-                                getString(R.string.description_import_db)))
+                                getString(R.string.description_import_db),
+                                getString(R.string.description_backup_help)))
                 fragment.showOn(this@MainActivity, "dialog")
                 drawer.closeDrawer(GravityCompat.START)
                 return true
@@ -1046,7 +1093,10 @@ class MainActivity : AppCompatActivity(),
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when(requestCode){
             RETCODE_SDCARD_PERM_FOR_SLIMEX,
-            RETCODE_SDCARD_PERM_FOR_FULLEX
+            RETCODE_SDCARD_PERM_FOR_FULLEX,
+            RETCODE_SDCARD_PERM_FOR_MERGEIP,
+            RETCODE_SDCARD_PERM_FOR_REPLIP,
+            RETCODE_SDCARD_PERM_FOR_REPLDB
                 -> onRequestSDCardAccessPermissionsResult(requestCode, permissions, grantResults)
             else -> {}
         }
@@ -1063,8 +1113,13 @@ class MainActivity : AppCompatActivity(),
                 }
         )
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
-            val mode = if(requestCode == RETCODE_SDCARD_PERM_FOR_SLIMEX) 0 else 1
-            exportDBDialog(mode)
+            when(requestCode){
+                RETCODE_SDCARD_PERM_FOR_SLIMEX  -> exportDBDialog(0)
+                RETCODE_SDCARD_PERM_FOR_FULLEX  -> exportDBDialog(1)
+                RETCODE_SDCARD_PERM_FOR_MERGEIP -> importDBDialog(0)
+                RETCODE_SDCARD_PERM_FOR_REPLIP  -> importDBDialog(1)
+                RETCODE_SDCARD_PERM_FOR_REPLDB  -> importDBDialog(2)
+            }
         } else {
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
         }
@@ -1089,6 +1144,28 @@ class MainActivity : AppCompatActivity(),
         exportDBDialog(mode)
     }
 
+    fun checkPermAndImportDB(mode: Int) { // 0: merge, 1: replace, 2: replace by .db
+        val writeDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val mediaLocDenied =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
+                }else{
+                    false
+                }
+
+        if (writeDenied || mediaLocDenied){
+            val retcode =
+                    when(mode){
+                        0 -> RETCODE_SDCARD_PERM_FOR_MERGEIP
+                        1 -> RETCODE_SDCARD_PERM_FOR_REPLIP
+                        else -> RETCODE_SDCARD_PERM_FOR_REPLIP
+                    }
+            ActivityCompat.requestPermissions(this, PERMISSIONS, retcode)
+            return
+        }
+        importDBDialog(mode)
+    }
+
     fun exportDBDialog(mode: Int) {
         val chooserIntent = Intent(this, DirectoryChooserActivity::class.java)
         Log.d("path", Environment.getExternalStorageDirectory().absolutePath)
@@ -1105,6 +1182,26 @@ class MainActivity : AppCompatActivity(),
         startActivityForResult(chooserIntent, reqcode)
     }
 
+    fun importDBDialog(mode: Int) {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+        intent.addCategory(Intent.CATEGORY_OPENABLE)
+        if(mode == 2){
+            //持っている環境では設定してもうまくいかないが、一応
+            intent.type = "application/vnd.sqlite3"
+            val mimetypes = arrayOf("application/x-sqlite3", "application/vnd.sqlite3")
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, mimetypes)
+        }else {
+            intent.type = "application/zip"
+        }
+        val reqcode =
+                when(mode){
+                    0 -> REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP
+                    1 -> REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP
+                    else -> REQCODE_DBFILE_CHOSEN_FOR_REPLDB
+                }
+        startActivityForResult(intent, reqcode)
+    }
+
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         val frag: androidx.fragment.app.Fragment = currentFragment
         when (requestCode) {
@@ -1115,7 +1212,21 @@ class MainActivity : AppCompatActivity(),
             }
             RETCODE_EXPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val mode = data.getIntExtra("which", 0)
-                checkPermAndExportDB(mode)
+                if(mode < 2)
+                    checkPermAndExportDB(mode)
+                else{
+                    val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
+                    startActivity(Intent(Intent.ACTION_VIEW,uri))
+                }
+            }
+            RETCODE_IMPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
+                val mode = data.getIntExtra("which", 0)
+                if(mode < 3)
+                    checkPermAndImportDB(mode)
+                else{
+                    val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
+                    startActivity(Intent(Intent.ACTION_VIEW,uri))
+                }
             }
             RETCODE_DELETE_FILMROLL -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val id = data.getIntExtra("id", -1)

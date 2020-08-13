@@ -11,6 +11,7 @@ android {
         versionName "Release 13"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+        multiDexEnabled true //メソッド数が64Kを超えてしまったので
     }
     buildTypes {
         release {
@@ -68,6 +69,8 @@ dependencies {
         exclude group: 'com.android.support', module: 'appcompat-v7'
     }
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'org.apache.commons:commons-compress:1.20'
+    implementation 'androidx.multidex:multidex:2.0.1' // minSdkVersion 20以下で必須
 }
 repositories {
     mavenCentral()
