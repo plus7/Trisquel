@@ -345,7 +345,7 @@ class ImportIntentService : IntentService {
                             if(ist!=null) {
                                 val md5sumToCompare = MD5Util.digestAsStr(ist)
                                 if(md5sum == md5sumToCompare){
-                                    result.add(path)
+                                    result.add(c)
                                     foundSome = true
                                 }
                             }
