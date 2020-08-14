@@ -25,6 +25,7 @@ import org.json.JSONObject
 import java.io.*
 import kotlin.collections.set
 
+class VersionUnmatchException : Exception()
 
 class ImportIntentService : IntentService {
 
@@ -51,6 +52,8 @@ class ImportIntentService : IntentService {
 
         const val SUCCESS = 0
         const val VERSION_UNMATCH = -1
+        const val CANCELED = -2
+        const val UNKNOWN = -999
     }
     var handler: Handler? = null
     val cameraIdOld2NewMap: HashMap<Int, Int> = HashMap()
@@ -69,16 +72,6 @@ class ImportIntentService : IntentService {
         intent.putExtra(PARAM_STATUS, status)
         intent.action = ACTION_IMPORT_PROGRESS
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
-    }
-
-    fun clearAllDbEntries(dao: TrisquelDao){
-        dao.deleteAll()
-    }
-
-    fun doImport(){
-        val dao = TrisquelDao(this)
-        dao.connection()
-        dao.close()
     }
 
     fun getJSONObjectFromEntry(zf: ZipFile, entryName: String): JSONObject{
@@ -118,9 +111,9 @@ class ImportIntentService : IntentService {
     fun appendSuffix(fileName: String, suffixNumber: Int):String{
         val lastDot = fileName.lastIndexOf('.')
         if(lastDot < 0){
-            return fileName + " (%d)".format(suffixNumber)
+            return fileName + "(%d)".format(suffixNumber)
         }else{
-            return fileName.replaceRange(lastDot, lastDot, " (%d)".format(suffixNumber))
+            return fileName.replaceRange(lastDot, lastDot, "(%d)".format(suffixNumber))
         }
     }
 
@@ -270,14 +263,53 @@ class ImportIntentService : IntentService {
         return Pair(result, "")
     }
 
-    fun assumedPaths(photo: JSONObject): Pair<ArrayList<String>, String> {
-        val result = ArrayList<String>()
-        val importErrors = ArrayList<String>()
+    fun isContentUriExists(uri: Uri): Boolean{
+        var result = true
+        try{
+            val pfd = contentResolver.openFileDescriptor(uri, "r")
+            if(pfd==null) result = false
+        }catch(e: FileNotFoundException){
+            result = false
+        }
+        return result
+    }
+
+    fun isMd5sumMatch(uri: Uri, md5sum: String): Boolean{
+        val ist = contentResolver.openInputStream(uri)
+        if(ist != null)
+            return MD5Util.digestAsStr(ist) == md5sum
+        else
+            return false
+    }
+
+    fun queryCandidateUris(fileName: String): ArrayList<String>{
         val cr = contentResolver
         val projection = arrayOf(
                 MediaStore.Images.Media._ID,
                 MediaStore.Images.Media.DISPLAY_NAME)
         val selection = "${MediaStore.Images.Media.DISPLAY_NAME} = ?"
+        val selectionArgs = arrayOf(fileName)
+        val cursor: Cursor? = cr.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection, selection, selectionArgs, null)
+        val paths = ArrayList<String>()
+        while (cursor?.moveToNext() == true) {
+            val idColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
+            val displayNameColumn = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+
+            val id = cursor.getLong(idColumn)
+            val contentUri = Uri.withAppendedPath(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    id.toString()
+            )
+            paths.add(contentUri.toString())
+        }
+        return paths
+    }
+
+    fun assumedPaths(photo: JSONObject): Pair<ArrayList<String>, String> {
+        val result = ArrayList<String>()
+        val importErrors = ArrayList<String>()
 
         val paths = JSONArray(photo.getString("suppimgs"))
         val fileNames = photo.getJSONArray("suppimgs_file_name")
@@ -285,57 +317,37 @@ class ImportIntentService : IntentService {
         val md5sums = photo.getJSONArray("suppimgs_md5sum")
         for (i in 0 until paths.length()) {
             val path = paths.getString(i)
+            if(path.isEmpty()) continue
             val fileName = fileNames.getString(i)
             val md5sum = md5sums.getString(i)
 
-            /*
-            if(mode == SLIM){
-                if(pathが存在してファイル名もmd5sumも一致) -> pathを採用(同じ携帯電話からのインポートを想定)
-                else -> {
-                    if(fileNameが存在して1個しかない) -> これを採用
-                    else if(fileNameが存在しない) -> インポートエラーに追加
+            // if(pathが存在してファイル名もmd5sumも一致) -> pathを採用(同じスマートフォンからのインポートを想定)
+            val contentUri = Uri.parse(path)
+            if(isContentUriExists(contentUri) && isMd5sumMatch(contentUri, md5sum)){
+                result.add(path)
+            }else{
+                val candidates = queryCandidateUris(fileName)
+                when(candidates.size){
+                    //fileNameが存在して1個しかない -> これを採用(普通はこれになるはず)
+                    1 -> result.add(candidates.first())
+                    //fileNameが存在しない -> インポートエラーに追加
+                    0 -> importErrors.add("Not found:" + fileName)
+                    //md5sumが一致するものを全部追加(取りこぼすよりはええじゃろ)
                     else -> {
-                        md5sumが一致するものを全部追加(取りこぼすよりはええじゃろ)
-                    }
-                }
-            }else{ // FULL
-                // フィルムロールのディレクトリを作ってその中に展開
-            }
-            */
-
-            val selectionArgs = arrayOf(fileName)
-            val cursor: Cursor? = cr.query(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    projection, selection, selectionArgs, null)
-            val paths = ArrayList<String>()
-            while (cursor?.moveToNext() == true) {
-                val idColumn = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
-                val displayNameColumn = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
-
-                val id = cursor.getLong(idColumn)
-                val contentUri = Uri.withAppendedPath(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        id.toString()
-                )
-                paths.add(contentUri.toString())
-            }
-            when(paths.size){
-                1 -> result.add(paths.first())
-                0 -> importErrors.add("Not found:" + fileName)
-                else -> {
-                    var foundSome = false
-                    for(path in paths){
-                        val ist = CompatibilityUtil.pathToInputStream(cr, path, true)
-                        if(ist!=null) {
-                            val md5sumToCompare = MD5Util.digestAsStr(ist)
-                            if(md5sum == md5sumToCompare){
-                                result.add(path)
-                                foundSome = true
+                        var foundSome = false
+                        for(c in candidates){
+                            val ist = CompatibilityUtil.pathToInputStream(contentResolver, c, true)
+                            if(ist!=null) {
+                                val md5sumToCompare = MD5Util.digestAsStr(ist)
+                                if(md5sum == md5sumToCompare){
+                                    result.add(path)
+                                    foundSome = true
+                                }
                             }
                         }
-                    }
-                    if(!foundSome){
-                        importErrors.add("No checksum match: " + fileName)
+                        if(!foundSome){
+                            importErrors.add("No checksum match: " + fileName)
+                        }
                     }
                 }
             }
@@ -343,59 +355,29 @@ class ImportIntentService : IntentService {
         return Pair(result, importErrors.joinToString("\n"))
     }
 
-    fun copyData(ist: InputStream, dir: File, fileName: String, size: Long): File{
-        val tmpFile = File(dir.absolutePath + "/" + fileName)
-        val ost = FileOutputStream(tmpFile)
-        val bost = BufferedOutputStream(ost)
-        val data = ByteArray(8*1024)
-        var totalWritten: Long = 0
-        var lasttime = System.currentTimeMillis()
-
-        while (true) {
-            val count = ist.read(data, 0, 8*1024)
-            if (count < 0) break
-            bost.write(data, 0, count)
-            totalWritten += count
-            if(System.currentTimeMillis() - lasttime > 1000) {
-                bcastProgress(totalWritten.toDouble() / size.toDouble() * 50.0, "Copying zip file to a temporary file...")
-                lasttime = System.currentTimeMillis()
-            }
-        }
-        bost.flush()
-        bost.close()
-        return File(dir.absolutePath + "/" + fileName)
-    }
-
     fun importFromZip(uri: Uri, merge: Boolean): Int{
+        var result = UNKNOWN
         val pfd = contentResolver.openFileDescriptor(uri, "r")
         if (pfd == null) throw FileNotFoundException(uri.toString())
         val fis = FileInputStream(pfd.fileDescriptor)
         val size = fis.channel.size()
         val dir = getExternalFilesDir(null)
         val sfs = StatFs(dir!!.absolutePath)
-        // 一旦ファイルをコピーしてから取り出すという挙動にせざるを得ないので、２倍している。
-        // Androidは本当にクソ
-        //if(sfs.availableBytes < size * 2) throw IOException("No space available")
-
-        val ist = contentResolver.openInputStream(uri)
-
-        //val fis = FileInputStream(pfd.fileDescriptor)
-        //val tmpFile = copyData(ist!!, dir, "tmpBackupData.zip", size)
-        //var inputStream: InputStream // input stream
-        //val channel = SeekableInMemoryByteChannel(IOUtils.toByteArray(ist))
 
         val dao = TrisquelDao(this)
         dao.connection()
         //try {
             val zipfile = ZipFile(fis.channel)
-            //try {
+            try {
                 val metadataJSON = getJSONObjectFromEntry(zipfile, "metadata.json")
                 val dbver = metadataJSON.getInt("DB_VERSION")
                 val mode = metadataJSON.getInt("EXPORT_MODE")
                 Log.d("importFromZip",
                         "DB_VERSION=" + dbver.toString() + ", " +
                                 "EXPORT_MODE=" + mode.toString())
-                if (dbver > DatabaseHelper.DATABASE_VERSION) return VERSION_UNMATCH
+                if (dbver > DatabaseHelper.DATABASE_VERSION) {
+                    throw VersionUnmatchException()
+                }
 
                 if (!merge) dao.deleteAll()
 
@@ -404,24 +386,28 @@ class ImportIntentService : IntentService {
                     val id_pair = dao.mergeCameraJSON(cameraJSON.getJSONObject(i))
                     cameraIdOld2NewMap[id_pair.first] = id_pair.second
                 }
+                if (!shouldContinue){ throw InterruptedException() }
 
                 val lensJSON = getJSONArrayFromEntry(zipfile, "lens.json")
                 for (i in 0 until lensJSON.length()) {
                     val id_pair = dao.mergeLensJSON(lensJSON.getJSONObject(i), cameraIdOld2NewMap)
                     lensIdOld2NewMap[id_pair.first] = id_pair.second
                 }
+                if (!shouldContinue){ throw InterruptedException() }
 
                 val accessoryJSON = getJSONArrayFromEntry(zipfile, "accessory.json")
                 for (i in 0 until accessoryJSON.length()) {
                     val id_pair = dao.mergeAccessoryJSON(accessoryJSON.getJSONObject(i))
                     accessoryIdOld2NewMap[id_pair.first] = id_pair.second
                 }
+                if (!shouldContinue){ throw InterruptedException() }
 
                 val filmrollJSON = getJSONArrayFromEntry(zipfile, "filmroll.json")
                 for (i in 0 until filmrollJSON.length()) {
                     val id_pair = dao.mergeFilmRollJSON(filmrollJSON.getJSONObject(i), cameraIdOld2NewMap)
                     filmrollIdOld2NewMap[id_pair.first] = id_pair.second
                 }
+                if (!shouldContinue){ throw InterruptedException() }
 
                 val photoJSON = getJSONArrayFromEntry(zipfile, "photo.json")
                 for (i in 0 until photoJSON.length()) {
@@ -436,6 +422,7 @@ class ImportIntentService : IntentService {
                             cameraIdOld2NewMap, lensIdOld2NewMap, filmrollIdOld2NewMap, accessoryIdOld2NewMap)
                     photoIdOld2NewMap[id_pair.first] = id_pair.second
 
+                    if (!shouldContinue){ throw InterruptedException() }
                     bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, "Copying photo files...")
                 }
 
@@ -443,20 +430,26 @@ class ImportIntentService : IntentService {
                 val tagmapJSON = getJSONArrayFromEntry(zipfile, "tagmap.json")
                 dao.mergeTagMapJSON(tagmapJSON, tagJSON, filmrollIdOld2NewMap, photoIdOld2NewMap)
 
+                if (!shouldContinue){ throw InterruptedException() }
             //} catch( e: Exception ) {
             //    Log.d("ZipFile", e.toString())
-            //} finally {
+                result = SUCCESS
+            } catch (e: InterruptedException) {
+                result = CANCELED
+            } catch (e: VersionUnmatchException) {
+                result = VERSION_UNMATCH
+            } finally {
                 zipfile.close()
                 dao.close()
                 //zipfile.close()
                 //tmpFile.delete()
-            //}
+            }
         //} catch( e: Exception ) {
             //Log.d("ZipFile", e.toString())
         //} finally {
         //}
 
-        return SUCCESS
+        return result
     }
 
     override fun onHandleIntent(intent: Intent?) {
@@ -506,24 +499,37 @@ class ImportIntentService : IntentService {
                 val uri = intent.getStringExtra(PARAM_URI)
                 val mode = intent.getIntExtra(PARAM_MODE, 0)
 
-                importFromZip(Uri.parse(uri), (mode == 0))
-                handler?.post(Runnable {
-                    Toast.makeText(this, "Import from " + uri + " completed", Toast.LENGTH_LONG).show()
-                })
-                val i2 = Intent(applicationContext, MainActivity::class.java)
-                val pi2 = PendingIntent.getActivity(this, 0, i2, 0)
+                val result = importFromZip(Uri.parse(uri), (mode == 0))
+                if(result != SUCCESS){
+                    val errstr = when(result){
+                        VERSION_UNMATCH -> "Database version is too new"
+                        CANCELED -> "User canceled import operation"
+                        UNKNOWN -> "Unknown error %d".format(result)
+                        else -> "impossible error %d".format(result)
+                    }
+                    handler?.post(Runnable {
+                        Toast.makeText(this, errstr, Toast.LENGTH_LONG).show()
+                    })
+                    bcastProgress(100.0, errstr)
+                }else {
+                    handler?.post(Runnable {
+                        Toast.makeText(this, "Import from " + uri + " completed", Toast.LENGTH_LONG).show()
+                    })
+                    val i2 = Intent(applicationContext, MainActivity::class.java)
+                    val pi2 = PendingIntent.getActivity(this, 0, i2, 0)
 
-                val builder2 = NotificationCompat.Builder(this, channelId)
+                    val builder2 = NotificationCompat.Builder(this, channelId)
 
-                //Foreground Service
-                val n = builder2.setContentIntent(pi2)
-                        .setGroup("trisquel_ch_grp")
-                        .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
-                        .setAutoCancel(true).setContentTitle("Conversion finished")
-                        .setContentText("Trisquel").build()
+                    //Foreground Service
+                    val n = builder2.setContentIntent(pi2)
+                            .setGroup("trisquel_ch_grp")
+                            .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
+                            .setAutoCancel(true).setContentTitle("Conversion finished")
+                            .setContentText("Trisquel").build()
 
-                nm.notify(1, n)
-                bcastProgress(100.0, "Import completed.")
+                    nm.notify(1, n)
+                    bcastProgress(100.0, "Import completed.")
+                }
             }
         }
     }

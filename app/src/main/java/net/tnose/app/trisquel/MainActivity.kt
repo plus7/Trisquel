@@ -646,7 +646,7 @@ class MainActivity : AppCompatActivity(),
         zos.close()
     }
 
-    fun setProgressPercentage(percentage: Double, status: String){
+    fun setProgressPercentage(percentage: Double, status: String, error: Boolean){
         val intent = Intent()
         if(percentage >= 100.0){
             isIntentServiceWorking = 0

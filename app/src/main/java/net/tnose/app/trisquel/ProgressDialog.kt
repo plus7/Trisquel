@@ -55,7 +55,9 @@ class ProgressDialog : AbstractDialogFragment() {
         val btnCancel = frame.findViewById<Button>(R.id.btnCancel)
         val isCancellableByBtn = arguments?.getBoolean("cancellable", true) ?: true
         btnCancel.setOnClickListener {
-            ExportIntentService.shouldContinue = false
+            ExportIntentService.shouldContinue = false // 手抜き
+            ImportIntentService.shouldContinue = false
+            DbConvIntentService.shouldContinue = false
             closeDialog()
         }
         btnCancel.isEnabled = isCancellableByBtn

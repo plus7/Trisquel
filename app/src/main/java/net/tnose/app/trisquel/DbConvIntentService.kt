@@ -13,6 +13,10 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.*
 
 class DbConvIntentService : IntentService {
     companion object {
@@ -23,6 +27,7 @@ class DbConvIntentService : IntentService {
         val ACTION_DBCONV_PROGRESS = "net.tnose.app.trisquel.action.DBCONV_PROGRESS"
         val PARAM_PERCENTAGE = "percentage"
         val PARAM_STATUS = "status"
+        val PARAM_ERROR = "error"
 
         internal fun startExport(context: Context){
             val intent = Intent(context, DbConvIntentService::class.java)
@@ -36,10 +41,11 @@ class DbConvIntentService : IntentService {
         handler = Handler()
     }
 
-    fun bcastProgress(percentage: Double, status: String){
+    fun bcastProgress(percentage: Double, status: String, isError: Boolean){
         val intent = Intent()
         intent.putExtra(PARAM_PERCENTAGE, percentage)
         intent.putExtra(PARAM_STATUS, status)
+        intent.putExtra(PARAM_ERROR, isError)
         intent.action = ACTION_DBCONV_PROGRESS
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
     }
@@ -69,6 +75,22 @@ class DbConvIntentService : IntentService {
         return ""
     }
 
+    fun backupDBBeforeConvert(){
+        val dbpath = this.getDatabasePath("trisquel.db")
+        val calendar = Calendar.getInstance()
+        val sdf = SimpleDateFormat("yyyyMMddHHmmss")
+        val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+
+        val fos = FileOutputStream(backupPath)
+        val fis = FileInputStream(dbpath)
+
+        val src = fis.channel
+        val dst = fos.channel
+        dst.transferFrom(src, 0, src.size())
+        src.close()
+        dst.close()
+    }
+
     fun doConvert(): Boolean {
         val dao = TrisquelDao(this)
         var status = false
@@ -85,14 +107,16 @@ class DbConvIntentService : IntentService {
                         val f = File(before)
                         val prefix = if(p.memo.isEmpty()) "" else "\n"
                         if(f.exists()){
-                            p.memo += prefix + "path conversion failed: %s".format(f.name)
+                            p.memo += prefix + "Path conversion failed: %s".format(f.name)
+                        }else{
+                            p.memo += prefix + "Not found: %s".format(f.name)
                         }
                     }
                     Log.d("CONV", "before:" + before +" after:" + p.supplementalImages[i])
                 }
                 dao.doPhotoConversion(p)
                 processedCount += 1.0
-                bcastProgress( processedCount / (photoList.size + 1) * 100, getString(net.tnose.app.trisquel.R.string.description_update_dialog))
+                bcastProgress( processedCount / (photoList.size + 1) * 100, getString(net.tnose.app.trisquel.R.string.description_update_dialog), false)
             }
             status = true
         }finally {
@@ -124,7 +148,7 @@ class DbConvIntentService : IntentService {
                             ""
                         }
 
-                bcastProgress(0.0, "Starting DB conversion...")
+                bcastProgress(0.0, "Starting DB conversion...", false)
                 // Notificationのインスタンス化
                 var notification = Notification()
                 val i = Intent(applicationContext, MainActivity::class.java)
@@ -144,12 +168,23 @@ class DbConvIntentService : IntentService {
                 notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
                 startForeground(1, notification) //Foreground Service開始
 
+                try {
+                    backupDBBeforeConvert()
+                } catch (e: Exception){
+                    handler?.post(Runnable {
+                        Toast.makeText(this, "Internal backup before DB conversion failed!", Toast.LENGTH_LONG).show()
+                    })
+                    bcastProgress(100.0, "DB conversion interrupted.", true)
+                    return
+                }
+
                 val convertSuccess = doConvert()
 
                 if(!convertSuccess) {
                     handler?.post(Runnable {
                         Toast.makeText(this, "Conversion failed!", Toast.LENGTH_LONG).show()
                     })
+                    bcastProgress(100.0, "DB conversion failed!", true)
                 } else {
                     handler?.post(Runnable {
                         val i2 = Intent(applicationContext, MainActivity::class.java)
@@ -166,8 +201,8 @@ class DbConvIntentService : IntentService {
 
                         nm.notify(1, n)
                     })
+                    bcastProgress(100.0, "DB conversion completed.", false)
                 }
-                bcastProgress(100.0, "DB conversion completed.")
             }
         }
     }
