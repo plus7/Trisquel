@@ -22,7 +22,7 @@
             android:exported="false"
             android:launchMode="singleInstance"
             android:process=":restart_process"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            android:theme="@android:style/Theme.NoTitleBar" />
         <activity android:name=".SearchActivity" />
         <activity
             android:name=".EditCameraActivity"
