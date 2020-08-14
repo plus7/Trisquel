@@ -23,6 +23,10 @@ import org.apache.commons.compress.archivers.zip.ZipFile
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.*
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.collections.set
 
 class VersionUnmatchException : Exception()
@@ -66,10 +70,11 @@ class ImportIntentService : IntentService {
         handler = Handler()
     }
 
-    fun bcastProgress(percentage: Double, status: String){
+    fun bcastProgress(percentage: Double, status: String, isError: Boolean){
         val intent = Intent()
         intent.putExtra(PARAM_PERCENTAGE, percentage)
         intent.putExtra(PARAM_STATUS, status)
+        intent.putExtra(DbConvIntentService.PARAM_ERROR, isError)
         intent.action = ACTION_IMPORT_PROGRESS
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
     }
@@ -354,6 +359,22 @@ class ImportIntentService : IntentService {
         }
         return Pair(result, importErrors.joinToString("\n"))
     }
+    // インポート前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
+    fun backupDBBeforeImport(){
+        val dbpath = this.getDatabasePath("trisquel.db")
+        val calendar = Calendar.getInstance()
+        val sdf = SimpleDateFormat("yyyyMMddHHmmss")
+        val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+
+        val fos = FileOutputStream(backupPath)
+        val fis = FileInputStream(dbpath)
+
+        val src = fis.channel
+        val dst = fos.channel
+        dst.transferFrom(src, 0, src.size())
+        src.close()
+        dst.close()
+    }
 
     fun importFromZip(uri: Uri, merge: Boolean): Int{
         var result = UNKNOWN
@@ -423,7 +444,7 @@ class ImportIntentService : IntentService {
                     photoIdOld2NewMap[id_pair.first] = id_pair.second
 
                     if (!shouldContinue){ throw InterruptedException() }
-                    bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, "Copying photo files...")
+                    bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, "Copying photo files...", false)
                 }
 
                 val tagJSON = getJSONArrayFromEntry(zipfile, "tag.json")
@@ -499,18 +520,28 @@ class ImportIntentService : IntentService {
                 val uri = intent.getStringExtra(PARAM_URI)
                 val mode = intent.getIntExtra(PARAM_MODE, 0)
 
+                try {
+                    backupDBBeforeImport()
+                } catch (e: Exception){
+                    handler?.post(Runnable {
+                        Toast.makeText(this, "Internal backup before import failed!", Toast.LENGTH_LONG).show()
+                    })
+                    bcastProgress(100.0, "Import interrupted.", true)
+                    return
+                }
+
                 val result = importFromZip(Uri.parse(uri), (mode == 0))
                 if(result != SUCCESS){
                     val errstr = when(result){
                         VERSION_UNMATCH -> "Database version is too new"
                         CANCELED -> "User canceled import operation"
                         UNKNOWN -> "Unknown error %d".format(result)
-                        else -> "impossible error %d".format(result)
+                        else -> "Impossible error %d".format(result)
                     }
                     handler?.post(Runnable {
                         Toast.makeText(this, errstr, Toast.LENGTH_LONG).show()
                     })
-                    bcastProgress(100.0, errstr)
+                    bcastProgress(100.0, errstr, true)
                 }else {
                     handler?.post(Runnable {
                         Toast.makeText(this, "Import from " + uri + " completed", Toast.LENGTH_LONG).show()
@@ -528,7 +559,7 @@ class ImportIntentService : IntentService {
                             .setContentText("Trisquel").build()
 
                     nm.notify(1, n)
-                    bcastProgress(100.0, "Import completed.")
+                    bcastProgress(100.0, "Import completed.", false)
                 }
             }
         }

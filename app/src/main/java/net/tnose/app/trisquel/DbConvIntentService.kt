@@ -75,6 +75,7 @@ class DbConvIntentService : IntentService {
         return ""
     }
 
+    // DB変換前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
     fun backupDBBeforeConvert(){
         val dbpath = this.getDatabasePath("trisquel.db")
         val calendar = Calendar.getInstance()

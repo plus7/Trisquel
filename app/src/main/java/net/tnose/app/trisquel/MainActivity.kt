@@ -837,6 +837,19 @@ class MainActivity : AppCompatActivity(),
                 if(uri != null){
                     val pfd = contentResolver.openFileDescriptor(uri, "r")
                     if (pfd == null) throw FileNotFoundException(uri.toString())
+
+                    // DB置換前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
+                    val calendar = Calendar.getInstance()
+                    val sdf = SimpleDateFormat("yyyyMMddHHmmss")
+                    val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+                    val bu_fos = FileOutputStream(backupPath)
+                    val bu_fis = FileInputStream(dbpath)
+                    val bu_src = bu_fis.channel
+                    val bu_dst = bu_fos.channel
+                    bu_dst.transferFrom(bu_src, 0, bu_src.size())
+                    bu_src.close()
+                    bu_dst.close()
+
                     val fis = FileInputStream(pfd.fileDescriptor)
 
                     val src = fis.channel
