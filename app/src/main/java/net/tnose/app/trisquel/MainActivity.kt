@@ -29,6 +29,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.view.GravityCompat
+import androidx.lifecycle.Lifecycle
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import net.rdrei.android.dirchooser.DirectoryChooserActivity
@@ -663,8 +664,10 @@ class MainActivity : AppCompatActivity(),
             intent.putExtra("status", status)
             sendBroadcast(intent)
             releaseOrientation()
-            selectFragment(ID_FILMROLL, 0, arrayListOf(""))
-            refreshFab()
+            if(lifecycle.currentState == Lifecycle.State.RESUMED) {
+                selectFragment(ID_FILMROLL, 0, arrayListOf(""))
+                refreshFab()
+            }
         }else {
             intent.action = ACTION_UPDATE_PROGRESS_DIALOG
             intent.putExtra("percentage", percentage)
