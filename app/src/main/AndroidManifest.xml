@@ -25,10 +25,6 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity android:name=".SearchActivity" />
         <activity
-            android:name=".TabbedActivity"
-            android:label="@string/title_activity_edit_photo"
-            android:theme="@style/AppTheme.NoActionBar" /> <!-- なんかhttps://github.com/passy/Android-DirectoryChooserをbuild.gradleに入れたら衝突するようになったのでsuggestされたやつ -->
-        <activity
             android:name=".EditCameraActivity"
             android:label="@string/title_activity_reg_cam"
             android:windowSoftInputMode="adjustResize" />
