@@ -1199,10 +1199,7 @@ class MainActivity : AppCompatActivity(),
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
         intent.addCategory(Intent.CATEGORY_OPENABLE)
         if(mode == 2){
-            //持っている環境では設定してもうまくいかないが、一応
-            intent.type = "application/vnd.sqlite3"
-            val mimetypes = arrayOf("application/x-sqlite3", "application/vnd.sqlite3")
-            intent.putExtra(Intent.EXTRA_MIME_TYPES, mimetypes)
+            intent.type = "*/*" //本当はSQLite3のMIME Typeを登録したいが、うまくいかない
         }else {
             intent.type = "application/zip"
         }
