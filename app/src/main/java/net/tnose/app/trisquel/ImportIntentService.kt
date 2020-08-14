@@ -336,7 +336,7 @@ class ImportIntentService : IntentService {
                     //fileNameが存在して1個しかない -> これを採用(普通はこれになるはず)
                     1 -> result.add(candidates.first())
                     //fileNameが存在しない -> インポートエラーに追加
-                    0 -> importErrors.add("Not found:" + fileName)
+                    0 -> importErrors.add("Not found: " + fileName)
                     //md5sumが一致するものを全部追加(取りこぼすよりはええじゃろ)
                     else -> {
                         var foundSome = false
