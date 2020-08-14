@@ -1014,8 +1014,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val options = BitmapFactory.Options()
 
         options.inJustDecodeBounds = true
-        var bmp = if(path.startsWith("/")){
+        var bmp = if(path.startsWith("/")) {
             BitmapFactory.decodeFile(path, options)
+        } else if(path.isEmpty()) {
+            null
         } else {
             val input = contentResolver.openInputStream(Uri.parse(path))
             if(input != null) {
