@@ -85,6 +85,7 @@
     <string name="error_permission_denied_sdcard">SDカードにアクセスする許可が得られませんでした</string>
     <string name="error_permission_location">位置情報にアクセスする許可が得られませんでした</string>
     <string name="error_please_reg_cam">フィルム情報を新規作成する前に「カメラ一覧」からカメラを登録してください</string>
+    <string name="error_not_sqlite3_db">選択されたファイルはSQLite3データベースではありません。</string>
     <string name="save">保存</string>
     <string name="discard">破棄</string>
     <string name="continue_">続行</string>

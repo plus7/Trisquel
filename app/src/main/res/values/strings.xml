@@ -98,6 +98,7 @@
     <string name="error_permission_denied_sdcard">Could not get permission to access SD card</string>
     <string name="error_permission_location">No location permissions granted</string>
     <string name="error_please_reg_cam">Register camera before creating a film roll.</string>
+    <string name="error_not_sqlite3_db">Selected file is not a SQLite3 DB file.</string>
     <string name="notify_copied">Copied to clipboard</string>
     <string name="save">Save</string>
     <string name="discard">Discard</string>

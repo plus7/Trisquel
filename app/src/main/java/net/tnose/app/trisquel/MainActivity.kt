@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.ParcelFileDescriptor
 import android.preference.PreferenceManager
 import android.util.Log
 import android.view.Gravity
@@ -662,6 +663,23 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
+    fun checkSQLiteFileFormat(pfd: ParcelFileDescriptor): Boolean{
+        // "SQLite format 3\0"
+        val header = byteArrayOf(
+                0x53, 0x51, 0x4c, 0x69,
+                0x74, 0x65, 0x20, 0x66,
+                0x6f, 0x72, 0x6d, 0x61,
+                0x74, 0x20, 0x33, 0x00)
+        try {
+            val fis = FileInputStream(pfd.fileDescriptor)
+            val buffer = ByteArray(16)
+            val readsize = fis.read(buffer)
+            return readsize == 16 && header.contentEquals(buffer)
+        }catch(e : Exception){
+            return false
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if(data == null) return
@@ -837,6 +855,11 @@ class MainActivity : AppCompatActivity(),
                 if(uri != null){
                     val pfd = contentResolver.openFileDescriptor(uri, "r")
                     if (pfd == null) throw FileNotFoundException(uri.toString())
+
+                    if(!checkSQLiteFileFormat(pfd)) {
+                        Toast.makeText(this, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
+                        return
+                    }
 
                     // DB置換前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
                     val calendar = Calendar.getInstance()
