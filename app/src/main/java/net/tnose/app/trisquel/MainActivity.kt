@@ -115,31 +115,7 @@ class MainActivity : AppCompatActivity(),
             Manifest.permission.ACCESS_MEDIA_LOCATION
     )
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        localBroadcastManager = androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
-        progressFilter = IntentFilter()
-        progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
-        progressFilter?.addAction(ImportIntentService.ACTION_IMPORT_PROGRESS)
-        progressFilter?.addAction(DbConvIntentService.ACTION_DBCONV_PROGRESS)
-        progressReceiver = ProgressReceiver(this)
-        localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
-
-        setContentView(R.layout.activity_main2)
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        val currentFragmentId = if (savedInstanceState != null) {
-            savedInstanceState.getInt("current_fragment")
-        } else {
-            ID_FILMROLL
-        }
-
-        isIntentServiceWorking = if (savedInstanceState != null){
-            savedInstanceState.getInt("is_intent_service_working")
-        } else {
-            0
-        }
-
+    fun selectFragment(currentFragmentId: Int, filtertype: Int, filtervalue: ArrayList<String>){
         val f: androidx.fragment.app.Fragment
         val transaction = supportFragmentManager.beginTransaction()
         when (currentFragmentId) {
@@ -164,8 +140,6 @@ class MainActivity : AppCompatActivity(),
                 supportActionBar?.subtitle = ""
             }
             else -> {
-                val filtertype = savedInstanceState?.getInt("filmroll_filtertype") ?: 0
-                val filtervalue = savedInstanceState?.getStringArrayList("filmroll_filtervalue") ?: arrayListOf("")
                 currentFragment = FilmRollFragment.newInstance(filtertype, filtervalue)
                 setTitle(R.string.title_activity_filmroll_list)
                 val dao = TrisquelDao(this)
@@ -182,11 +156,14 @@ class MainActivity : AppCompatActivity(),
                 supportActionBar?.subtitle = subtitle
             }
         }
+
         //addではなくreplaceでないとonCreateが再び呼ばれたときに変になる（以前作ったfragmentの残骸が残って表示される）
         //この辺の処理は画面回転なども考えるとよろしくないが先送りする
         transaction.replace(R.id.container, currentFragment)
         transaction.commit()
+    }
 
+    fun refreshFab() {
         val fab = findViewById<FloatingActionButton>(R.id.fab)
         when (currentFragment) {
             is CameraFragment -> fab.setImageResource(R.drawable.ic_menu_camera_white)
@@ -228,6 +205,37 @@ class MainActivity : AppCompatActivity(),
                 }
             }
         }
+    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        localBroadcastManager = androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
+        progressFilter = IntentFilter()
+        progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
+        progressFilter?.addAction(ImportIntentService.ACTION_IMPORT_PROGRESS)
+        progressFilter?.addAction(DbConvIntentService.ACTION_DBCONV_PROGRESS)
+        progressReceiver = ProgressReceiver(this)
+        localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
+
+        setContentView(R.layout.activity_main2)
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        val currentFragmentId = if (savedInstanceState != null) {
+            savedInstanceState.getInt("current_fragment")
+        } else {
+            ID_FILMROLL
+        }
+
+        isIntentServiceWorking = if (savedInstanceState != null){
+            savedInstanceState.getInt("is_intent_service_working")
+        } else {
+            0
+        }
+
+        val filtertype = savedInstanceState?.getInt("filmroll_filtertype") ?: 0
+        val filtervalue = savedInstanceState?.getStringArrayList("filmroll_filtervalue") ?: arrayListOf("")
+        selectFragment(currentFragmentId, filtertype, filtervalue)
+
+        refreshFab()
 
         val drawer = findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
         val toggle = ActionBarDrawerToggle(
@@ -655,6 +663,8 @@ class MainActivity : AppCompatActivity(),
             intent.putExtra("status", status)
             sendBroadcast(intent)
             releaseOrientation()
+            selectFragment(ID_FILMROLL, 0, arrayListOf(""))
+            refreshFab()
         }else {
             intent.action = ACTION_UPDATE_PROGRESS_DIALOG
             intent.putExtra("percentage", percentage)
