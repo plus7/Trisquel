@@ -287,6 +287,21 @@ class ImportIntentService : IntentService {
             return false
     }
 
+    fun getRealPathFromURI(contentUri: Uri): String? {
+        var cursor: Cursor? = null
+        var result = ""
+        try {
+            val proj = arrayOf(MediaStore.Images.Media.DATA)
+            cursor = contentResolver.query(contentUri, proj, null, null, null)
+            cursor!!.moveToFirst()
+            val column_index = cursor.getColumnIndex(proj[0])
+            result = cursor.getString(column_index)
+        } finally {
+            cursor?.close()
+        }
+        return result
+    }
+
     fun queryCandidateUris(fileName: String): ArrayList<String>{
         val cr = contentResolver
         val projection = arrayOf(
@@ -334,13 +349,17 @@ class ImportIntentService : IntentService {
                 val candidates = queryCandidateUris(fileName)
                 when(candidates.size){
                     //fileNameが存在して1個しかない -> これを採用(普通はこれになるはず)
-                    1 -> result.add(candidates.first())
+                    //1 -> result.add(candidates.first()) //やめた。ファイルがないのにcontent://のURIがみつかることがある。中身もチェックしないとだめ
                     //fileNameが存在しない -> インポートエラーに追加
                     0 -> importErrors.add("Not found: " + fileName)
                     //md5sumが一致するものを全部追加(取りこぼすよりはええじゃろ)
                     else -> {
                         var foundSome = false
                         for(c in candidates){
+                            Log.d("ImportDebug",
+                                    "fileName:" + fileName
+                                            + " Candidate URI:" + c
+                                            + " Path:" +getRealPathFromURI(Uri.parse(c)))
                             val ist = CompatibilityUtil.pathToInputStream(contentResolver, c, true)
                             if(ist!=null) {
                                 val md5sumToCompare = MD5Util.digestAsStr(ist)
@@ -351,7 +370,7 @@ class ImportIntentService : IntentService {
                             }
                         }
                         if(!foundSome){
-                            importErrors.add("No checksum match: " + fileName)
+                            importErrors.add("Not found: " + fileName)
                         }
                     }
                 }
