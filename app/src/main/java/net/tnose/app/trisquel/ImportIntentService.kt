@@ -463,7 +463,8 @@ class ImportIntentService : IntentService {
                     photoIdOld2NewMap[id_pair.first] = id_pair.second
 
                     if (!shouldContinue){ throw InterruptedException() }
-                    bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, "Copying photo files...", false)
+                    val msg = if(mode == 0) "Searching photo files..." else "Copying photo files..."
+                    bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, msg, false)
                 }
 
                 val tagJSON = getJSONArrayFromEntry(zipfile, "tag.json")
