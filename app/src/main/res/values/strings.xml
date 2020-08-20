@@ -95,6 +95,7 @@
     <string name="description_import_db">
         WARNING: Existing data in the database will be removed!
     </string>
+    <string name="word_select">Select</string>
     <string name="error_permission_denied_sdcard">Could not get permission to access SD card</string>
     <string name="error_permission_location">No location permissions granted</string>
     <string name="error_please_reg_cam">Register camera before creating a film roll.</string>

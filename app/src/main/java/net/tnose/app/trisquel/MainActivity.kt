@@ -1263,6 +1263,8 @@ class MainActivity : AppCompatActivity(),
         FilePickerManager
                 .from(this@MainActivity)
                 .enableSingleChoice()
+                .setTheme(R.style.FilePickerThemeReply)
+                .setText("", "",0,getString(R.string.word_select),0,"")
                 .filter(object : AbstractFileFilter() {
                     override fun doFilter(listData: ArrayList<FileItemBeanImpl>): ArrayList<FileItemBeanImpl> {
                         return ArrayList(listData.filter { item ->

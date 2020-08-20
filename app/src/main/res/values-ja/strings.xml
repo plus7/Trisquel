@@ -81,6 +81,7 @@
     <string name="description_import_db">
         警告: 既存のデータベース内のデータは消去されます！
     </string>
+    <string name="word_select">選択</string>
     <string name="notify_copied">クリップボードにコピーしました</string>
     <string name="error_permission_denied_sdcard">SDカードにアクセスする許可が得られませんでした</string>
     <string name="error_permission_location">位置情報にアクセスする許可が得られませんでした</string>
