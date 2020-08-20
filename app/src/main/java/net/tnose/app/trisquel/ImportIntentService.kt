@@ -338,10 +338,12 @@ class ImportIntentService : IntentService {
         val result = ArrayList<String>()
         val importErrors = ArrayList<String>()
 
-        val paths = JSONArray(photo.getString("suppimgs"))
-        val fileNames = photo.getJSONArray("suppimgs_file_name")
-        val dateTakens = photo.getJSONArray("suppimgs_date_taken")
-        val md5sums = photo.getJSONArray("suppimgs_md5sum")
+        //Log.d("AssumePath", "suppimgs=" + photo.getString("suppimgs"))
+        val suppimgs: String = photo.getString("suppimgs")
+        val paths = if(suppimgs.isEmpty()) JSONArray() else JSONArray(suppimgs)
+        val fileNames = if(photo.isNull("suppimgs_file_name")) JSONArray() else photo.getJSONArray("suppimgs_file_name")
+        //val dateTakens = photo.getJSONArray("suppimgs_date_taken")
+        val md5sums = if(photo.isNull("suppimgs_md5sum")) JSONArray() else photo.getJSONArray("suppimgs_md5sum")
         for (i in 0 until paths.length()) {
             val path = paths.getString(i)
             if(path.isEmpty()) continue
