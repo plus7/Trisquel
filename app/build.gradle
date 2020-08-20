@@ -71,6 +71,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'org.apache.commons:commons-compress:1.20'
     implementation 'androidx.multidex:multidex:2.0.1' // minSdkVersion 20以下で必須
+    implementation 'me.rosuh:AndroidFilePicker:0.6.5' //API level 19～23で絶対パスの取れるファイルピッカーが必要
 }
 repositories {
     mavenCentral()

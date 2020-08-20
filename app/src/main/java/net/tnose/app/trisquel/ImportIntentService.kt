@@ -13,7 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
-import android.os.StatFs
+import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
@@ -30,6 +30,11 @@ import kotlin.collections.HashMap
 import kotlin.collections.set
 
 class VersionUnmatchException : Exception()
+
+sealed class WrappedZipFile {
+    data class JavaZipFile(val zf: java.util.zip.ZipFile): WrappedZipFile()
+    data class ApacheCCZipFile(val zf: org.apache.commons.compress.archivers.zip.ZipFile): WrappedZipFile()
+}
 
 class ImportIntentService : IntentService {
 
@@ -79,9 +84,12 @@ class ImportIntentService : IntentService {
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
     }
 
-    fun getJSONObjectFromEntry(zf: ZipFile, entryName: String): JSONObject{
-        val ze = zf.getEntry(entryName)
-        val stream = zf.getInputStream(ze)
+    fun getStringFromEntry(wzf: WrappedZipFile, entryName: String): String{
+        val stream: InputStream = when(wzf) {
+            is WrappedZipFile.JavaZipFile -> wzf.zf.getInputStream(wzf.zf.getEntry(entryName))
+            is WrappedZipFile.ApacheCCZipFile -> wzf.zf.getInputStream(wzf.zf.getEntry(entryName))
+        }
+
         val baos = ByteArrayOutputStream()
         val bos = BufferedOutputStream(baos)
         val data = ByteArray(8*1024)
@@ -91,26 +99,20 @@ class ImportIntentService : IntentService {
             bos.write(data, 0, count)
         }
         bos.flush()
+        val result = baos.toString()
         bos.close()
         stream.close()
-        return JSONObject(baos.toString())
+        return result
     }
 
-    fun getJSONArrayFromEntry(zf: ZipFile, entryName: String): JSONArray{
-        val ze = zf.getEntry(entryName)
-        val stream = zf.getInputStream(ze)
-        val baos = ByteArrayOutputStream()
-        val bos = BufferedOutputStream(baos)
-        val data = ByteArray(8*1024)
-        while (true) {
-            val count = stream.read(data, 0, 8*1024)
-            if (count < 0) break
-            bos.write(data, 0, count)
-        }
-        bos.flush()
-        bos.close()
-        stream.close()
-        return JSONArray(baos.toString())
+    fun getJSONObjectFromEntry(wzf: WrappedZipFile, entryName: String): JSONObject{
+        val str = getStringFromEntry(wzf, entryName)
+        return JSONObject(str)
+    }
+
+    fun getJSONArrayFromEntry(wzf: WrappedZipFile, entryName: String): JSONArray{
+        val str = getStringFromEntry(wzf, entryName)
+        return JSONArray(str)
     }
 
     fun appendSuffix(fileName: String, suffixNumber: Int):String{
@@ -223,7 +225,7 @@ class ImportIntentService : IntentService {
         return item.toString()
     }
 
-    fun newPathsFullRestore(zf: ZipFile, photo: JSONObject, dao: TrisquelDao, filmrollIdOld2NewMap: HashMap<Int, Int>): Pair<ArrayList<String>, String>{
+    fun newPathsFullRestore(wzf: WrappedZipFile, photo: JSONObject, dao: TrisquelDao, filmrollIdOld2NewMap: HashMap<Int, Int>): Pair<ArrayList<String>, String>{
         val result = ArrayList<String>()
         val importErrors = ArrayList<String>()
 
@@ -247,13 +249,18 @@ class ImportIntentService : IntentService {
                 getSafeFileNameP(relPath, fileName)
             }
 
-            val ze = zf.getEntry("imgs/" + md5sum)
+            /*val ze = zf.getEntry("imgs/" + md5sum)
             if(ze == null){
                 Log.d("ZipFile", "zip entry for imgs/%s is null".format(md5sum))
             }
             val istream = zf.getInputStream(ze)
             if(istream == null){
                 Log.d("ZipFile", "istream is null")
+            }*/
+            val entryName = "imgs/" + md5sum
+            val istream: InputStream = when(wzf) {
+                is WrappedZipFile.JavaZipFile -> wzf.zf.getInputStream(wzf.zf.getEntry(entryName))
+                is WrappedZipFile.ApacheCCZipFile -> wzf.zf.getInputStream(wzf.zf.getEntry(entryName))
             }
 
             val newpath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
@@ -395,19 +402,30 @@ class ImportIntentService : IntentService {
         dst.close()
     }
 
+    fun CloseWrappedZipFile(wzf: WrappedZipFile){
+        when(wzf) {
+            is WrappedZipFile.JavaZipFile -> wzf.zf.close()
+            is WrappedZipFile.ApacheCCZipFile -> wzf.zf.close()
+        }
+    }
+
     fun importFromZip(uri: Uri, merge: Boolean): Int{
         var result = UNKNOWN
-        val pfd = contentResolver.openFileDescriptor(uri, "r")
-        if (pfd == null) throw FileNotFoundException(uri.toString())
-        val fis = FileInputStream(pfd.fileDescriptor)
-        val size = fis.channel.size()
-        val dir = getExternalFilesDir(null)
-        val sfs = StatFs(dir!!.absolutePath)
+        var pfd: ParcelFileDescriptor? = null
+        val zipfile: WrappedZipFile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            //どうもここでval pfdとするとファイルディスクリプタがGCされてしまう？？？
+            pfd = contentResolver.openFileDescriptor(uri, "r")
+            if (pfd == null) throw FileNotFoundException(uri.toString())
+            val fis = FileInputStream(pfd.fileDescriptor)
+            WrappedZipFile.ApacheCCZipFile(ZipFile(fis.channel))
+        }else{
+            val path = uri.path
+            WrappedZipFile.JavaZipFile(java.util.zip.ZipFile(path))
+        }
 
         val dao = TrisquelDao(this)
         dao.connection()
         //try {
-            val zipfile = ZipFile(fis.channel)
             try {
                 val metadataJSON = getJSONObjectFromEntry(zipfile, "metadata.json")
                 val dbver = metadataJSON.getInt("DB_VERSION")
@@ -480,7 +498,7 @@ class ImportIntentService : IntentService {
             } catch (e: VersionUnmatchException) {
                 result = VERSION_UNMATCH
             } finally {
-                zipfile.close()
+                CloseWrappedZipFile(zipfile)
                 dao.close()
                 //zipfile.close()
                 //tmpFile.delete()
@@ -489,6 +507,9 @@ class ImportIntentService : IntentService {
             //Log.d("ZipFile", e.toString())
         //} finally {
         //}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            pfd?.close() //念のため最後にpfdを触るコードを入れてGCさせない（いいのかこれで？） ついでにクローズもしてみる
+        }
 
         return result
     }
