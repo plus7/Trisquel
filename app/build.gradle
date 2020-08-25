@@ -7,8 +7,8 @@ android {
         applicationId "net.tnose.app.trisquel"
         minSdkVersion 19
         targetSdkVersion 29
-        versionCode 20
-        versionName "Release 15"
+        versionCode 21
+        versionName "Release 16"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled true //メソッド数が64Kを超えてしまったので
