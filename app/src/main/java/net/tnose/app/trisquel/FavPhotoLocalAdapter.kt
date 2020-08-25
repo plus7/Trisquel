@@ -67,10 +67,14 @@ class FavPhotoLocalAdapter(context: Context, @ColorInt val textColor: Int? = nul
                 if(path.isNotEmpty() &&
                         oldBottom - oldTop != bottom - top &&
                         oldRight - oldLeft != right - left){
-                    val file = File(path)
-                    Glide.with(holder.mImageView.context)
-                            .load(file)
-                            .apply(RequestOptions()
+                    val rb = if(path.startsWith("/")){
+                        Glide.with(holder.mImageView.context)
+                                .load(File(path))
+                    }else{
+                        Glide.with(holder.mImageView.context)
+                                .load(Uri.parse(path))
+                    }
+                    rb.apply(RequestOptions()
                                     .placeholder(R.drawable.general_image_gray)
                                     .centerCrop()
                                     .error(R.drawable.ic_error_circle)
