@@ -54,7 +54,6 @@
             android:layout_height="wrap_content"
             android:ems="10"
             android:hint="@string/label_brand"
-            android:inputType="textPersonName"
             app:met_floatingLabel="normal" />
 
         <net.tnose.app.trisquel.ImmediateAutoCompleteTextView
