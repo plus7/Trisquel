@@ -11,7 +11,6 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.preference.PreferenceManager
 import android.util.Log
@@ -35,8 +34,6 @@ import com.google.android.material.navigation.NavigationView
 import me.rosuh.filepicker.bean.FileItemBeanImpl
 import me.rosuh.filepicker.config.AbstractFileFilter
 import me.rosuh.filepicker.config.FilePickerManager
-import net.rdrei.android.dirchooser.DirectoryChooserActivity
-import net.rdrei.android.dirchooser.DirectoryChooserConfig
 import net.tnose.app.trisquel.dummy.DummyContent
 import org.json.JSONArray
 import org.json.JSONObject
@@ -313,7 +310,7 @@ class MainActivity : AppCompatActivity(),
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putInt("current_fragment", when(currentFragment){
+        outState.putInt("current_fragment", when (currentFragment) {
             is CameraFragment -> ID_CAMERA
             is LensFragment -> ID_LENS
             is AccessoryFragment -> ID_ACCESSORY
@@ -405,7 +402,7 @@ class MainActivity : AppCompatActivity(),
             else -> false
         }
         sortmenu.setShowAsAction(
-                when(currentFragment){
+                when (currentFragment) {
                     is CameraFragment, is LensFragment, is AccessoryFragment -> SHOW_AS_ACTION_IF_ROOM
                     else -> SHOW_AS_ACTION_NEVER
                 }
@@ -458,7 +455,7 @@ class MainActivity : AppCompatActivity(),
 
             val fragment = SearchCondDialogFragment.Builder().build(RETCODE_SEARCH)
             fragment.arguments?.putString("title", getString(R.string.title_dialog_search_by_tags))
-            fragment.arguments?.putStringArray("labels", tags.sortedBy{ it.label }.map { it.label }.toTypedArray())
+            fragment.arguments?.putStringArray("labels", tags.sortedBy { it.label }.map { it.label }.toTypedArray())
             fragment.showOn(this, "dialog")
             return true
         } else if (id == R.id.action_sort){
@@ -474,12 +471,12 @@ class MainActivity : AppCompatActivity(),
                         getString(R.string.label_name),
                         getString(R.string.label_mount),
                         getString(R.string.label_format))
-                is LensFragment   -> arrayOf(
+                is LensFragment -> arrayOf(
                         getString(R.string.label_created_date),
                         getString(R.string.label_name),
                         getString(R.string.label_mount),
                         getString(R.string.label_focal_length))
-                is AccessoryFragment   -> arrayOf(
+                is AccessoryFragment -> arrayOf(
                         getString(R.string.label_created_date),
                         getString(R.string.label_name),
                         getString(R.string.label_accessory_type))
@@ -488,9 +485,9 @@ class MainActivity : AppCompatActivity(),
             val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
             val key = when(currentFragment){
                 is FilmRollFragment -> pref.getInt("filmroll_sortkey", 0)
-                is CameraFragment   -> pref.getInt("camera_sortkey", 0)
-                is LensFragment     -> pref.getInt("lens_sortkey", 0)
-                is AccessoryFragment-> pref.getInt("accessory_sortkey", 0)
+                is CameraFragment -> pref.getInt("camera_sortkey", 0)
+                is LensFragment -> pref.getInt("lens_sortkey", 0)
+                is AccessoryFragment -> pref.getInt("accessory_sortkey", 0)
                 else -> 0
             }
             fragment.arguments?.putString("title", getString(R.string.label_sort_by))
@@ -512,15 +509,15 @@ class MainActivity : AppCompatActivity(),
             while(filters.size > pinnedFilterViewId.size){
                 pinnedFilterViewId.add(View.generateViewId())
             }
-            for((i,f) in filters.withIndex()){
+            for((i, f) in filters.withIndex()){
                 when(f.first){
                     1 -> {
                         val c = dao.getCamera(f.second[0].toInt())
-                        if(c != null)
-                            popupMenu.menu.add(0, pinnedFilterViewId[i],0, c.manufacturer + " " + c.modelName)
+                        if (c != null)
+                            popupMenu.menu.add(0, pinnedFilterViewId[i], 0, c.manufacturer + " " + c.modelName)
                     }
                     2 -> {
-                        popupMenu.menu.add(0, pinnedFilterViewId[i],0,f.second.joinToString(" "))
+                        popupMenu.menu.add(0, pinnedFilterViewId[i], 0, f.second.joinToString(" "))
                     }
                 }
             }
@@ -542,7 +539,7 @@ class MainActivity : AppCompatActivity(),
                             dao.connection()
                             val cs = dao.allCameras
                             dao.close()
-                            cs.sortBy { it.manufacturer + " "+ it.modelName }
+                            cs.sortBy { it.manufacturer + " " + it.modelName }
                             fragment.arguments?.putStringArray("items", cs.map { it.manufacturer + " " + it.modelName }.toTypedArray())
                             fragment.arguments?.putIntegerArrayList("ids", ArrayList(cs.map { it.id }))
                             fragment.showOn(this@MainActivity, "dialog")
@@ -555,7 +552,7 @@ class MainActivity : AppCompatActivity(),
                             dao.connection()
                             val fbs = dao.availableFilmBrandList
                             dao.close()
-                            fragment.arguments?.putStringArray("items", fbs.map { it.first + " " +it.second }.toTypedArray())
+                            fragment.arguments?.putStringArray("items", fbs.map { it.first + " " + it.second }.toTypedArray())
                             fragment.showOn(this@MainActivity, "dialog")
                         }
                     else -> {
@@ -640,7 +637,7 @@ class MainActivity : AppCompatActivity(),
                 val ze = ZipEntry("imgs" + path)
                 zos.putNextEntry(ze)
                 try {
-                    val buf = ByteArray(1024*128)
+                    val buf = ByteArray(1024 * 128)
                     val bis = BufferedInputStream(FileInputStream(f))
                     while (true) {
                         val len = bis.read(buf)
@@ -691,7 +688,7 @@ class MainActivity : AppCompatActivity(),
             val buffer = ByteArray(16)
             val readsize = fis.read(buffer)
             return readsize == 16 && header.contentEquals(buffer)
-        }catch(e : Exception){
+        }catch (e: Exception){
             return false
         }
     }
@@ -704,7 +701,7 @@ class MainActivity : AppCompatActivity(),
             REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
                 val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
-                if(frag is CameraFragment && c != null) frag.insertCamera(c)
+                if (frag is CameraFragment && c != null) frag.insertCamera(c)
                 if (c.type == 1) {
                     val l = bundle.getParcelable<LensSpec>("fixed_lens")
                     l!!.body = c.id
@@ -718,7 +715,7 @@ class MainActivity : AppCompatActivity(),
             REQCODE_EDIT_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
                 val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
-                if(frag is CameraFragment && c != null) frag.updateCamera(c)
+                if (frag is CameraFragment && c != null) frag.updateCamera(c)
                 if (c.type == 1) {
                     val dao = TrisquelDao(this)
                     dao.connection()
@@ -732,11 +729,11 @@ class MainActivity : AppCompatActivity(),
             }
             REQCODE_ADD_LENS -> if (resultCode == Activity.RESULT_OK) {
                 val l = data.extras!!.getParcelable<LensSpec>("lensspec")
-                if(frag is LensFragment && l != null) frag.insertLens(l)
+                if (frag is LensFragment && l != null) frag.insertLens(l)
             }
             REQCODE_EDIT_LENS -> if (resultCode == Activity.RESULT_OK) {
                 val l = data.extras!!.getParcelable<LensSpec>("lensspec")
-                if(frag is LensFragment && l != null) frag.updateLens(l)
+                if (frag is LensFragment && l != null) frag.updateLens(l)
             }
             REQCODE_ADD_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
@@ -753,7 +750,7 @@ class MainActivity : AppCompatActivity(),
                         bundle.getInt("iso"),
                         36
                 )
-                if(frag is FilmRollFragment) frag.insertFilmRoll(f)
+                if (frag is FilmRollFragment) frag.insertFilmRoll(f)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_EDIT_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
@@ -773,12 +770,12 @@ class MainActivity : AppCompatActivity(),
                         bundle.getInt("iso"),
                         36
                 )
-                if(frag is FilmRollFragment) frag.updateFilmRoll(f)
+                if (frag is FilmRollFragment) frag.updateFilmRoll(f)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_EDIT_PHOTO_LIST -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                if(frag is FilmRollFragment) frag.refreshFilmRoll(bundle!!.getInt("filmroll"))
+                if (frag is FilmRollFragment) frag.refreshFilmRoll(bundle!!.getInt("filmroll"))
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_ADD_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
@@ -786,7 +783,7 @@ class MainActivity : AppCompatActivity(),
                 val a = Accessory(-1, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()),
                         bundle!!.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
                         bundle.getDouble("focal_length_factor"))
-                if(frag is AccessoryFragment) frag.insertAccessory(a)
+                if (frag is AccessoryFragment) frag.insertAccessory(a)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_EDIT_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
@@ -794,68 +791,34 @@ class MainActivity : AppCompatActivity(),
                 val a = Accessory(bundle!!.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()),
                         bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
                         bundle.getDouble("focal_length_factor"))
-                if(frag is AccessoryFragment) frag.updateAccessory(a)
+                if (frag is AccessoryFragment) frag.updateAccessory(a)
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX,
-            REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX -> if (resultCode == DirectoryChooserActivity.RESULT_CODE_DIR_SELECTED) {
-                val bundle = data.extras
-                val dir = bundle!!.getString(DirectoryChooserActivity.RESULT_SELECTED_DIR)
-                val sd = File(dir!!)
-                val dbpath = this.getDatabasePath("trisquel.db")
+            REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX -> if (resultCode == Activity.RESULT_OK) {
+                if (data.data != null) {
+                    val uri: Uri = data.data!!
+                    val mode = if (requestCode == REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX) 0 else 1
+                    val fragment = ProgressDialog.Builder()
+                            .build(RETCODE_BACKUP_PROGRESS)
+                    fragment.showOn(this, "dialog")
 
-                if (sd.canWrite()) {
-                    val calendar = Calendar.getInstance()
-                    val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-                    //val backupDB = File(sd, "trisquel-" + sdf.format(calendar.time) + ".db")
-                    val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
-                    val backupZip = File(sd, backupZipFileName)
-                    val mode = if(requestCode == REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX) 0 else 1
-
-                    if (dbpath.exists()) {
-                        val fragment = ProgressDialog.Builder()
-                                .build(RETCODE_BACKUP_PROGRESS)
-                        fragment.showOn(this, "dialog")
-                        isIntentServiceWorking = 2
-                        fixOrientation()
-                        ExportIntentService.shouldContinue = true
-                        ExportIntentService.startExport(this, dir, backupZipFileName, mode)
-                        /*
-                        try {
-                            backupToZip(backupZip)
-                            / *val src = FileInputStream(dbpath).channel
-                            val dst = FileOutputStream(backupDB).channel
-                            dst.transferFrom(src, 0, src.size())
-                            src.close()
-                            dst.close()* \/
-
-                            // MediaScannerに教えないとすぐにはPCから見えない
-                            val contentUri = Uri.fromFile(backupZip)
-                            val mediaScanIntent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, contentUri)
-                            this.sendBroadcast(mediaScanIntent)
-                        } catch (e: FileNotFoundException) {
-                            Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
-                            return
-                        } catch (e: IOException) {
-                            Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
-                            return
-                        }
-
-                        Toast.makeText(this, "Wrote to " + backupZip.absolutePath, Toast.LENGTH_LONG).show()
-                        */
-                    }
+                    isIntentServiceWorking = 2
+                    fixOrientation()
+                    ExportIntentService.shouldContinue = true
+                    ExportIntentService.startExport(this, uri.toString(), mode)
                 }
             }
             REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP,
-            REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> if(resultCode == Activity.RESULT_OK){
+            REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> if (resultCode == Activity.RESULT_OK) {
                 val uri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     data.data
-                }else{
+                } else {
                     val list = FilePickerManager.obtainData()
                     Uri.fromFile(File(list.first()))
                 }
 
-                if(uri != null) {
+                if (uri != null) {
                     Log.d("ZipFile", uri.toString())
 
                     val fragment = ProgressDialog.Builder()
@@ -872,20 +835,20 @@ class MainActivity : AppCompatActivity(),
                     ImportIntentService.startImport(this, uri, mode)
                 }
             }
-            REQCODE_DBFILE_CHOSEN_FOR_REPLDB -> if(resultCode == Activity.RESULT_OK){
+            REQCODE_DBFILE_CHOSEN_FOR_REPLDB -> if (resultCode == Activity.RESULT_OK) {
                 val uri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     data.data
-                }else{
+                } else {
                     val list = FilePickerManager.obtainData()
                     Uri.fromFile(File(list.first()))
                 }
                 Log.d("DBFile", uri.toString())
                 val dbpath = this.getDatabasePath("trisquel.db")
-                if(uri != null){
+                if (uri != null) {
                     val pfd = contentResolver.openFileDescriptor(uri, "r")
                     if (pfd == null) throw FileNotFoundException(uri.toString())
 
-                    if(!checkSQLiteFileFormat(pfd)) {
+                    if (!checkSQLiteFileFormat(pfd)) {
                         Toast.makeText(this, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
                         return
                     }
@@ -917,7 +880,7 @@ class MainActivity : AppCompatActivity(),
             REQCODE_SEARCH -> {
                 val bundle = data.extras
                 val dirtyFilmRolls = bundle?.getIntegerArrayList("dirtyFilmRolls") ?: ArrayList()
-                if(dirtyFilmRolls.size > 0 && currentFragment is FilmRollFragment){
+                if (dirtyFilmRolls.size > 0 && currentFragment is FilmRollFragment) {
                     (currentFragment as FilmRollFragment).refreshAll(ArrayList(dirtyFilmRolls.filterNotNull()))
                 }
             }
@@ -936,7 +899,7 @@ class MainActivity : AppCompatActivity(),
         var titleRsc: Int = 0
         var fabRsc: Int = 0
         when(id) {
-            R.id.nav_settings ->{
+            R.id.nav_settings -> {
                 val intent = Intent(application, SettingsActivity::class.java)
                 startActivity(intent)
                 drawer.closeDrawer(GravityCompat.START)
@@ -1162,7 +1125,7 @@ class MainActivity : AppCompatActivity(),
             RETCODE_SDCARD_PERM_FOR_MERGEIP,
             RETCODE_SDCARD_PERM_FOR_REPLIP,
             RETCODE_SDCARD_PERM_FOR_REPLDB
-                -> onRequestSDCardAccessPermissionsResult(requestCode, permissions, grantResults)
+            -> onRequestSDCardAccessPermissionsResult(requestCode, permissions, grantResults)
             else -> {}
         }
     }
@@ -1173,17 +1136,17 @@ class MainActivity : AppCompatActivity(),
                 PackageManager.PERMISSION_GRANTED,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     PackageManager.PERMISSION_GRANTED
-                }else{
+                } else {
                     PackageManager.PERMISSION_DENIED //バージョンが低いとDenied扱いになる
                 }
         )
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
             when(requestCode){
-                RETCODE_SDCARD_PERM_FOR_SLIMEX  -> exportDBDialog(0)
-                RETCODE_SDCARD_PERM_FOR_FULLEX  -> exportDBDialog(1)
+                RETCODE_SDCARD_PERM_FOR_SLIMEX -> exportDBDialog(0)
+                RETCODE_SDCARD_PERM_FOR_FULLEX -> exportDBDialog(1)
                 RETCODE_SDCARD_PERM_FOR_MERGEIP -> importDBDialog(0)
-                RETCODE_SDCARD_PERM_FOR_REPLIP  -> importDBDialog(1)
-                RETCODE_SDCARD_PERM_FOR_REPLDB  -> importDBDialog(2)
+                RETCODE_SDCARD_PERM_FOR_REPLIP -> importDBDialog(1)
+                RETCODE_SDCARD_PERM_FOR_REPLDB -> importDBDialog(2)
             }
         } else {
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
@@ -1232,15 +1195,13 @@ class MainActivity : AppCompatActivity(),
     }
 
     fun exportDBDialog(mode: Int) {
-        val chooserIntent = Intent(this, DirectoryChooserActivity::class.java)
-        Log.d("path", Environment.getExternalStorageDirectory().absolutePath)
-        val config = DirectoryChooserConfig.builder()
-                .newDirectoryName("Trisquel")
-                .allowReadOnlyDirectory(true)
-                .allowNewDirectoryNameModification(true)
-                .initialDirectory(Environment.getExternalStorageDirectory().absolutePath)
-                .build()
-        chooserIntent.putExtra(DirectoryChooserActivity.EXTRA_CONFIG, config)
+        val chooserIntent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+        chooserIntent.addCategory(Intent.CATEGORY_OPENABLE)
+        chooserIntent.type = "application/zip"
+        val calendar = Calendar.getInstance()
+        val sdf = SimpleDateFormat("yyyyMMddHHmmss")
+        val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
+        chooserIntent.putExtra(Intent.EXTRA_TITLE, backupZipFileName)
         val reqcode =
                 if(mode==0) REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX
                 else        REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX
@@ -1249,7 +1210,7 @@ class MainActivity : AppCompatActivity(),
 
     fun importDBDialogUntilM(mode: Int){
         val suffix = when(mode){
-            0,1 -> ".zip"
+            0, 1 -> ".zip"
             else -> ".db"
         }
 
@@ -1264,7 +1225,7 @@ class MainActivity : AppCompatActivity(),
                 .from(this@MainActivity)
                 .enableSingleChoice()
                 .setTheme(R.style.FilePickerThemeReply)
-                .setText("", "",0,getString(R.string.word_select),0,"")
+                .setText("", "", 0, getString(R.string.word_select), 0, "")
                 .filter(object : AbstractFileFilter() {
                     override fun doFilter(listData: ArrayList<FileItemBeanImpl>): ArrayList<FileItemBeanImpl> {
                         return ArrayList(listData.filter { item ->
@@ -1311,26 +1272,26 @@ class MainActivity : AppCompatActivity(),
             }
             RETCODE_EXPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val mode = data.getIntExtra("which", 0)
-                if(mode < 2)
+                if (mode < 2)
                     checkPermAndExportDB(mode)
-                else{
+                else {
                     val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
-                    startActivity(Intent(Intent.ACTION_VIEW,uri))
+                    startActivity(Intent(Intent.ACTION_VIEW, uri))
                 }
             }
             RETCODE_IMPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val mode = data.getIntExtra("which", 0)
-                if(mode < 3)
+                if (mode < 3)
                     checkPermAndImportDB(mode)
-                else{
+                else {
                     val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
-                    startActivity(Intent(Intent.ACTION_VIEW,uri))
+                    startActivity(Intent(Intent.ACTION_VIEW, uri))
                 }
             }
             RETCODE_DELETE_FILMROLL -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val id = data.getIntExtra("id", -1)
-                if (id != -1){
-                    if(frag is FilmRollFragment) frag.deleteFilmRoll(id)
+                if (id != -1) {
+                    if (frag is FilmRollFragment) frag.deleteFilmRoll(id)
                 }
             }
             RETCODE_DELETE_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
@@ -1361,7 +1322,7 @@ class MainActivity : AppCompatActivity(),
                 val which = data.getIntExtra("which", 0)
 
                 val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-                val key = when(frag){
+                val key = when (frag) {
                     is FilmRollFragment -> "filmroll_sortkey"
                     is CameraFragment -> "camera_sortkey"
                     is LensFragment -> "lens_sortkey"
@@ -1372,7 +1333,7 @@ class MainActivity : AppCompatActivity(),
                 e.putInt(key, which)
                 e.apply()
 
-                when(frag){
+                when (frag) {
                     is FilmRollFragment -> frag.changeSortKey(which)
                     is CameraFragment -> frag.changeSortKey(which)
                     is LensFragment -> frag.changeSortKey(which)
@@ -1380,28 +1341,28 @@ class MainActivity : AppCompatActivity(),
                 }
             }
             RETCODE_FILTER_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if(currentFragment is FilmRollFragment) {
+                if (currentFragment is FilmRollFragment) {
                     val cameraid = data.getIntExtra("which_id", -1)
-                    if(cameraid != -1) {
+                    if (cameraid != -1) {
                         (currentFragment as FilmRollFragment).currentFilter = Pair(1, arrayListOf(cameraid.toString()))
                         val dao = TrisquelDao(this)
                         dao.connection()
                         val c = dao.getCamera(cameraid)
                         dao.close()
-                        if(c != null) {
+                        if (c != null) {
                             supportActionBar?.subtitle = "📷 " + c.manufacturer + " " + c.modelName
                         }
                     }
                 }
             }
             RETCODE_FILTER_FILM_BRAND -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if(currentFragment is FilmRollFragment) {
+                if (currentFragment is FilmRollFragment) {
                     val which = data.getIntExtra("which", -1)
                     val dao = TrisquelDao(this)
                     dao.connection()
                     val brands = dao.availableFilmBrandList
                     dao.close()
-                    if(which != -1) {
+                    if (which != -1) {
                         (currentFragment as FilmRollFragment).currentFilter =
                                 Pair(2, arrayListOf(brands[which].first, brands[which].second))
                         supportActionBar?.subtitle = "🎞 " + brands[which].second
@@ -1410,7 +1371,7 @@ class MainActivity : AppCompatActivity(),
             }
             RETCODE_SEARCH -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val tags = data.getStringArrayListExtra("checked_labels")
-                if(tags.size > 0) {
+                if (tags.size > 0) {
                     val intent = Intent(application, SearchActivity::class.java)
                     intent.putExtra("tags", tags)
                     startActivityForResult(intent, REQCODE_SEARCH)

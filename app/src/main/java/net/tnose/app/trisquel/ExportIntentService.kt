@@ -28,17 +28,15 @@ class ExportIntentService : IntentService{
 
         val ACTION_START_EXPORT = "net.tnose.app.trisquel.action.START_EXPORT"
         val ACTION_EXPORT_PROGRESS = "net.tnose.app.trisquel.action.EXPORT_PROGRESS"
-        val PARAM_DIR = "dir"
         val PARAM_ZIPFILE = "zipfile"
         val PARAM_PERCENTAGE = "percentage"
         val PARAM_STATUS = "status"
         val PARAM_MODE = "mode"
 
-        internal fun startExport(context: Context, dir: String, zipfile: String, mode: Int){
+        internal fun startExport(context: Context, uri: String, mode: Int){
             val intent = Intent(context, ExportIntentService::class.java)
             intent.action = ACTION_START_EXPORT
-            intent.putExtra(PARAM_DIR, dir)
-            intent.putExtra(PARAM_ZIPFILE, zipfile)
+            intent.putExtra(PARAM_ZIPFILE, uri)
             intent.putExtra(PARAM_MODE, mode)
             context.startService(intent)
         }
@@ -195,8 +193,8 @@ class ExportIntentService : IntentService{
         return percentage + photosPercentage
     }
 
-    fun backupToZip(zipFile: File, mode: Int): Boolean {
-        val zos = ZipOutputStream(FileOutputStream(zipFile))
+    fun backupToZip(zipFile: OutputStream, mode: Int): Boolean {
+        val zos = ZipOutputStream(zipFile)
         zos.setMethod(ZipOutputStream.DEFLATED)
         val osw = OutputStreamWriter(zos, "UTF-8")
         val dao = TrisquelDao(this)
@@ -282,13 +280,20 @@ class ExportIntentService : IntentService{
                 notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
                 startForeground(1, notification) //Foreground Service開始
 
-                val dir = intent.getStringExtra(PARAM_DIR)
                 val zipfile = intent.getStringExtra(PARAM_ZIPFILE)
+                val uri = Uri.parse(zipfile!!)
                 val mode = intent.getIntExtra(PARAM_MODE, 0)
-                val sd = File(dir!!)
-                val backupZip = File(sd, zipfile!!)
-                val backupSuccess = backupToZip(backupZip, mode)
-                notifyMediaScanner(backupZip)
+
+                var backupSuccess = false
+                try {
+                    contentResolver.openOutputStream(uri).use { outputStream ->
+                        if(outputStream != null) {
+                            backupSuccess = backupToZip(outputStream, mode)
+                        }
+                    }
+                } catch (e: java.lang.Exception) {
+                    //e.printStackTrace()
+                }
 
                 if(!backupSuccess) {
                     handler?.post(Runnable {
@@ -305,12 +310,12 @@ class ExportIntentService : IntentService{
                         val n = builder.setContentIntent(pi)
                                 .setGroup("trisquel_ch_grp")
                                 .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
-                                .setAutoCancel(true).setContentTitle("Wrote to " + backupZip.absolutePath)
+                                .setAutoCancel(true).setContentTitle("Backup completed.")
                                 .setContentText("Trisquel").build()
 
                         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                         nm.notify(1, n)
-                        Toast.makeText(this, "Wrote to " + backupZip.absolutePath, Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Backup completed.", Toast.LENGTH_LONG).show()
                     })
                 }
             }

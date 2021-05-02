@@ -69,9 +69,6 @@
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps" />
 
-        <activity
-            android:name="net.rdrei.android.dirchooser.DirectoryChooserActivity"
-            android:label="@string/title_activity_dirchooser" />
         <activity android:name=".EditAccessoryActivity" />
         <activity
             android:name=".PrintPreviewActivity"
