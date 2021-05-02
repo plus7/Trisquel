@@ -24,7 +24,7 @@ class ProgressDialog : AbstractDialogFragment() {
                 }else if(action == MainActivity.ACTION_UPDATE_PROGRESS_DIALOG){
                     val percentage = intent.getDoubleExtra("percentage", 0.0)
                     val status = intent.getStringExtra("status")
-                    setPercentage(percentage, status)
+                    setPercentage(percentage, status!!)
                 }
             }
         }

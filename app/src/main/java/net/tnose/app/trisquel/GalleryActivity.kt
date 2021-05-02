@@ -13,7 +13,7 @@ class GalleryActivity : AppCompatActivity(), GalleryImageFragment.OnFragmentInte
         val manager = supportFragmentManager
         val photo = intent.getParcelableExtra<Photo>("photo")
         val favList = intent.getParcelableArrayListExtra<Photo>("favList")
-        val adapter = GalleryFragmentPagerAdapter(manager, photo, favList)
+        val adapter = GalleryFragmentPagerAdapter(manager, photo!!, favList!!)
         pager.adapter = adapter
 
         var currentPos = 0

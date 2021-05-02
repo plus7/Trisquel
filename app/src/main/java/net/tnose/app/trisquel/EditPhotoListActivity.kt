@@ -375,7 +375,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 }
             }
             REQCODE_EDIT_PHOTOINDEX -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val newindex = data.getStringExtra("value").toInt() - 1
+                val newindex = data.getStringExtra("value")!!.toInt() - 1
                 if(newindex < 0) return
                 val id = data.getIntExtra("id", -1)
                 val dao = TrisquelDao(this.applicationContext)
@@ -389,7 +389,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 }
             }
             REQCODE_INDEX_SHIFT -> if (resultCode == DialogInterface.BUTTON_POSITIVE){
-                val newindex = data.getStringExtra("value").toInt() - 1
+                val newindex = data.getStringExtra("value")!!.toInt() - 1
 
                 val id = data.getIntExtra("id", -1)
                 val dao = TrisquelDao(this.applicationContext)

@@ -577,7 +577,7 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
                 finish()
             }
             DIALOG_CUSTOM_SHUTTER_SPEEDS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val list = ArrayList(data.getStringExtra("value").split("\n").sortedBy { Util.stringToDoubleShutterSpeed(it) })
+                val list = ArrayList(data.getStringExtra("value")!!.split("\n").sortedBy { Util.stringToDoubleShutterSpeed(it) })
                 ssCustomSteps = list
                 refreshShutterSpeedSpinners()
                 previousCheckedSsSteps = 0

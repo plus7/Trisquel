@@ -12,7 +12,7 @@ class ProgressReceiver(private val mActivity: MainActivity) : BroadcastReceiver(
         val error = intent.getBooleanExtra(DbConvIntentService.PARAM_ERROR, false)
 
         mActivity.runOnUiThread {
-            mActivity.setProgressPercentage(percentage, status, error)
+            mActivity.setProgressPercentage(percentage, status!!, error)
         }
     }
 }

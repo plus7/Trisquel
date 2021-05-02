@@ -270,6 +270,12 @@ class MainActivity : AppCompatActivity(),
         dao.close()
 
         if(!dbConvForAndroid11Done && isIntentServiceWorking == 0) {
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+                val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/")
+                startActivity(Intent(Intent.ACTION_VIEW, uri))
+                return
+            }
+
             fixOrientation() // 画面回転時のDialogの挙動が怪しいので一時的にこうする
             isIntentServiceWorking = 1
 
@@ -1371,7 +1377,7 @@ class MainActivity : AppCompatActivity(),
             }
             RETCODE_SEARCH -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val tags = data.getStringArrayListExtra("checked_labels")
-                if (tags.size > 0) {
+                if (tags!!.size > 0) {
                     val intent = Intent(application, SearchActivity::class.java)
                     intent.putExtra("tags", tags)
                     startActivityForResult(intent, REQCODE_SEARCH)

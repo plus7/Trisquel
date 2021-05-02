@@ -41,7 +41,7 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         val tags = intent.getStringArrayListExtra("tags")
-        title = getString(R.string.action_search) + ": " + tags.joinToString(", ")
+        title = getString(R.string.action_search) + ": " + tags!!.joinToString(", ")
 
         if(savedInstanceState != null){
             val tbid = savedInstanceState.getInt("thumbnail_editing_id")

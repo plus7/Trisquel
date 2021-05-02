@@ -2,11 +2,11 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 30
     defaultConfig {
         applicationId "net.tnose.app.trisquel"
         minSdkVersion 23
-        targetSdkVersion 29
+        targetSdkVersion 30
         versionCode 22
         versionName "Release 17"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
