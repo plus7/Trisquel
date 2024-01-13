@@ -11,7 +11,6 @@ import android.content.Context
 import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
-import android.os.Build
 import android.os.Handler
 import android.provider.MediaStore
 import android.util.Log
@@ -140,19 +139,12 @@ class DbConvIntentService : IntentService {
             ACTION_START_DBCONV -> {
                 val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 // グループ生成
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
-                    nm.createNotificationChannelGroups(arrayListOf(g))
-                    val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
-                    ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                    nm.createNotificationChannel(ch)
-                }
-                val channelId =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            "trisquel_ch"
-                        } else {
-                            ""
-                        }
+                val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
+                nm.createNotificationChannelGroups(arrayListOf(g))
+                val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
+                ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                nm.createNotificationChannel(ch)
+                val channelId = "trisquel_ch"
 
                 bcastProgress(0.0, "Starting DB conversion...", false)
                 // Notificationのインスタンス化

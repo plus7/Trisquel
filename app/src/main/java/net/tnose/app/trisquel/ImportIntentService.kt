@@ -515,20 +515,13 @@ class ImportIntentService : IntentService {
             ACTION_START_IMPORT -> {
                 val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 // グループ生成
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
-                    nm.createNotificationChannelGroups(arrayListOf(g))
-                    val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
-                    ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                    nm.createNotificationChannel(ch)
-                }
+                val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
+                nm.createNotificationChannelGroups(arrayListOf(g))
+                val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
+                ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                nm.createNotificationChannel(ch)
 
-                val channelId =
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            "trisquel_ch"
-                        } else {
-                            ""
-                        }
+                val channelId = "trisquel_ch"
 
                 // Notificationのインスタンス化
                 var notification = Notification()
