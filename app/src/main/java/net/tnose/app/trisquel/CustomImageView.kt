@@ -7,24 +7,26 @@ import android.view.View
 import android.widget.FrameLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
-import kotlinx.android.synthetic.main.custom_image_view.view.*
+import net.tnose.app.trisquel.databinding.CustomImageViewBinding
 import java.io.File
 
 
 class CustomImageView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
     var mPath : String = ""
-    private var imgListener: View.OnClickListener? = null
-    private var closeButtonListener: View.OnClickListener? = null
+    private var imgListener: OnClickListener? = null
+    private var closeButtonListener: OnClickListener? = null
+    private var _binding: CustomImageViewBinding? = null
+    private val binding get() = _binding!!
 
     init {
         initme()
     }
 
-    override fun setOnClickListener(l: View.OnClickListener?) {
+    override fun setOnClickListener(l: OnClickListener?) {
         this.imgListener = l
     }
 
-    fun setOnCloseClickListener(l: View.OnClickListener?) {
+    fun setOnCloseClickListener(l: OnClickListener?) {
         this.closeButtonListener = l
     }
 
@@ -37,7 +39,8 @@ class CustomImageView @JvmOverloads constructor(context: Context, attrs: Attribu
         }
 
     private fun initme() {
-        LayoutInflater.from(context).inflate(R.layout.custom_image_view, this)
+        val inflater =LayoutInflater.from(context) //.inflate(R.layout.custom_image_view, this)
+        _binding = CustomImageViewBinding.inflate(inflater, this, false)
         this.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             // 大きさが確定してから描画しないといけない。
             // 当初はonCreateで追加されたCustomImageViewにpathが設定された瞬間に描画していたが、
@@ -46,21 +49,21 @@ class CustomImageView @JvmOverloads constructor(context: Context, attrs: Attribu
                     oldBottom - oldTop != bottom - top &&
                     oldRight - oldLeft != right - left) {
                 val rb = if (mPath.startsWith("/")) {
-                    Glide.with(civ_image_view.context).load(File(mPath))
+                    Glide.with(binding.civImageView.context).load(File(mPath))
                 }else{
-                    Glide.with(civ_image_view.context).load(Uri.parse(mPath))
+                    Glide.with(binding.civImageView.context).load(Uri.parse(mPath))
                 }
                 rb.apply(RequestOptions()
                          .placeholder(R.drawable.general_image_gray)
                          .centerCrop()
                          .error(R.drawable.ic_error_circle)
-                         .timeout(5000)).into(civ_image_view)
+                         .timeout(5000)).into(binding.civImageView)
             }
         }
-        civ_close_button.setOnClickListener {
+        binding.civCloseButton.setOnClickListener {
             this@CustomImageView.closeButtonListener?.onClick(this@CustomImageView)
         }
-        civ_image_view.setOnClickListener{
+        binding.civImageView.setOnClickListener{
             this@CustomImageView.imgListener?.onClick(this@CustomImageView)
         }
     }

@@ -2,11 +2,16 @@ package net.tnose.app.trisquel
 
 import android.Manifest
 import android.app.Activity
-import android.content.*
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.text.Editable
@@ -17,7 +22,11 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
@@ -26,14 +35,15 @@ import com.google.android.material.chip.Chip
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
-import kotlinx.android.synthetic.main.activity_edit_photo.*
+import net.tnose.app.trisquel.databinding.ActivityEditPhotoBinding
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Arrays
+import java.util.Calendar
 
 class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_GET_LOCATION = 100
@@ -76,6 +86,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var favorite = false
     private var isResumed: Boolean = false
     private var isDirty: Boolean = false
+    private lateinit var binding: ActivityEditPhotoBinding
 
     val newphoto: Photo
         get() {
@@ -90,16 +101,16 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     id,
                     filmroll!!.id,
                     frameIndex,
-                    edit_date.text.toString(),
+                    binding.editDate.text.toString(),
                     0,
-                    lenslist[spinner_lens.position].id,
-                    seek_focal_length.progress + focalLengthRange.first,
-                    Util.safeStr2Dobule(spinner_aperture.text.toString()),
-                    Util.stringToDoubleShutterSpeed(spinner_ss.text.toString()),
+                    lenslist[binding.spinnerLens.position].id,
+                    binding.seekFocalLength.progress + focalLengthRange.first,
+                    Util.safeStr2Dobule(binding.spinnerAperture.text.toString()),
+                    Util.stringToDoubleShutterSpeed(binding.spinnerSs.text.toString()),
                     expCompensation, ttlLightMeter,
-                    edit_location.text.toString(),
+                    binding.editLocation.text.toString(),
                     latitude, longitude,
-                    edit_memo.text.toString(),
+                    binding.editMemo.text.toString(),
                     accessories, JSONArray(supplementalImages).toString(),
                     favorite)
         }
@@ -119,14 +130,14 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     private val expCompensation: Double
         get() {
-            val bd = BigDecimal((seek_exp_compensation.progress - evGrainSize * evWidth).toDouble() / evGrainSize.toDouble())
+            val bd = BigDecimal((binding.seekExpCompensation.progress - evGrainSize * evWidth).toDouble() / evGrainSize.toDouble())
             val bd2 = bd.setScale(1, BigDecimal.ROUND_DOWN)
             return java.lang.Double.parseDouble(bd2.toPlainString())
         }
 
     private val ttlLightMeter: Double
         get() {
-            val bd3 = BigDecimal((seek_ttl_light_meter.progress - evGrainSize * evWidth).toDouble() / evGrainSize.toDouble())
+            val bd3 = BigDecimal((binding.seekTtlLightMeter.progress - evGrainSize * evWidth).toDouble() / evGrainSize.toDouble())
             val bd4 = bd3.setScale(1, BigDecimal.ROUND_DOWN)
             return java.lang.Double.parseDouble(bd4.toPlainString())
         }
@@ -134,26 +145,26 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private val photoText: String
         get() {
             val sb = StringBuilder()
-            sb.append(getString(R.string.label_date) + ": " + edit_date.text.toString() + "\n")
-            if (spinner_lens.position >= 0) {
-                val l = lenslist[spinner_lens.position]
+            sb.append(getString(R.string.label_date) + ": " + binding.editDate.text.toString() + "\n")
+            if (binding.spinnerLens.position >= 0) {
+                val l = lenslist[binding.spinnerLens.position]
                 sb.append(getString(R.string.label_lens_name) + ": " + l.manufacturer + " " + l.modelName + "\n")
-                if (spinner_aperture.text.isNotEmpty())
-                    sb.append(getString(R.string.label_aperture) + ": " + spinner_aperture.text + "\n")
-                if (spinner_ss.text.isNotEmpty())
-                    sb.append(getString(R.string.label_shutter_speed) + ": " + spinner_ss.text.toString() + "\n")
+                if (binding.spinnerAperture.text.isNotEmpty())
+                    sb.append(getString(R.string.label_aperture) + ": " + binding.spinnerAperture.text + "\n")
+                if (binding.spinnerSs.text.isNotEmpty())
+                    sb.append(getString(R.string.label_shutter_speed) + ": " + binding.spinnerSs.text.toString() + "\n")
                 if (expCompensation != 0.0)
                     sb.append(getString(R.string.label_exposure_compensation) + ": " + expCompensation + "\n")
                 if (ttlLightMeter != 0.0)
                     sb.append(getString(R.string.label_ttl_light_meter) + ": " + ttlLightMeter + "\n")
-                if (edit_location.text?.isNotEmpty() == true)
-                    sb.append(getString(R.string.label_location) + ": " + edit_location.text.toString() + "\n")
+                if (binding.editLocation.text?.isNotEmpty() == true)
+                    sb.append(getString(R.string.label_location) + ": " + binding.editLocation.text.toString() + "\n")
                 if (latitude != 999.0 && longitude != 999.0)
                     sb.append(getString(R.string.label_coordinate) + ": " + java.lang.Double.toString(latitude) + ", " + java.lang.Double.toString(longitude) + "\n")
-                if (edit_memo.text?.isNotEmpty() == true)
-                    sb.append(getString(R.string.label_memo) + ": " + edit_memo.text.toString() + "\n")
-                if (edit_accessories.text?.isNotEmpty() == true)
-                    sb.append(getString(R.string.label_accessories) + ": " + edit_accessories.text.toString() + "\n")
+                if (binding.editMemo.text?.isNotEmpty() == true)
+                    sb.append(getString(R.string.label_memo) + ": " + binding.editMemo.text.toString() + "\n")
+                if (binding.editAccessories.text?.isNotEmpty() == true)
+                    sb.append(getString(R.string.label_accessories) + ": " + binding.editAccessories.text.toString() + "\n")
             }
             return sb.toString()
         }
@@ -162,9 +173,9 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         if (filmroll!!.camera.type == 1) { //問答無用。selectedId等は完全無視
             lenslist = ArrayList()
             lenslist.add(dao.getLens(dao.getFixedLensIdByBody(filmroll!!.camera.id))!!)
-            spinner_lens.isEnabled = false
-            btn_mount_adapters.isEnabled = false
-            btn_mount_adapters.setImageResource(R.drawable.ic_mount_adapter_disabled)
+            binding.spinnerLens.isEnabled = false
+            binding.btnMountAdapters.isEnabled = false
+            binding.btnMountAdapters.setImageResource(R.drawable.ic_mount_adapter_disabled)
         } else {
             lenslist = dao.getLensesByMount(filmroll!!.camera.mount)
             for (s in getSuggestListSubPref("mount_adapters", filmroll!!.camera.mount)) {
@@ -176,17 +187,17 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
         lensadapter = LensAdapter(this, android.R.layout.simple_spinner_item, lenslist)
         lensadapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner_lens.setAdapter(lensadapter)
+        binding.spinnerLens.setAdapter(lensadapter)
         if (lensadapter!!.count == 0) {
-            spinner_lens.error = getString(R.string.error_nolens).replace("%s", filmroll!!.camera.mount)
+            binding.spinnerLens.error = getString(R.string.error_nolens).replace("%s", filmroll!!.camera.mount)
         }else{
-            spinner_lens.error = null
+            binding.spinnerLens.error = null
         }
 
         if (lens != null) {
-            spinner_lens.position = lensadapter!!.getPosition(lens.id)
+            binding.spinnerLens.position = lensadapter!!.getPosition(lens.id)
         } else if (filmroll!!.camera.type == 1) {
-            spinner_lens.position = 0
+            binding.spinnerLens.position = 0
         }
     }
 
@@ -201,7 +212,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             sb.append(a!!.name)
             first = false
         }
-        edit_accessories.setText(sb.toString())
+        binding.editAccessories.setText(sb.toString())
     }
 
     protected fun loadTags(id: Int, dao: TrisquelDao){
@@ -228,8 +239,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
         this.evGrainSize = filmroll!!.camera.evGrainSize
         this.evWidth = filmroll!!.camera.evWidth
-        seek_exp_compensation.max = evWidth * 2 * evGrainSize
-        seek_ttl_light_meter.max = evWidth * 2 * evGrainSize
+        binding.seekExpCompensation.max = evWidth * 2 * evGrainSize
+        binding.seekTtlLightMeter.max = evWidth * 2 * evGrainSize
 
         val ssArray = when (filmroll!!.camera.shutterSpeedGrainSize) {
             1 -> resources.getStringArray(R.array.shutter_speeds_one)
@@ -243,10 +254,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
         ssAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, ssArray)
         ssAdapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner_ss.setAdapter<ArrayAdapter<String>>(ssAdapter)
+        binding.spinnerSs.setAdapter<ArrayAdapter<String>>(ssAdapter)
         // 写ルンですを考慮
         if (ssAdapter!!.count == 1) {
-            spinner_ss.position = 0
+            binding.spinnerSs.position = 0
         }
 
         if (photo != null) {
@@ -257,23 +268,23 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             lensid = photo!!.lensid
             lens = dao.getLens(lensid)
             if(photo!!.date.isNotEmpty())
-                edit_date.setText(photo!!.date)
+                binding.editDate.setText(photo!!.date)
             setLatLng(photo!!.latitude, photo!!.longitude)
             setAccessories(dao, photo!!.accessories)
-            if (photo!!.aperture > 0) spinner_aperture.setText(Util.doubleToStringShutterSpeed(photo!!.aperture))
-            if (photo!!.shutterSpeed > 0) spinner_ss.setText(Util.doubleToStringShutterSpeed(photo!!.shutterSpeed))
-            edit_location.setText(photo!!.location)
-            edit_memo.setText(photo!!.memo)
+            if (photo!!.aperture > 0) binding.spinnerAperture.setText(Util.doubleToStringShutterSpeed(photo!!.aperture))
+            if (photo!!.shutterSpeed > 0) binding.spinnerSs.setText(Util.doubleToStringShutterSpeed(photo!!.shutterSpeed))
+            binding.editLocation.setText(photo!!.location)
+            binding.editMemo.setText(photo!!.memo)
 
-            seek_exp_compensation.progress = ((evWidth + photo!!.expCompensation) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
-            label_ev_corr_amount.text = toHumanReadableCompensationAmount((photo!!.expCompensation * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
-            seek_ttl_light_meter.progress = ((evWidth + photo!!.ttlLightMeter) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
-            label_ttl_light_meter.text = toHumanReadableCompensationAmount((photo!!.ttlLightMeter * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
+            binding.seekExpCompensation.progress = ((evWidth + photo!!.expCompensation) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
+            binding.labelEvCorrAmount.text = toHumanReadableCompensationAmount((photo!!.expCompensation * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
+            binding.seekTtlLightMeter.progress = ((evWidth + photo!!.ttlLightMeter) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
+            binding.labelTtlLightMeter.text = toHumanReadableCompensationAmount((photo!!.ttlLightMeter * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
 
             refreshFocalLength(lens)
             if(lens != null){
-                seek_focal_length.progress = (photo!!.focalLength - lens!!.focalLengthRange.first).toInt()
-                label_focal_length.text = photo!!.focalLength.toString() + "mm"
+                binding.seekFocalLength.progress = (photo!!.focalLength - lens!!.focalLengthRange.first).toInt()
+                binding.labelFocalLength.text = photo!!.focalLength.toString() + "mm"
             }
 
             favorite = photo!!.favorite
@@ -285,27 +296,27 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }else if(savedInstanceState != null){ //復帰データあり
             lensid = savedInstanceState.getInt("lensid")
             lens = dao.getLens(lensid)
-            edit_date.setText(savedInstanceState.getString("date"))
+            binding.editDate.setText(savedInstanceState.getString("date"))
             setLatLng(savedInstanceState.getDouble("latitude"), savedInstanceState.getDouble("longitude"))
             setAccessories(dao, savedInstanceState.getIntegerArrayList("selected_accessories"))
-            spinner_ss.setText(savedInstanceState.getString("shutter_speed"))
-            spinner_aperture.setText(savedInstanceState.getString("aperture"))
-            edit_location.setText(savedInstanceState.getString("location"))
-            edit_memo.setText(savedInstanceState.getString("memo"))
+            binding.spinnerSs.setText(savedInstanceState.getString("shutter_speed"))
+            binding.spinnerAperture.setText(savedInstanceState.getString("aperture"))
+            binding.editLocation.setText(savedInstanceState.getString("location"))
+            binding.editMemo.setText(savedInstanceState.getString("memo"))
 
             val exp_compensation = savedInstanceState.getDouble("exp_compensation")
-            seek_exp_compensation.progress = ((evWidth + exp_compensation) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
-            label_ev_corr_amount.text = toHumanReadableCompensationAmount((exp_compensation * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
+            binding.seekExpCompensation.progress = ((evWidth + exp_compensation) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
+            binding.labelEvCorrAmount.text = toHumanReadableCompensationAmount((exp_compensation * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
 
             val ttl_light_meter = savedInstanceState.getDouble("ttl_light_meter")
-            seek_ttl_light_meter.progress = ((evWidth + ttl_light_meter) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
-            label_ttl_light_meter.text = toHumanReadableCompensationAmount((ttl_light_meter * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
+            binding.seekTtlLightMeter.progress = ((evWidth + ttl_light_meter) * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt()
+            binding.labelTtlLightMeter.text = toHumanReadableCompensationAmount((ttl_light_meter * evGrainSize).toBigDecimal().setScale(0, BigDecimal.ROUND_HALF_UP).toInt())
 
             refreshFocalLength(lens)
             if(lens != null) {
                 val focalLength = savedInstanceState.getDouble("focal_length")
-                seek_focal_length.progress = (focalLength - lens!!.focalLengthRange.first).toInt()
-                label_focal_length.text = focalLength.toString() + "mm"
+                binding.seekFocalLength.progress = (focalLength - lens!!.focalLengthRange.first).toInt()
+                binding.labelFocalLength.text = focalLength.toString() + "mm"
             }
 
             favorite = savedInstanceState.getBoolean("favorite")
@@ -320,10 +331,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             checkPermAndAppendSupplementalImages(savedInstanceState.getStringArrayList("suppimgs"))
         }else{ //未入力開きたて
             loadTags(-1, dao)
-            seek_exp_compensation.progress = evWidth * evGrainSize
-            label_ev_corr_amount.text = toHumanReadableCompensationAmount(0)
-            seek_ttl_light_meter.progress = evWidth * evGrainSize
-            label_ttl_light_meter.text = toHumanReadableCompensationAmount(0)
+            binding.seekExpCompensation.progress = evWidth * evGrainSize
+            binding.labelEvCorrAmount.text = toHumanReadableCompensationAmount(0)
+            binding.seekTtlLightMeter.progress = evWidth * evGrainSize
+            binding.labelTtlLightMeter.text = toHumanReadableCompensationAmount(0)
             if(filmroll!!.camera.type == 1){
                 lensid = dao.getFixedLensIdByBody(filmroll!!.camera.id)
             }else {
@@ -353,11 +364,11 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             lens = dao.getLens(lensid)
 
             refreshFocalLength(lens)
-            seek_focal_length.progress = 0
+            binding.seekFocalLength.progress = 0
 
             val calendar = Calendar.getInstance()
             val sdf = SimpleDateFormat("yyyy/MM/dd")
-            edit_date.setText(sdf.format(calendar.time))
+            binding.editDate.setText(sdf.format(calendar.time))
 
             setLatLng(999.0, 999.0)
         }
@@ -376,8 +387,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     protected fun setEventListeners() {
 
-        spinner_lens.setOnClickListener {
-            if(spinner_lens.adapter.count == 0){
+        binding.spinnerLens.setOnClickListener {
+            if(binding.spinnerLens.adapter.count == 0){
                 val fragment = YesNoDialogFragment.Builder()
                         .build(DIALOG_ASK_CREATE_LENS)
                 fragment.arguments?.putString("message", getString(R.string.msg_ask_create_lens))
@@ -387,8 +398,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
         }
 
-        val oldListener = spinner_lens.onItemClickListener // これやらないとgetPositionがおかしくなる
-        spinner_lens.onItemClickListener = AdapterView.OnItemClickListener { adapterView, view, i, l ->
+        val oldListener = binding.spinnerLens.onItemClickListener // これやらないとgetPositionがおかしくなる
+        binding.spinnerLens.onItemClickListener = AdapterView.OnItemClickListener { adapterView, view, i, l ->
             if(lens?.id != lenslist[i].id){
                 lens = lenslist[i]
                 lensid = lens!!.id
@@ -400,9 +411,9 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             oldListener.onItemClick(adapterView, view, i, l)
         }
 
-        edit_date.setOnClickListener { showDateDialogOnActivity() }
+        binding.editDate.setOnClickListener { showDateDialogOnActivity() }
 
-        edit_date.addTextChangedListener(object : TextWatcher {
+        binding.editDate.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -416,9 +427,9 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
         })
 
-        edit_accessories.setOnClickListener { showAccessoryDialogOnActivity() }
+        binding.editAccessories.setOnClickListener { showAccessoryDialogOnActivity() }
 
-        edit_accessories.addTextChangedListener(object : TextWatcher {
+        binding.editAccessories.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -432,7 +443,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
         })
 
-        spinner_aperture.addTextChangedListener(object : TextWatcher {
+        binding.spinnerAperture.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -446,7 +457,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
         })
-        spinner_ss.addTextChangedListener(object : TextWatcher {
+        binding.spinnerSs.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -461,9 +472,9 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
         })
 
-        seek_exp_compensation.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        binding.seekExpCompensation.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, i: Int, b: Boolean) {
-                label_ev_corr_amount.text = toHumanReadableCompensationAmount(i - evGrainSize * evWidth)
+                binding.labelEvCorrAmount.text = toHumanReadableCompensationAmount(i - evGrainSize * evWidth)
                 if(isResumed) isDirty = true
             }
 
@@ -475,9 +486,9 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
         })
-        seek_ttl_light_meter.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        binding.seekTtlLightMeter.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, i: Int, b: Boolean) {
-                label_ttl_light_meter.text = toHumanReadableCompensationAmount(i - evGrainSize * evWidth)
+                binding.labelTtlLightMeter.text = toHumanReadableCompensationAmount(i - evGrainSize * evWidth)
                 if(isResumed) isDirty = true
             }
 
@@ -489,9 +500,9 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
         })
-        seek_focal_length.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        binding.seekFocalLength.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, i: Int, b: Boolean) {
-                label_focal_length.text = java.lang.Double.toString(seek_focal_length.progress + focalLengthRange.first) + "mm"
+                binding.labelFocalLength.text = java.lang.Double.toString(binding.seekFocalLength.progress + focalLengthRange.first) + "mm"
                 if(isResumed) isDirty = true
             }
 
@@ -503,7 +514,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
         })
-        edit_location.addTextChangedListener(object : TextWatcher {
+        binding.editLocation.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -517,7 +528,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
         })
-        edit_memo.addTextChangedListener(object : TextWatcher {
+        binding.editMemo.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -531,7 +542,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
         })
-        btn_get_location.setOnClickListener {
+        binding.btnGetLocation.setOnClickListener {
             val intent = Intent(application, MapsActivity::class.java)
             if (latitude != 999.0 && longitude != 999.0) {
                 intent.putExtra("latitude", latitude)
@@ -539,7 +550,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
             startActivityForResult(intent, REQCODE_GET_LOCATION)
         }
-        btn_mount_adapters.setOnClickListener {
+        binding.btnMountAdapters.setOnClickListener {
             val fragment = CheckListDialogFragment.Builder()
                     .build(DIALOG_MOUNT_ADAPTERS)
             val dao = TrisquelDao(applicationContext)
@@ -569,41 +580,41 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             fragment.showOn(this@EditPhotoActivity, "dialog")
         }
 
-        button_add.isEnabled = false
-        button_add.setOnClickListener {
+        binding.buttonAdd.isEnabled = false
+        binding.buttonAdd.setOnClickListener {
             if(isResumed) isDirty = true
-            val label = edit_tagtext.text.toString()
+            val label = binding.editTagtext.text.toString()
             allTags.add(label)
             checkState.add(true)
             val chip = createNewChip(label)
             chip.isChecked = true
-            edit_tagtext.setText("")
+            binding.editTagtext.setText("")
         }
 
-        edit_tagtext!!.addTextChangedListener(object : TextWatcher {
+        binding.editTagtext.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable) {
-                button_add.isEnabled = !allTags.contains(edit_tagtext.text.toString()) && edit_tagtext.text.isNotEmpty()
+                binding.buttonAdd.isEnabled = !allTags.contains(binding.editTagtext.text.toString()) && binding.editTagtext.text.isNotEmpty()
             }
         })
     }
 
     protected fun canSave(): Boolean {
-        return spinner_lens.position >= 0
+        return binding.spinnerLens.position >= 0
     }
 
     protected fun refreshApertureAdapter(lens: LensSpec?) {
         apertureAdapter?.clear()
         if (lens != null) {
             apertureAdapter?.addAll(lens.fSteps.map { d -> d.toString() })
-            spinner_aperture.isEnabled = true
+            binding.spinnerAperture.isEnabled = true
         }
-        spinner_aperture.setAdapter(apertureAdapter)
+        binding.spinnerAperture.setAdapter(apertureAdapter)
 
         //写ルンですを考慮
         if (apertureAdapter!!.count == 1) {
-            spinner_aperture.position = 0
+            binding.spinnerAperture.position = 0
         }
     }
 
@@ -612,14 +623,14 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             null -> Pair(0.0, 0.0)
             else -> Util.getFocalLengthRangeFromStr(lens.focalLength)
         }
-        label_focal_length.text = focalLengthRange.first.toString() + "mm"
+        binding.labelFocalLength.text = focalLengthRange.first.toString() + "mm"
         if (primeLens(focalLengthRange)) {
-            seek_focal_length.visibility = View.GONE
+            binding.seekFocalLength.visibility = View.GONE
         } else {
-            seek_focal_length.visibility = View.VISIBLE
+            binding.seekFocalLength.visibility = View.VISIBLE
         }
-        seek_focal_length.max = (focalLengthRange.second - focalLengthRange.first).toInt() // API Level 26以降ならsetMinが使えるのだが…
-        seek_focal_length.progress = 0
+        binding.seekFocalLength.max = (focalLengthRange.second - focalLengthRange.first).toInt() // API Level 26以降ならsetMinが使えるのだが…
+        binding.seekFocalLength.progress = 0
     }
 
     protected fun getSuggestListSubPref(parentkey: String, subkey: String): ArrayList<String> {
@@ -705,7 +716,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }
 
     fun checkPermAndOpenImagePicker() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+        if (//ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
             return
@@ -716,11 +727,11 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     fun checkPermAndAppendSupplementalImages(paths: ArrayList<String>?) {
         if(paths == null) return
         if(paths.size == 0) return
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        /*if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             supplementalImagesToLoad = paths
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_LOADIMG)
             return
-        }
+        }*/
         appendSupplementalImages(paths)
     }
 
@@ -740,17 +751,18 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 if (isResumed) isDirty = true
             }
         }
-        chip_group.addView(newchip)
+        binding.chipGroup.addView(newchip)
         return newchip
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_edit_photo)
+        binding = ActivityEditPhotoBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         val actionBar = supportActionBar
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
-        imageButton.setOnClickListener {
+        binding.imageButton.setOnClickListener {
             checkPermAndOpenImagePicker()
         }
 
@@ -758,13 +770,13 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val theme = applicationContext.theme
         theme.resolveAttribute(R.attr.editTextColor, typedValue, true)
         val color = typedValue.data
-        label_images.setTextColor(color and 0x00ffffff or 0x44000000)
+        binding.labelImages.setTextColor(color and 0x00ffffff or 0x44000000)
 
-        edit_location.helperTextColor = R.color.common_google_signin_btn_text_light_default
+        binding.editLocation.helperTextColor = R.color.common_google_signin_btn_text_light_default
 
         apertureAdapter = ArrayAdapter(this, /* これでいいのか？ */
                 android.R.layout.simple_dropdown_item_1line)
-        spinner_aperture.isEnabled = false
+        binding.spinnerAperture.isEnabled = false
 
         val dao = TrisquelDao(applicationContext)
         dao.connection()
@@ -783,18 +795,18 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("isDirty", isDirty)
-        outState.putString("date", edit_date.text.toString())
+        outState.putString("date", binding.editDate.text.toString())
         outState.putDouble("latitude", latitude)
         outState.putDouble("longitude", longitude)
         outState.putInt("lensid", lensid)
         outState.putIntegerArrayList("selected_accessories", selectedAccessories)
-        outState.putString("aperture", spinner_aperture.text.toString())
-        outState.putDouble("focal_length", seek_focal_length.progress + focalLengthRange.first)
-        outState.putString("shutter_speed", spinner_ss.text.toString())
+        outState.putString("aperture", binding.spinnerAperture.text.toString())
+        outState.putDouble("focal_length", binding.seekFocalLength.progress + focalLengthRange.first)
+        outState.putString("shutter_speed", binding.spinnerSs.text.toString())
         outState.putDouble("exp_compensation", expCompensation)
         outState.putDouble("ttl_light_meter", ttlLightMeter)
-        outState.putString("location", edit_location.text.toString())
-        outState.putString("memo", edit_memo.text.toString())
+        outState.putString("location", binding.editLocation.text.toString())
+        outState.putString("memo", binding.editMemo.text.toString())
         outState.putStringArrayList("suppimgs", supplementalImages)
         outState.putBoolean("favorite", favorite)
         outState.putStringArrayList("alltags", allTags)
@@ -856,7 +868,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 c.set(Calendar.MONTH, month)
                 c.set(Calendar.DAY_OF_MONTH, day)
                 val sdf = SimpleDateFormat("yyyy/MM/dd")
-                edit_date.setText(sdf.format(c.time))
+                binding.editDate.setText(sdf.format(c.time))
             }
             DIALOG_SAVE_OR_DISCARD -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 setResult(Activity.RESULT_OK, resultData)
@@ -878,13 +890,13 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                         bundle!!.getStringArrayList("checked_items"))
                 val dao = TrisquelDao(applicationContext)
                 dao.connection()
-                val lens = when(spinner_lens.position){
+                val lens = when(binding.spinnerLens.position){
                     -1 -> null
-                    else -> dao.getLens(lenslist[spinner_lens.position].id)
+                    else -> dao.getLens(lenslist[binding.spinnerLens.position].id)
                 }
                 updateLensList(lens, dao)
                 dao.close()
-                spinner_lens.clearFocus() //こうしないとドロップダウンリストが更新されない…気がする。バグか？
+                binding.spinnerLens.clearFocus() //こうしないとドロップダウンリストが更新されない…気がする。バグか？
             }
             DIALOG_ACCESSORY -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val bundle = data.extras
@@ -986,17 +998,17 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         if (newlatitude == 999.0 || newlongitude == 999.0) {
             latitude = 999.0
             longitude = 999.0
-            edit_location.setHelperText(null)
-            edit_location.isHelperTextAlwaysShown = false
-            btn_get_location.setImageResource(R.drawable.ic_place_gray_24dp)
+            binding.editLocation.setHelperText(null)
+            binding.editLocation.isHelperTextAlwaysShown = false
+            binding.btnGetLocation.setImageResource(R.drawable.ic_place_gray_24dp)
         } else {
             latitude = newlatitude
             longitude = newlongitude
-            edit_location.setHelperText(
+            binding.editLocation.setHelperText(
                     getString(R.string.label_coordinate) +
                             ": " + java.lang.Double.toString(newlatitude) + ", " + java.lang.Double.toString(newlongitude))
-            edit_location.isHelperTextAlwaysShown = true
-            btn_get_location.setImageResource(R.drawable.ic_place_black_24dp)
+            binding.editLocation.isHelperTextAlwaysShown = true
+            binding.btnGetLocation.setImageResource(R.drawable.ic_place_black_24dp)
         }
     }
 
@@ -1061,7 +1073,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val scale = resources.displayMetrics.density
         val lp = LinearLayout.LayoutParams((150 * scale * w / h).toInt(), (150 * scale).toInt())
         lp.setMargins(0,0, 16, 0)
-        image_container.addView(imageView, image_container.childCount - 1, lp)
+        binding.imageContainer.addView(imageView, binding.imageContainer.childCount - 1, lp)
         imageView.path = path
         imageView.setOnCloseClickListener(object: View.OnClickListener{
             override fun onClick(view: View?): Unit {
@@ -1107,7 +1119,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 newlog = bundle.getDouble("longitude")
                 if (newlat != latitude || newlog != longitude) if(isResumed) isDirty = true
                 setLatLng(newlat, newlog)
-                edit_location.setText(bundle.getString("location"))
+                binding.editLocation.setText(bundle.getString("location"))
             } else if (resultCode == MapsActivity.RESULT_DELETE) {
                 if (999.0 != latitude || 999.0 != longitude) if(isResumed) isDirty = true
                 setLatLng(999.0, 999.0)
@@ -1132,7 +1144,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     l.id = dao.addLens(l).toInt()
                     updateLensList(l, dao)
                     dao.close()
-                    spinner_lens.clearFocus()
+                    binding.spinnerLens.clearFocus()
                     refreshApertureAdapter(l)
                     refreshFocalLength(l)
                     invalidateOptionsMenu()

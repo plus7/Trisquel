@@ -25,15 +25,13 @@ import org.json.JSONObject
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.collections.set
 
 class VersionUnmatchException : Exception()
 
 sealed class WrappedZipFile {
     data class JavaZipFile(val zf: java.util.zip.ZipFile): WrappedZipFile()
-    data class ApacheCCZipFile(val zf: org.apache.commons.compress.archivers.zip.ZipFile): WrappedZipFile()
+    data class ApacheCCZipFile(val zf: ZipFile): WrappedZipFile()
 }
 
 class ImportIntentService : IntentService {
@@ -294,7 +292,7 @@ class ImportIntentService : IntentService {
             return false
     }
 
-    fun getRealPathFromURI(contentUri: Uri): String? {
+    fun getRealPathFromURI(contentUri: Uri): String {
         var cursor: Cursor? = null
         var result = ""
         try {
@@ -414,16 +412,12 @@ class ImportIntentService : IntentService {
     fun importFromZip(uri: Uri, merge: Boolean): Int{
         var result = UNKNOWN
         var pfd: ParcelFileDescriptor? = null
-        val zipfile: WrappedZipFile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            //どうもここでval pfdとするとファイルディスクリプタがGCされてしまう？？？
-            pfd = contentResolver.openFileDescriptor(uri, "r")
-            if (pfd == null) throw FileNotFoundException(uri.toString())
-            val fis = FileInputStream(pfd.fileDescriptor)
-            WrappedZipFile.ApacheCCZipFile(ZipFile(fis.channel))
-        }else{
-            val path = uri.path
-            WrappedZipFile.JavaZipFile(java.util.zip.ZipFile(path))
-        }
+        //どうもここでval pfdとするとファイルディスクリプタがGCされてしまう？？？
+
+        pfd = contentResolver.openFileDescriptor(uri, "r")
+        if (pfd == null) throw FileNotFoundException(uri.toString())
+        val fis = FileInputStream(pfd.fileDescriptor)
+        val zipfile: WrappedZipFile = WrappedZipFile.ApacheCCZipFile(ZipFile(fis.channel))
 
         val dao = TrisquelDao(this)
         dao.connection()
@@ -509,9 +503,8 @@ class ImportIntentService : IntentService {
             //Log.d("ZipFile", e.toString())
         //} finally {
         //}
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            pfd?.close() //念のため最後にpfdを触るコードを入れてGCさせない（いいのかこれで？） ついでにクローズもしてみる
-        }
+        pfd.close() //念のため最後にpfdを触るコードを入れてGCさせない（いいのかこれで？） ついでにクローズもしてみる
+
 
         return result
     }
@@ -541,7 +534,7 @@ class ImportIntentService : IntentService {
                 var notification = Notification()
                 val i = Intent(applicationContext, MainActivity::class.java)
                 val pi = PendingIntent.getActivity(this, 0, i,
-                        PendingIntent.FLAG_CANCEL_CURRENT)
+                    PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
                 val builder = NotificationCompat.Builder(this, channelId)
 
@@ -590,7 +583,7 @@ class ImportIntentService : IntentService {
                         Toast.makeText(this, "Import from " + uri + " completed", Toast.LENGTH_LONG).show()
                     })
                     val i2 = Intent(applicationContext, MainActivity::class.java)
-                    val pi2 = PendingIntent.getActivity(this, 0, i2, 0)
+                    val pi2 = PendingIntent.getActivity(this, 0, i2, PendingIntent.FLAG_IMMUTABLE)
 
                     val builder2 = NotificationCompat.Builder(this, channelId)
 

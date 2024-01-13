@@ -1,7 +1,12 @@
 package net.tnose.app.trisquel
 
 import android.R
-import android.app.*
+import android.app.IntentService
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationChannelGroup
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -14,8 +19,11 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.*
-import java.util.*
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.IOException
+import java.io.OutputStream
+import java.io.OutputStreamWriter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -265,7 +273,7 @@ class ExportIntentService : IntentService{
                 var notification = Notification()
                 val i = Intent(applicationContext, MainActivity::class.java)
                 val pi = PendingIntent.getActivity(this, 0, i,
-                        PendingIntent.FLAG_CANCEL_CURRENT)
+                    PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
                 val builder = NotificationCompat.Builder(this, channelId)
 
@@ -302,7 +310,7 @@ class ExportIntentService : IntentService{
                 } else {
                     handler?.post(Runnable {
                         val i2 = Intent(applicationContext, MainActivity::class.java)
-                        val pi = PendingIntent.getActivity(this, 0, i2, 0)
+                        val pi = PendingIntent.getActivity(this, 0, i2, PendingIntent.FLAG_IMMUTABLE)
 
                         val builder = NotificationCompat.Builder(this, channelId)
 

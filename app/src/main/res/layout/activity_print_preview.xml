@@ -20,6 +20,6 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <include layout="@layout/content_print_preview" />
+    <include android:id="@+id/include_content_print_preview" layout="@layout/content_print_preview" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

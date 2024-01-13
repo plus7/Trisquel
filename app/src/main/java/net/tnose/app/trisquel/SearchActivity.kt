@@ -6,6 +6,7 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.Toast
@@ -14,7 +15,7 @@ import androidx.core.app.ActivityCompat
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
-import java.util.*
+import java.util.Arrays
 
 // 実装がEditPhotoListActivityなどから丸コピ状態＆微妙に違うところがあるのが気に食わないが、仕方がない
 class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {

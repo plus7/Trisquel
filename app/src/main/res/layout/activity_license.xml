@@ -20,6 +20,6 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <include layout="@layout/content_license" />
+    <include android:id="@+id/include_content_license" layout="@layout/content_license" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

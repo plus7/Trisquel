@@ -13,11 +13,10 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.android.synthetic.main.activity_edit_film_roll.*
+import net.tnose.app.trisquel.databinding.ActivityEditFilmRollBinding
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import java.util.*
 import java.util.regex.Pattern
 
 class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
@@ -29,19 +28,20 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     private var cadapter: CameraAdapter? = null
     private var isResumed: Boolean = false
     private var isDirty: Boolean = false
+    private lateinit var binding: ActivityEditFilmRollBinding
 
     val data: Intent
         get() {
             val data = Intent()
             data.putExtra("id", id)
-            data.putExtra("name", edit_name!!.text.toString())
+            data.putExtra("name", binding.editName.text.toString())
             data.putExtra("created", created)
-            data.putExtra("camera", cameralist!![spinner_camera!!.position].id)
-            data.putExtra("manufacturer", edit_manufacturer!!.text.toString())
-            data.putExtra("brand", edit_brand!!.text.toString())
+            data.putExtra("camera", cameralist!![binding.spinnerCamera.position].id)
+            data.putExtra("manufacturer", binding.editManufacturer.text.toString())
+            data.putExtra("brand", binding.editBrand.text.toString())
             var iso: Int
             try {
-                iso = Integer.parseInt(edit_iso!!.text.toString())
+                iso = Integer.parseInt(binding.editIso.text.toString())
             } catch (e: NumberFormatException) {
                 iso = 0
             }
@@ -60,37 +60,37 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         if(id >= 0 && savedInstanceState == null) { //既存データを開きたて
             val f = dao.getFilmRoll(id)
             this.created = Util.dateToStringUTC(f!!.created)
-            edit_name!!.setText(f.name)
+            binding.editName.setText(f.name)
             if (f.camera.id > 0)
-                spinner_camera!!.position = cadapter!!.getPosition(f.camera.id)
-            edit_manufacturer!!.setText(f.manufacturer)
-            edit_brand!!.setText(f.brand)
+                binding.spinnerCamera.position = cadapter!!.getPosition(f.camera.id)
+            binding.editManufacturer.setText(f.manufacturer)
+            binding.editBrand.setText(f.brand)
             if (f.iso > 0)
-                edit_iso!!.setText(Integer.toString(f.iso))
+                binding.editIso.setText(Integer.toString(f.iso))
         }else if(savedInstanceState != null){ //復帰データあり
             this.created = savedInstanceState.getString("created")
-            edit_name!!.setText(savedInstanceState.getString("name"))
-            spinner_camera!!.position = savedInstanceState.getInt("camera_position")
-            edit_manufacturer!!.setText(savedInstanceState.getString("manufacturer"))
-            edit_brand!!.setText(savedInstanceState.getString("brand"))
-            edit_iso!!.setText(savedInstanceState.getString("iso"))
+            binding.editName.setText(savedInstanceState.getString("name"))
+            binding.spinnerCamera.position = savedInstanceState.getInt("camera_position")
+            binding.editManufacturer.setText(savedInstanceState.getString("manufacturer"))
+            binding.editBrand.setText(savedInstanceState.getString("brand"))
+            binding.editIso.setText(savedInstanceState.getString("iso"))
         }else{ //新規データ開きたて
             val cameraid = data.getIntExtra("default_camera", -1)
             if (cameraid != -1)
-                spinner_camera!!.position = cadapter!!.getPosition(cameraid)
+                binding.spinnerCamera.position = cadapter!!.getPosition(cameraid)
 
             val film_manufacturer = data.getStringExtra("default_manufacturer") ?: ""
             if (film_manufacturer.isNotEmpty())
-                edit_manufacturer!!.setText(film_manufacturer)
+                binding.editManufacturer.setText(film_manufacturer)
 
             val film_brand = data.getStringExtra("default_brand") ?: ""
             if (film_brand.isNotEmpty())
-                edit_brand!!.setText(film_brand)
+                binding.editBrand.setText(film_brand)
         }
     }
 
     protected fun setEventListeners() {
-        edit_name!!.addTextChangedListener(object : TextWatcher {
+        binding.editName.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -104,15 +104,15 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                 if(isResumed) isDirty = true
             }
         })
-        val oldListener = spinner_camera!!.onItemClickListener// これやらないとgetPositionがおかしくなる
-        spinner_camera!!.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+        val oldListener = binding.spinnerCamera.onItemClickListener// これやらないとgetPositionがおかしくなる
+        binding.spinnerCamera.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             invalidateOptionsMenu()
             if(isResumed) isDirty = true
             oldListener.onItemClick(parent, view, position, id)
         }
 
-        spinner_camera.setOnClickListener {
-            if(spinner_camera.adapter.count == 0){
+        binding.spinnerCamera.setOnClickListener {
+            if(binding.spinnerCamera.adapter.count == 0){
                 val fragment = YesNoDialogFragment.Builder()
                         .build(REQCODE_ASK_CREATE_CAMERA)
                 fragment.arguments?.putString("message", getString(R.string.msg_ask_create_camera))
@@ -122,7 +122,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             }
         }
 
-        edit_manufacturer!!.addTextChangedListener(object : TextWatcher {
+        binding.editManufacturer.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -135,13 +135,13 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                 invalidateOptionsMenu()
                 if(isResumed) isDirty = true
                 val brand_adapter = getSuggestListSubPref("film_brand",
-                        edit_manufacturer!!.text.toString(),
+                        binding.editManufacturer.text.toString(),
                         android.R.layout.simple_dropdown_item_1line)
-                edit_brand!!.setAdapter(brand_adapter)
+                binding.editBrand.setAdapter(brand_adapter)
             }
         })
 
-        edit_brand!!.addTextChangedListener(object : TextWatcher {
+        binding.editBrand.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -156,7 +156,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             }
         })
 
-        edit_iso!!.addTextChangedListener(object : TextWatcher {
+        binding.editIso.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -173,7 +173,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     }
 
     protected fun canSave(): Boolean {
-        return edit_name!!.text.toString().length > 0 && spinner_camera!!.position >= 0
+        return binding.editName.text.toString().length > 0 && binding.spinnerCamera.position >= 0
     }
 
     override fun onResume() {
@@ -183,7 +183,8 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_edit_film_roll)
+        binding = ActivityEditFilmRollBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         val actionBar = supportActionBar
         actionBar!!.setDisplayHomeAsUpEnabled(true)
@@ -196,18 +197,18 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         val manufacturer_adapter = getSuggestListPref("film_manufacturer",
                 R.array.film_manufacturer,
                 android.R.layout.simple_dropdown_item_1line)
-        edit_manufacturer!!.setAdapter(manufacturer_adapter)
+        binding.editManufacturer.setAdapter(manufacturer_adapter)
 
         val iso_adapter = ArrayAdapter.createFromResource(this, R.array.film_iso, android.R.layout.simple_dropdown_item_1line)
 
-        edit_iso!!.setAdapter(iso_adapter)
-        edit_iso!!.onFocusChangeListener = View.OnFocusChangeListener { view, b ->
-            if (b && edit_iso!!.text.toString().isEmpty()) {
+        binding.editIso.setAdapter(iso_adapter)
+        binding.editIso.onFocusChangeListener = View.OnFocusChangeListener { view, b ->
+            if (b && binding.editIso.text.toString().isEmpty()) {
                 val zoom = Pattern.compile(".*?(\\d++).*")
-                val m = zoom.matcher(edit_brand!!.text.toString())
+                val m = zoom.matcher(binding.editBrand.text.toString())
                 if (m.find()) {
                     val suggestedISO = m.group(1)
-                    edit_iso!!.setText(suggestedISO)
+                    binding.editIso.setText(suggestedISO)
                 }
             }
         }
@@ -217,9 +218,9 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         dao.close()
 
         val brand_adapter = getSuggestListSubPref("film_brand",
-                edit_manufacturer!!.text.toString(),
+                binding.editManufacturer.text.toString(),
                 android.R.layout.simple_dropdown_item_1line)
-        edit_brand!!.setAdapter(brand_adapter)
+        binding.editBrand.setAdapter(brand_adapter)
 
         setEventListeners()
 
@@ -234,25 +235,25 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         cameralist = dao.allCameras
         cadapter = CameraAdapter(this, android.R.layout.simple_spinner_item, cameralist!!)
         cadapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner_camera!!.setAdapter<CameraAdapter>(cadapter)
+        binding.spinnerCamera.setAdapter<CameraAdapter>(cadapter)
         if(cameralist!!.size == 0){
-            spinner_camera.error = getString(R.string.error_nocamera)
+            binding.spinnerCamera.error = getString(R.string.error_nocamera)
         }else{
-            spinner_camera.error = null
+            binding.spinnerCamera.error = null
             if(cameralist!!.size == 1){
-                spinner_camera.position = 0
+                binding.spinnerCamera.position = 0
             }
         }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("isDirty", isDirty)
-        outState.putInt("camera_position", spinner_camera!!.position)
+        outState.putInt("camera_position", binding.spinnerCamera.position)
         outState.putString("created", this.created)
-        outState.putString("name", edit_name!!.text.toString())
-        outState.putString("manufacturer", edit_manufacturer!!.text.toString())
-        outState.putString("brand", edit_brand!!.text.toString())
-        outState.putString("iso", edit_iso!!.text.toString())
+        outState.putString("name", binding.editName.text.toString())
+        outState.putString("manufacturer", binding.editManufacturer.text.toString())
+        outState.putString("brand", binding.editBrand.text.toString())
+        outState.putString("iso", binding.editIso.text.toString())
         super.onSaveInstanceState(outState)
     }
 
@@ -371,10 +372,10 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val resultData = this.data
                 saveSuggestListPref("film_manufacturer",
-                        R.array.film_manufacturer, edit_manufacturer!!.text.toString())
+                        R.array.film_manufacturer, binding.editManufacturer.text.toString())
                 saveSuggestListSubPref("film_brand",
-                        edit_manufacturer!!.text.toString(),
-                        edit_brand!!.text.toString())
+                        binding.editManufacturer.text.toString(),
+                        binding.editBrand.text.toString())
                 setResult(Activity.RESULT_OK, resultData)
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
@@ -411,7 +412,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                     c.id = dao.addCamera(c).toInt()
                     updateCameraList(dao)
                     dao.close()
-                    spinner_camera.clearFocus()
+                    binding.spinnerCamera.clearFocus()
                     invalidateOptionsMenu()
                 }
             }
@@ -445,10 +446,10 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             }
             R.id.menu_save -> {
                 saveSuggestListPref("film_manufacturer",
-                        R.array.film_manufacturer, edit_manufacturer!!.text.toString())
+                        R.array.film_manufacturer, binding.editManufacturer.text.toString())
                 saveSuggestListSubPref("film_brand",
-                        edit_manufacturer!!.text.toString(),
-                        edit_brand!!.text.toString())
+                        binding.editManufacturer.text.toString(),
+                        binding.editBrand.text.toString())
                 setResult(Activity.RESULT_OK, data)
                 finish()
                 return true

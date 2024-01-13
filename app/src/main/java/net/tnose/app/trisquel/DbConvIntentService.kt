@@ -1,7 +1,12 @@
 package net.tnose.app.trisquel
 
 import android.R
-import android.app.*
+import android.app.IntentService
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationChannelGroup
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
@@ -16,7 +21,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
 
 class DbConvIntentService : IntentService {
     companion object {
@@ -132,7 +137,7 @@ class DbConvIntentService : IntentService {
     override fun onHandleIntent(intent: Intent?) {
         if (intent == null) return
         when(intent.action){
-            DbConvIntentService.ACTION_START_DBCONV -> {
+            ACTION_START_DBCONV -> {
                 val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 // グループ生成
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -154,7 +159,7 @@ class DbConvIntentService : IntentService {
                 var notification = Notification()
                 val i = Intent(applicationContext, MainActivity::class.java)
                 val pi = PendingIntent.getActivity(this, 0, i,
-                        PendingIntent.FLAG_CANCEL_CURRENT)
+                    PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
                 val builder = NotificationCompat.Builder(this, channelId)
 
@@ -189,7 +194,7 @@ class DbConvIntentService : IntentService {
                 } else {
                     handler?.post(Runnable {
                         val i2 = Intent(applicationContext, MainActivity::class.java)
-                        val pi = PendingIntent.getActivity(this, 0, i2, 0)
+                        val pi = PendingIntent.getActivity(this, 0, i2, PendingIntent.FLAG_IMMUTABLE)
 
                         val builder = NotificationCompat.Builder(this, channelId)
 

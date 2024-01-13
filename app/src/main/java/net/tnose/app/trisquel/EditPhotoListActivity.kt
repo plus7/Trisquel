@@ -2,9 +2,14 @@ package net.tnose.app.trisquel
 
 import android.Manifest
 import android.app.Activity
-import android.content.*
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -16,7 +21,8 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
-import java.util.*
+import java.util.Arrays
+import java.util.Date
 
 class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {
     internal val REQCODE_ADD_PHOTO = 100

@@ -31,9 +31,6 @@ import androidx.core.view.GravityCompat
 import androidx.lifecycle.Lifecycle
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
-import me.rosuh.filepicker.bean.FileItemBeanImpl
-import me.rosuh.filepicker.config.AbstractFileFilter
-import me.rosuh.filepicker.config.FilePickerManager
 import net.tnose.app.trisquel.dummy.DummyContent
 import org.json.JSONArray
 import org.json.JSONObject
@@ -817,13 +814,7 @@ class MainActivity : AppCompatActivity(),
             }
             REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP,
             REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> if (resultCode == Activity.RESULT_OK) {
-                val uri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    data.data
-                } else {
-                    val list = FilePickerManager.obtainData()
-                    Uri.fromFile(File(list.first()))
-                }
-
+                val uri: Uri? = data.data
                 if (uri != null) {
                     Log.d("ZipFile", uri.toString())
 
@@ -842,12 +833,7 @@ class MainActivity : AppCompatActivity(),
                 }
             }
             REQCODE_DBFILE_CHOSEN_FOR_REPLDB -> if (resultCode == Activity.RESULT_OK) {
-                val uri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    data.data
-                } else {
-                    val list = FilePickerManager.obtainData()
-                    Uri.fromFile(File(list.first()))
-                }
+                val uri: Uri? = data.data
                 Log.d("DBFile", uri.toString())
                 val dbpath = this.getDatabasePath("trisquel.db")
                 if (uri != null) {
@@ -1214,35 +1200,6 @@ class MainActivity : AppCompatActivity(),
         startActivityForResult(chooserIntent, reqcode)
     }
 
-    fun importDBDialogUntilM(mode: Int){
-        val suffix = when(mode){
-            0, 1 -> ".zip"
-            else -> ".db"
-        }
-
-        val reqcode =
-                when(mode){
-                    0 -> REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP
-                    1 -> REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP
-                    else -> REQCODE_DBFILE_CHOSEN_FOR_REPLDB
-                }
-
-        FilePickerManager
-                .from(this@MainActivity)
-                .enableSingleChoice()
-                .setTheme(R.style.FilePickerThemeReply)
-                .setText("", "", 0, getString(R.string.word_select), 0, "")
-                .filter(object : AbstractFileFilter() {
-                    override fun doFilter(listData: ArrayList<FileItemBeanImpl>): ArrayList<FileItemBeanImpl> {
-                        return ArrayList(listData.filter { item ->
-                            item.isDir || item.fileName.endsWith(suffix)
-                        })
-                    }
-                })
-                .forResult(reqcode)
-        //startActivityForResult(intent, reqcode)
-    }
-
     fun importDBDialogSinceN(mode: Int) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
         intent.addCategory(Intent.CATEGORY_OPENABLE)
@@ -1261,11 +1218,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     fun importDBDialog(mode: Int) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            importDBDialogSinceN(mode)
-        }else{
-            importDBDialogUntilM(mode)
-        }
+        importDBDialogSinceN(mode)
     }
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {

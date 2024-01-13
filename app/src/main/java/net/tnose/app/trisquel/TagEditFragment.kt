@@ -3,15 +3,15 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import com.google.android.material.chip.Chip
-import androidx.fragment.app.Fragment
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import kotlinx.android.synthetic.main.fragment_tag_edit.*
+import androidx.fragment.app.Fragment
+import com.google.android.material.chip.Chip
+import net.tnose.app.trisquel.databinding.FragmentTagEditBinding
 
 
 // TODO: Rename parameter arguments, choose names that match
@@ -28,13 +28,15 @@ private const val ARG_PARAM2 = "param2"
  * create an instance of this fragment.
  *
  */
-class TagEditFragment : androidx.fragment.app.Fragment() {
+class TagEditFragment : Fragment() {
     // TODO: Rename and change types of parameters
     private var mFilmRollId: Int = -1
     private var mId: Int = -1
     private var listener: OnFragmentInteractionListener? = null
     private var mAllTags: ArrayList<String> = arrayListOf()
     private var mCheckState: ArrayList<Boolean> = arrayListOf()
+    private var _binding: FragmentTagEditBinding? = null
+    private val binding get() = _binding!!
     // SoAになってしまっている
     val allTags: ArrayList<String>
         get(){
@@ -55,9 +57,14 @@ class TagEditFragment : androidx.fragment.app.Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+                              savedInstanceState: Bundle?): View {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_tag_edit, container, false)
+        _binding = FragmentTagEditBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     fun createNewChip(label: String): Chip {
@@ -76,25 +83,25 @@ class TagEditFragment : androidx.fragment.app.Fragment() {
                 if (isResumed) isDirty = true
             }
         }
-        chip_group.addView(newchip)
+        binding.chipGroup.addView(newchip)
         return newchip
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
 
-        button_add.isEnabled = false
-        button_add.setOnClickListener {
+        binding.buttonAdd.isEnabled = false
+        binding.buttonAdd.setOnClickListener {
             if(isResumed) isDirty = true
-            val label = edit_tagtext.text.toString()
+            val label = binding.editTagtext.text.toString()
             mAllTags.add(label)
             mCheckState.add(true)
             val chip = createNewChip(label)
             chip.isChecked = true
-            edit_tagtext.setText("")
+            binding.editTagtext.setText("")
         }
 
-        edit_tagtext!!.addTextChangedListener(object : TextWatcher {
+        binding.editTagtext.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
 
             }
@@ -104,7 +111,7 @@ class TagEditFragment : androidx.fragment.app.Fragment() {
             }
 
             override fun afterTextChanged(s: Editable) {
-                button_add.isEnabled = !mAllTags.contains(edit_tagtext.text.toString()) && edit_tagtext.text.isNotEmpty()
+                binding.buttonAdd.isEnabled = !mAllTags.contains(binding.editTagtext.text.toString()) && binding.editTagtext.text.isNotEmpty()
             }
         })
 

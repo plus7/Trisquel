@@ -10,7 +10,7 @@ import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import it.sephiroth.android.library.imagezoom.ImageViewTouchBase
-import kotlinx.android.synthetic.main.fragment_gallery_image.view.*
+import net.tnose.app.trisquel.databinding.FragmentGalleryImageBinding
 import java.io.File
 
 
@@ -28,12 +28,13 @@ private const val ARG_PARAM_SUPPIMGIDX = "suppImgIdx"
  * create an instance of this fragment.
  *
  */
-class GalleryImageFragment : androidx.fragment.app.Fragment() {
+class GalleryImageFragment : Fragment() {
     // TODO: Rename and change types of parameters
     private var photoId: Int? = 0
     private var suppImgIdx: Int? = 0
     private var listener: OnFragmentInteractionListener? = null
-
+    private var _binding: FragmentGalleryImageBinding? = null
+    private val binding get() = _binding!!
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
@@ -43,7 +44,7 @@ class GalleryImageFragment : androidx.fragment.app.Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+                              savedInstanceState: Bundle?): View {
         // Inflate the layout for this fragment
 
         val dao = TrisquelDao(this.context)
@@ -51,8 +52,10 @@ class GalleryImageFragment : androidx.fragment.app.Fragment() {
         val p = dao.getPhoto(photoId!!)
         dao.close()
 
-        val view = inflater.inflate(R.layout.fragment_gallery_image, container, false)
-        val imageView = view.imageView
+        _binding = FragmentGalleryImageBinding.inflate(inflater, container, false)
+
+        //val view = inflater.inflate(R.layout.fragment_gallery_image, container, false)
+        val imageView = binding.imageView
         imageView.displayType = ImageViewTouchBase.DisplayType.FIT_TO_SCREEN
 
         imageView.setSingleTapListener {
@@ -76,7 +79,11 @@ class GalleryImageFragment : androidx.fragment.app.Fragment() {
             .into(imageView)
         }
 
-        return view
+        return binding.root
+    }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     // TODO: Rename method, update argument and hook method into UI event

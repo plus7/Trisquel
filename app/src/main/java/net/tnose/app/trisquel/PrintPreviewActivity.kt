@@ -5,25 +5,26 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.print.PrintManager
-import androidx.print.PrintHelper
-import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
-import kotlinx.android.synthetic.main.activity_print_preview.*
-import kotlinx.android.synthetic.main.content_print_preview.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.print.PrintHelper
+import net.tnose.app.trisquel.databinding.ActivityPrintPreviewBinding
 
 class PrintPreviewActivity : AppCompatActivity() {
     var name: String = ""
+    private lateinit var binding: ActivityPrintPreviewBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_print_preview)
-        setSupportActionBar(toolbar)
+        binding = ActivityPrintPreviewBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        webview.settings.builtInZoomControls = true
-        webview.settings.useWideViewPort = true
+        binding.includeContentPrintPreview.webview.settings.builtInZoomControls = true
+        binding.includeContentPrintPreview.webview.settings.useWideViewPort = true
 
         val id = intent.getIntExtra("filmroll", -1)
 
@@ -98,7 +99,8 @@ class PrintPreviewActivity : AppCompatActivity() {
         sb.append("</div></body></html>")
         dao.close()
 
-        webview.loadDataWithBaseURL(null, sb.toString(), "text/html", "UTF8", null)
+        binding.includeContentPrintPreview.webview.loadDataWithBaseURL(null, sb.toString(), "text/html", "UTF8", null)
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -108,7 +110,7 @@ class PrintPreviewActivity : AppCompatActivity() {
 
     private fun printHtml(fileName: String) {
         if (PrintHelper.systemSupportsPrint()) {
-            val adapter = webview.createPrintDocumentAdapter(name)
+            val adapter = binding.includeContentPrintPreview.webview.createPrintDocumentAdapter(name)
             val printManager: PrintManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
             printManager.print(fileName, adapter, null)
         } else {

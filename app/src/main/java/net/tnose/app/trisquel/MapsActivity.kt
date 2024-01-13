@@ -7,12 +7,16 @@ import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
 import android.os.Bundle
-import androidx.core.app.ActivityCompat
-import androidx.fragment.app.FragmentActivity
 import android.util.Log
 import android.widget.Button
 import android.widget.Toast
-import com.google.android.gms.location.*
+import androidx.core.app.ActivityCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.location.SettingsClient
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -20,9 +24,10 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import net.tnose.app.trisquel.databinding.ActivityMapsBinding
 import java.io.IOException
 import java.text.Normalizer
-import java.util.*
+import java.util.Arrays
 
 class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallback {
     internal val RETCODE_LOC_PERM = 100
@@ -34,10 +39,12 @@ class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallbac
     private val locationSettingsRequest: LocationSettingsRequest? = null
     private val locationCallback: LocationCallback? = null
     private val locationRequest: LocationRequest? = null
+    private lateinit var binding: ActivityMapsBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_maps)
+        binding = ActivityMapsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager
                 .findFragmentById(R.id.map) as SupportMapFragment
@@ -57,9 +64,9 @@ class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallbac
                     var addresses: List<Address>
                     try {
                         addresses = coder.getFromLocation(
-                                mMarker!!.position.latitude,
-                                mMarker!!.position.longitude,
-                                1)
+                            mMarker!!.position.latitude,
+                            mMarker!!.position.longitude,
+                            1)!!
                     } catch (e: IOException) {
                         addresses = ArrayList()
                     }
