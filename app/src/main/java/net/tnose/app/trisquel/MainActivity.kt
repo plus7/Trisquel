@@ -1172,8 +1172,8 @@ class MainActivity : AppCompatActivity(),
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val mediaLocDenied =
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
-            else false
+                false
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
 
         if (writeDenied || readDenied || mediaLocDenied){
             val retcode =
