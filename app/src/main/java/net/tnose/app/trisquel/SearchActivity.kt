@@ -26,10 +26,18 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
     internal val RETCODE_SDCARD_PERM_IMGPICKER = 106
     internal val DIALOG_DELETE_PHOTO = 200
 
-    private val PERMISSIONS = arrayOf(
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.CAMERA)
+    private val PERMISSIONS =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.CAMERA)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.CAMERA)
+        } else {
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.CAMERA)
+        }
 
     private var thumbnailEditingPhoto: Photo? = null
     var fragment: SearchFragment? = null
@@ -97,7 +105,18 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
     }
 
     internal fun onRequestSDCardAccessPermissionsResult(permissions: Array<String>, grantResults: IntArray, requestCode: Int) {
-        val granted = intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED)
+        val granted =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            } else {
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            }
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
             when(requestCode){
                 RETCODE_SDCARD_PERM_IMGPICKER -> {
@@ -124,8 +143,15 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
     }
 
     fun checkPermAndEditThumbPhoto(){
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+        val writeDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val readDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val cameraDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+        if (writeDenied || readDenied || cameraDenied) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
             return
         }

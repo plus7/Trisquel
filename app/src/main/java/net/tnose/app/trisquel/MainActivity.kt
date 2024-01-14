@@ -107,11 +107,21 @@ class MainActivity : AppCompatActivity(),
     private lateinit var currentFragment: androidx.fragment.app.Fragment
     private val pinnedFilterViewId: ArrayList<Int> = arrayListOf()
 
-    internal val PERMISSIONS = arrayOf(
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.ACCESS_MEDIA_LOCATION
-    )
+    internal val PERMISSIONS =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.ACCESS_MEDIA_LOCATION)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.ACCESS_MEDIA_LOCATION)
+        } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.ACCESS_MEDIA_LOCATION)
+        } else {
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
 
     fun selectFragment(currentFragmentId: Int, filtertype: Int, filtervalue: ArrayList<String>){
         val f: androidx.fragment.app.Fragment
@@ -1123,15 +1133,21 @@ class MainActivity : AppCompatActivity(),
     }
 
     internal fun onRequestSDCardAccessPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        val granted = intArrayOf(
-                PackageManager.PERMISSION_GRANTED,
-                PackageManager.PERMISSION_GRANTED,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    PackageManager.PERMISSION_GRANTED
-                } else {
-                    PackageManager.PERMISSION_DENIED //バージョンが低いとDenied扱いになる
-                }
-        )
+        val granted =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            } else {
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            }
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
             when(requestCode){
                 RETCODE_SDCARD_PERM_FOR_SLIMEX -> exportDBDialog(0)
@@ -1146,26 +1162,39 @@ class MainActivity : AppCompatActivity(),
     }
 
     fun checkPermAndExportDB(mode: Int) { // 0: Slim 1: Whole
-        val writeDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val writeDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
+            else
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val readDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val mediaLocDenied =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
-                }else{
-                    false
-                }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
+            else false
 
-        if (writeDenied || mediaLocDenied){
+        if (writeDenied || readDenied || mediaLocDenied){
             val retcode =
                     if(mode == 0) RETCODE_SDCARD_PERM_FOR_SLIMEX
                     else RETCODE_SDCARD_PERM_FOR_FULLEX
             ActivityCompat.requestPermissions(this, PERMISSIONS, retcode)
             return
         }
+
         exportDBDialog(mode)
     }
 
     fun checkPermAndImportDB(mode: Int) { // 0: merge, 1: replace, 2: replace by .db
-        val writeDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val writeDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
+            else
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val readDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val mediaLocDenied =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
@@ -1173,7 +1202,7 @@ class MainActivity : AppCompatActivity(),
                     false
                 }
 
-        if (writeDenied || mediaLocDenied){
+        if (writeDenied || readDenied || mediaLocDenied){
             val retcode =
                     when(mode){
                         0 -> RETCODE_SDCARD_PERM_FOR_MERGEIP

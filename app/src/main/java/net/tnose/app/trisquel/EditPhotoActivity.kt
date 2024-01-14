@@ -60,10 +60,18 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var evGrainSize = 3
     private var evWidth = 3
     private var focalLengthRange = Pair(43.0, 43.0) // FA limited 43mm こそ真の標準レンズ！！！
-    private val PERMISSIONS = arrayOf(
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.CAMERA)
+    private val PERMISSIONS =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.CAMERA)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.CAMERA)
+        } else {
+            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.CAMERA)
+        }
 
     private var filmroll: FilmRoll? = null
     private var photo: Photo? = null
@@ -686,7 +694,19 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }
 
     internal fun onRequestSDCardAccessPermissionsResult(permissions: Array<String>, grantResults: IntArray, requestCode: Int) {
-        val granted = intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED)
+         val granted =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            } else {
+                intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED)
+            }
+
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
             when(requestCode){
                 RETCODE_SDCARD_PERM_LOADIMG -> {
@@ -716,8 +736,15 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }
 
     fun checkPermAndOpenImagePicker() {
-        if (//ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+        val writeDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val readDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val cameraDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+        if (writeDenied || readDenied || cameraDenied) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
             return
         }
@@ -727,11 +754,19 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     fun checkPermAndAppendSupplementalImages(paths: ArrayList<String>?) {
         if(paths == null) return
         if(paths.size == 0) return
-        /*if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        val writeDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val readDenied =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+
+        if (writeDenied || readDenied) {
             supplementalImagesToLoad = paths
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_LOADIMG)
             return
-        }*/
+        }
         appendSupplementalImages(paths)
     }
 
@@ -1053,13 +1088,13 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 ExifInterface(ist!!)
             }
             val orientation = exifInterface.getAttributeInt(
-                    androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
-                    androidx.exifinterface.media.ExifInterface.ORIENTATION_UNDEFINED)
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_UNDEFINED)
             when (orientation) {
-                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90,
-                androidx.exifinterface.media.ExifInterface.ORIENTATION_TRANSVERSE,
-                androidx.exifinterface.media.ExifInterface.ORIENTATION_TRANSPOSE,
-                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> {
+                ExifInterface.ORIENTATION_ROTATE_90,
+                ExifInterface.ORIENTATION_TRANSVERSE,
+                ExifInterface.ORIENTATION_TRANSPOSE,
+                ExifInterface.ORIENTATION_ROTATE_270 -> {
                     val tmp = h
                     h = w
                     w = tmp
@@ -1097,7 +1132,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     }else{
                         Uri.parse(view.path)
                     }
-                    intent.action = android.content.Intent.ACTION_VIEW
+                    intent.action = Intent.ACTION_VIEW
                     intent.setDataAndType(photoURI, "image/*")
                     intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                     startActivity(intent)
