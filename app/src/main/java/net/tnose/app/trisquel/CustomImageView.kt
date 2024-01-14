@@ -3,7 +3,6 @@ import android.content.Context
 import android.net.Uri
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.View
 import android.widget.FrameLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
@@ -39,8 +38,8 @@ class CustomImageView @JvmOverloads constructor(context: Context, attrs: Attribu
         }
 
     private fun initme() {
-        val inflater =LayoutInflater.from(context) //.inflate(R.layout.custom_image_view, this)
-        _binding = CustomImageViewBinding.inflate(inflater, this, false)
+        val inflater =LayoutInflater.from(context)
+        _binding = CustomImageViewBinding.inflate(inflater, this, true)
         this.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             // 大きさが確定してから描画しないといけない。
             // 当初はonCreateで追加されたCustomImageViewにpathが設定された瞬間に描画していたが、
