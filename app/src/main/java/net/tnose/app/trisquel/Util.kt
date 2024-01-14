@@ -6,7 +6,8 @@ package net.tnose.app.trisquel
 
 import java.text.ParseException
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.TimeZone
 
 class Util {
 
@@ -32,7 +33,7 @@ class Util {
     }
 
     companion object {
-        val TRISQUEL_VERSION = 18
+        val TRISQUEL_VERSION = 19
 
         /* シャッタースピードはたかだか2桁精度なのでdoubleからきれいに変換できる */
         internal fun doubleToStringShutterSpeed(ss: Double): String {
@@ -70,9 +71,9 @@ class Util {
         internal fun getFocalLengthRangeFromStr(s: String): Pair<Double, Double>{
             if (s.indexOf("-") > 0) {
                 val range = s.split("-".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                return Pair(Util.safeStr2Dobule(range[0]), Util.safeStr2Dobule(range[1]))
+                return Pair(safeStr2Dobule(range[0]), safeStr2Dobule(range[1]))
             } else {
-                val focalLength = Util.safeStr2Dobule(s)
+                val focalLength = safeStr2Dobule(s)
                 return Pair(focalLength, focalLength)
             }
         }
