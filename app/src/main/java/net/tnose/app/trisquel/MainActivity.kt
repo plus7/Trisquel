@@ -1020,9 +1020,9 @@ class MainActivity : AppCompatActivity(),
         if (isLong) {
             val dao = TrisquelDao(applicationContext)
             dao.connection()
-            val usedCount = dao.getCameraUsageCount(camera.id)
+            val used = dao.getCameraUsage(camera.id)
             dao.close()
-            if (usedCount > 0) {
+            if (used) {
                 val fragment = AlertDialogFragment.Builder().build(99)
                 fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(camera.modelName))
                 fragment.showOn(this, "dialog")
@@ -1046,9 +1046,9 @@ class MainActivity : AppCompatActivity(),
 
             val dao = TrisquelDao(applicationContext)
             dao.connection()
-            val usedCount = dao.getLensUsageCount(lens.id)
+            val used = dao.getLensUsage(lens.id)
             dao.close()
-            if (usedCount > 0) {
+            if (used) {
                 val fragment = AlertDialogFragment.Builder().build(99)
                 fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(lens.modelName))
                 fragment.showOn(this, "dialog")

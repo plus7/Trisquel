@@ -8,15 +8,16 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.Cursor.FIELD_TYPE_NULL
-import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import androidx.sqlite.db.SupportSQLiteDatabase
 import org.json.JSONArray
 import org.json.JSONObject
 
-class TrisquelDao(context: Context?) : DatabaseHelper(context) {
+
+class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
     protected val mContext = context
-    protected var mDb: SQLiteDatabase? = null
+    protected var mDb: SupportSQLiteDatabase? = null
 
     val allCameras: ArrayList<CameraSpec>
         get() {
@@ -24,23 +25,23 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select * from camera order by created desc;", null)
-                while (cursor!!.moveToNext()) {
-                    val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                    val type = cursor.getInt(cursor.getColumnIndex("type"))
-                    val created = cursor.getString(cursor.getColumnIndex("created"))
-                    val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                    val mount = cursor.getString(cursor.getColumnIndex("mount"))
-                    val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                    val modelName = cursor.getString(cursor.getColumnIndex("model_name"))
-                    val format = cursor.getInt(cursor.getColumnIndex("format"))
-                    val shutterSpeedGrainSize = cursor.getInt(cursor.getColumnIndex("ss_grain_size"))
-                    val fastestShutterSpeed = cursor.getDouble(cursor.getColumnIndex("fastest_ss"))
-                    val slowestShutterSpeed = cursor.getDouble(cursor.getColumnIndex("slowest_ss"))
-                    val bulbAvailable = cursor.getInt(cursor.getColumnIndex("bulb_available")) != 0
-                    val shutterSpeedSteps = cursor.getString(cursor.getColumnIndex("shutter_speeds"))
-                    val evBiasStep = cursor.getInt(cursor.getColumnIndex("ev_grain_size"))
-                    val evBiasWidth = cursor.getInt(cursor.getColumnIndex("ev_width"))
+                cursor = mDb!!.query("select * from camera order by created desc;")
+                while (cursor.moveToNext()) {
+                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                    val type = cursor.getInt(cursor.getColumnIndexOrThrow("type"))
+                    val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                    val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                    val mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"))
+                    val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                    val modelName = cursor.getString(cursor.getColumnIndexOrThrow("model_name"))
+                    val format = cursor.getInt(cursor.getColumnIndexOrThrow("format"))
+                    val shutterSpeedGrainSize = cursor.getInt(cursor.getColumnIndexOrThrow("ss_grain_size"))
+                    val fastestShutterSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow("fastest_ss"))
+                    val slowestShutterSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow("slowest_ss"))
+                    val bulbAvailable = cursor.getInt(cursor.getColumnIndexOrThrow("bulb_available")) != 0
+                    val shutterSpeedSteps = cursor.getString(cursor.getColumnIndexOrThrow("shutter_speeds"))
+                    val evBiasStep = cursor.getInt(cursor.getColumnIndexOrThrow("ev_grain_size"))
+                    val evBiasWidth = cursor.getInt(cursor.getColumnIndexOrThrow("ev_width"))
                     cameraList.add(
                             CameraSpec(id, type, created, lastModified, mount, manufacturer, modelName, format,
                                     shutterSpeedGrainSize, fastestShutterSpeed, slowestShutterSpeed,
@@ -58,8 +59,8 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from "+type+" order by _id desc;", null)
-            while (cursor!!.moveToNext()) {
+            cursor = mDb!!.query("select * from "+type+" order by _id desc;")
+            while (cursor.moveToNext()) {
                 val obj = JSONObject()
                 for (i in 0..cursor.columnCount - 1) {
                     val cname = cursor.getColumnName(i)
@@ -94,7 +95,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             }
         }
 
-        val newId = mDb!!.insert("camera", null, cval)
+        val newId = mDb!!.insert("camera", SQLiteDatabase.CONFLICT_ABORT, cval)
         return Pair(oldId, newId.toInt())
     }
 
@@ -114,7 +115,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             }
         }
 
-        val newId = mDb!!.insert("lens", null, cval)
+        val newId = mDb!!.insert("lens", SQLiteDatabase.CONFLICT_ABORT, cval)
         return Pair(oldId, newId.toInt())
     }
 
@@ -133,7 +134,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             }
         }
 
-        val newId = mDb!!.insert("accessory", null, cval)
+        val newId = mDb!!.insert("accessory", SQLiteDatabase.CONFLICT_ABORT, cval)
         return Pair(oldId, newId.toInt())
     }
 
@@ -153,7 +154,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             }
         }
 
-        val newId = mDb!!.insert("filmroll", null, cval)
+        val newId = mDb!!.insert("filmroll", SQLiteDatabase.CONFLICT_ABORT, cval)
         return Pair(oldId, newId.toInt())
     }
 
@@ -208,7 +209,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             }
         }
 
-        val newId = mDb!!.insert("photo", null, cval)
+        val newId = mDb!!.insert("photo", SQLiteDatabase.CONFLICT_ABORT, cval)
         return Pair(oldId, newId.toInt())
     }
 
@@ -249,7 +250,8 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
             //reset autoincrement
             val cval = ContentValues()
             cval.put("seq", 0)
-            mDb!!.update("sqlite_sequence", cval, "name = ?", arrayOf(table))
+            mDb!!.update("sqlite_sequence", SQLiteDatabase.CONFLICT_ABORT,
+                cval, "name = ?", arrayOf(table))
         }
     }
 
@@ -259,17 +261,17 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select * from lens order by created desc;", null)
-                while (cursor!!.moveToNext()) {
-                    val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                    val created = cursor.getString(cursor.getColumnIndex("created"))
-                    val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                    val mount = cursor.getString(cursor.getColumnIndex("mount"))
-                    val body = cursor.getInt(cursor.getColumnIndex("body"))
-                    val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                    val modelName = cursor.getString(cursor.getColumnIndex("model_name"))
-                    val focalLength = cursor.getString(cursor.getColumnIndex("focal_length"))
-                    val fSteps = cursor.getString(cursor.getColumnIndex("f_steps"))
+                cursor = mDb!!.query("select * from lens order by created desc;")
+                while (cursor.moveToNext()) {
+                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                    val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                    val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                    val mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"))
+                    val body = cursor.getInt(cursor.getColumnIndexOrThrow("body"))
+                    val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                    val modelName = cursor.getString(cursor.getColumnIndexOrThrow("model_name"))
+                    val focalLength = cursor.getString(cursor.getColumnIndexOrThrow("focal_length"))
+                    val fSteps = cursor.getString(cursor.getColumnIndexOrThrow("f_steps"))
                     if (body == 0) lensList.add(LensSpec(id, created, lastModified, mount, body, manufacturer, modelName, focalLength, fSteps))
                 }
             } finally {
@@ -285,17 +287,17 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select * from lens order by created desc;", null)
-                while (cursor!!.moveToNext()) {
-                    val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                    val created = cursor.getString(cursor.getColumnIndex("created"))
-                    val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                    val mount = cursor.getString(cursor.getColumnIndex("mount"))
-                    val body = cursor.getInt(cursor.getColumnIndex("body"))
-                    val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                    val modelName = cursor.getString(cursor.getColumnIndex("model_name"))
-                    val focalLength = cursor.getString(cursor.getColumnIndex("focal_length"))
-                    val fSteps = cursor.getString(cursor.getColumnIndex("f_steps"))
+                cursor = mDb!!.query("select * from lens order by created desc;")
+                while (cursor.moveToNext()) {
+                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                    val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                    val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                    val mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"))
+                    val body = cursor.getInt(cursor.getColumnIndexOrThrow("body"))
+                    val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                    val modelName = cursor.getString(cursor.getColumnIndexOrThrow("model_name"))
+                    val focalLength = cursor.getString(cursor.getColumnIndexOrThrow("focal_length"))
+                    val fSteps = cursor.getString(cursor.getColumnIndexOrThrow("f_steps"))
                     lensList.add(LensSpec(id, created, lastModified, mount, body, manufacturer, modelName, focalLength, fSteps))
                 }
             } finally {
@@ -311,9 +313,9 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select distinct mount from lens order by mount;", null)
-                while (cursor!!.moveToNext()) {
-                    val mount = cursor.getString(cursor.getColumnIndex("mount"))
+                cursor = mDb!!.query("select distinct mount from lens order by mount;")
+                while (cursor.moveToNext()) {
+                    val mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"))
                     if (!mount.isEmpty()) mounts.add(mount)
                 }
             } finally {
@@ -330,10 +332,10 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select distinct manufacturer, brand from filmroll order by manufacturer;", null)
-                while (cursor!!.moveToNext()) {
-                    val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                    val brand = cursor.getString(cursor.getColumnIndex("brand"))
+                cursor = mDb!!.query("select distinct manufacturer, brand from filmroll order by manufacturer;")
+                while (cursor.moveToNext()) {
+                    val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                    val brand = cursor.getString(cursor.getColumnIndexOrThrow("brand"))
                     if (!brand.isEmpty()) fbs.add(Pair<String, String>(manufacturer, brand))
                 }
             } finally {
@@ -349,16 +351,16 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select * from filmroll order by created desc;", null)
-                while (cursor!!.moveToNext()) {
-                    val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                    val name = cursor.getString(cursor.getColumnIndex("name"))
-                    val created = cursor.getString(cursor.getColumnIndex("created"))
-                    val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                    val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                    val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                    val brand = cursor.getString(cursor.getColumnIndex("brand"))
-                    val iso = cursor.getInt(cursor.getColumnIndex("iso"))
+                cursor = mDb!!.query("select * from filmroll order by created desc;")
+                while (cursor.moveToNext()) {
+                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                    val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                    val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                    val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                    val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
+                    val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                    val brand = cursor.getString(cursor.getColumnIndexOrThrow("brand"))
+                    val iso = cursor.getInt(cursor.getColumnIndexOrThrow("iso"))
 
                     val f = FilmRoll(id, name, created, lastModified, getCamera(camera)!!, manufacturer, brand, iso, 36)
                     filmList.add(f)
@@ -377,11 +379,11 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select * from tag;", null)
-                while (cursor!!.moveToNext()) {
-                    val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                    val label = cursor.getString(cursor.getColumnIndex("label"))
-                    val refcnt = cursor.getInt(cursor.getColumnIndex("refcnt"))
+                cursor = mDb!!.query("select * from tag;")
+                while (cursor.moveToNext()) {
+                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                    val label = cursor.getString(cursor.getColumnIndexOrThrow("label"))
+                    val refcnt = cursor.getInt(cursor.getColumnIndexOrThrow("refcnt"))
                     tagList.add(Tag(id, label, refcnt))
                 }
             } finally {
@@ -396,16 +398,16 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from filmroll where camera = ? order by created desc;", arrayOf(Integer.toString(cameraid)))
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                val name = cursor.getString(cursor.getColumnIndex("name"))
-                val created = cursor.getString(cursor.getColumnIndex("created"))
-                val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                val brand = cursor.getString(cursor.getColumnIndex("brand"))
-                val iso = cursor.getInt(cursor.getColumnIndex("iso"))
+            cursor = mDb!!.query("select * from filmroll where camera = ? order by created desc;", arrayOf(Integer.toString(cameraid)))
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
+                val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                val brand = cursor.getString(cursor.getColumnIndexOrThrow("brand"))
+                val iso = cursor.getInt(cursor.getColumnIndexOrThrow("iso"))
 
                 val f = FilmRoll(id, name, created, lastModified, getCamera(camera)!!, manufacturer, brand, iso, 36)
                 filmList.add(f)
@@ -423,16 +425,16 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from filmroll where brand = ? and manufacturer = ? order by created desc;", arrayOf(brand, manufacturer))
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                val name = cursor.getString(cursor.getColumnIndex("name"))
-                val created = cursor.getString(cursor.getColumnIndex("created"))
-                val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                //val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                //val brand = cursor.getString(cursor.getColumnIndex("brand"))
-                val iso = cursor.getInt(cursor.getColumnIndex("iso"))
+            cursor = mDb!!.query("select * from filmroll where brand = ? and manufacturer = ? order by created desc;", arrayOf(brand, manufacturer))
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
+                //val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                //val brand = cursor.getString(cursor.getColumnIndexOrThrow("brand"))
+                val iso = cursor.getInt(cursor.getColumnIndexOrThrow("iso"))
 
                 val f = FilmRoll(id, name, created, lastModified, getCamera(camera)!!, manufacturer, brand, iso, 36)
                 filmList.add(f)
@@ -451,15 +453,15 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
             var cursor: Cursor? = null
             try {
-                cursor = mDb!!.rawQuery("select * from accessory order by created desc;", null)
-                while (cursor!!.moveToNext()) {
-                    val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                    val type = cursor.getInt(cursor.getColumnIndex("type"))
-                    val created = cursor.getString(cursor.getColumnIndex("created"))
-                    val last_modified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                    val name = cursor.getString(cursor.getColumnIndex("name"))
-                    val mount = cursor.getString(cursor.getColumnIndex("mount"))
-                    val focal_length_factor = cursor.getDouble(cursor.getColumnIndex("focal_length_factor"))
+                cursor = mDb!!.query("select * from accessory order by created desc;")
+                while (cursor.moveToNext()) {
+                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                    val type = cursor.getInt(cursor.getColumnIndexOrThrow("type"))
+                    val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                    val last_modified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                    val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                    val mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"))
+                    val focal_length_factor = cursor.getDouble(cursor.getColumnIndexOrThrow("focal_length_factor"))
                     accessories.add(Accessory(id, created, last_modified, type, name, mount, focal_length_factor))
                 }
             } finally {
@@ -470,8 +472,9 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         }
 
     fun connection() {
-        val helper = DatabaseHelper(mContext)
-        mDb = helper.open()
+        //val helper = DatabaseHelper(mContext)
+        val helper = TrisquelRoomDatabase.getInstance(mContext!!).openHelper
+        mDb = helper.writableDatabase
     }
 
     override fun close() {
@@ -496,7 +499,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("shutter_speeds", camera.shutterSpeedSteps.joinToString(","))
         cval.put("ev_grain_size", camera.evGrainSize)
         cval.put("ev_width", camera.evWidth)
-        return mDb!!.insert("camera", null, cval)
+        return mDb!!.insert("camera", SQLiteDatabase.CONFLICT_ABORT, cval)
     }
 
     fun deleteCamera(id: Int) {
@@ -522,7 +525,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("ev_grain_size", camera.evGrainSize)
         cval.put("ev_width", camera.evWidth)
 
-        return mDb!!.update("camera",
+        return mDb!!.update("camera", SQLiteDatabase.CONFLICT_ABORT,
                 cval,
                 "_id = ?",
                 selectArgs)
@@ -532,23 +535,23 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var c: CameraSpec? = null
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from camera where _id = ?;", arrayOf(Integer.toString(id)))
+            cursor = mDb!!.query("select * from camera where _id = ?;", arrayOf(Integer.toString(id)))
 
-            if (cursor!!.moveToFirst()) {
-                val type = cursor.getInt(cursor.getColumnIndex("type"))
-                val created = cursor.getString(cursor.getColumnIndex("created"))
-                val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                val mount = cursor.getString(cursor.getColumnIndex("mount"))
-                val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                val modelName = cursor.getString(cursor.getColumnIndex("model_name"))
-                val format = cursor.getInt(cursor.getColumnIndex("format"))
-                val shutterSpeedGrainSize = cursor.getInt(cursor.getColumnIndex("ss_grain_size"))
-                val fastestShutterSpeed = cursor.getDouble(cursor.getColumnIndex("fastest_ss"))
-                val slowestShutterSpeed = cursor.getDouble(cursor.getColumnIndex("slowest_ss"))
-                val bulbAvailable = cursor.getInt(cursor.getColumnIndex("bulb_available")) != 0
-                val shutterSpeedSteps = cursor.getString(cursor.getColumnIndex("shutter_speeds"))
-                val evBiasStep = cursor.getInt(cursor.getColumnIndex("ev_grain_size"))
-                val evBiasWidth = cursor.getInt(cursor.getColumnIndex("ev_width"))
+            if (cursor.moveToFirst()) {
+                val type = cursor.getInt(cursor.getColumnIndexOrThrow("type"))
+                val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                val mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"))
+                val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                val modelName = cursor.getString(cursor.getColumnIndexOrThrow("model_name"))
+                val format = cursor.getInt(cursor.getColumnIndexOrThrow("format"))
+                val shutterSpeedGrainSize = cursor.getInt(cursor.getColumnIndexOrThrow("ss_grain_size"))
+                val fastestShutterSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow("fastest_ss"))
+                val slowestShutterSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow("slowest_ss"))
+                val bulbAvailable = cursor.getInt(cursor.getColumnIndexOrThrow("bulb_available")) != 0
+                val shutterSpeedSteps = cursor.getString(cursor.getColumnIndexOrThrow("shutter_speeds"))
+                val evBiasStep = cursor.getInt(cursor.getColumnIndexOrThrow("ev_grain_size"))
+                val evBiasWidth = cursor.getInt(cursor.getColumnIndexOrThrow("ev_width"))
 
                 c = CameraSpec(id, type, created, lastModified, mount, manufacturer, modelName, format,
                         shutterSpeedGrainSize, fastestShutterSpeed, slowestShutterSpeed,
@@ -562,11 +565,42 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         return c
     }
 
+    fun getCameraUsage(id: Int): Boolean {
+        var result = false
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.query(
+                "select exists(select 1 from filmroll where camera = ?)",
+                arrayOf(Integer.toString(id))
+            )
+            if (cursor.moveToFirst()){
+                result = true
+            }
+        }finally {
+            cursor?.close()
+        }
+        if ( result ) return result
+
+        try {
+            cursor = mDb!!.query(
+                "select exists(select 1 from photo where camera = ?)",
+                arrayOf(Integer.toString(id))
+            )
+            if (cursor.moveToFirst()){
+                result = true
+            }
+        }finally {
+            cursor?.close()
+        }
+        return result
+    }
+    /*
     fun getCameraUsageCount(id: Int): Long {
         val filmrolls = DatabaseUtils.queryNumEntries(mDb, "filmroll", "camera = ?", arrayOf(Integer.toString(id)))
         val photos = DatabaseUtils.queryNumEntries(mDb, "photo", "camera = ?", arrayOf(Integer.toString(id)))
         return filmrolls + photos
     }
+    */
 
     /* Lens */
     fun addLens(lens: LensSpec): Long {
@@ -579,7 +613,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("model_name", lens.modelName)
         cval.put("focal_length", lens.focalLength)
         cval.put("f_steps", lens.fSteps.joinToString(","))
-        return mDb!!.insert("lens", null, cval)
+        return mDb!!.insert("lens", SQLiteDatabase.CONFLICT_ABORT, cval)
     }
 
     fun deleteLens(id: Int) {
@@ -598,7 +632,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("model_name", lens.modelName)
         cval.put("focal_length", lens.focalLength)
         cval.put("f_steps", lens.fSteps.joinToString(","))
-        return mDb!!.update("lens",
+        return mDb!!.update("lens", SQLiteDatabase.CONFLICT_ABORT,
                 cval,
                 "_id = ?",
                 selectArgs)
@@ -611,17 +645,17 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var cursor: Cursor? = null
         try {
             val selectArgs = arrayOf(mount)
-            cursor = mDb!!.rawQuery("select * from lens where mount = ? order by created desc;", selectArgs)
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                val created = cursor.getString(cursor.getColumnIndex("created"))
-                val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                //String mount = cursor.getString(cursor.getColumnIndex("mount"));
-                val body = cursor.getInt(cursor.getColumnIndex("body"))
-                val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                val modelName = cursor.getString(cursor.getColumnIndex("model_name"))
-                val focalLength = cursor.getString(cursor.getColumnIndex("focal_length"))
-                val fSteps = cursor.getString(cursor.getColumnIndex("f_steps"))
+            cursor = mDb!!.query("select * from lens where mount = ? order by created desc;", selectArgs)
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                //String mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"));
+                val body = cursor.getInt(cursor.getColumnIndexOrThrow("body"))
+                val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                val modelName = cursor.getString(cursor.getColumnIndexOrThrow("model_name"))
+                val focalLength = cursor.getString(cursor.getColumnIndexOrThrow("focal_length"))
+                val fSteps = cursor.getString(cursor.getColumnIndexOrThrow("f_steps"))
                 lensList.add(LensSpec(id, created, lastModified, mount, body, manufacturer, modelName, focalLength, fSteps))
             }
         } finally {
@@ -634,10 +668,10 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     fun getFixedLensIdByBody(body: Int): Int {
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select _id from lens where body = ?;", arrayOf(Integer.toString(body)))
+            cursor = mDb!!.query("select _id from lens where body = ?;", arrayOf(Integer.toString(body)))
 
-            if (cursor!!.moveToFirst()) {
-                return cursor.getInt(cursor.getColumnIndex("_id"))
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
             }
         } finally {
             cursor?.close()
@@ -650,17 +684,17 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var l: LensSpec? = null
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from lens where _id = ?;", arrayOf(Integer.toString(id)))
+            cursor = mDb!!.query("select * from lens where _id = ?;", arrayOf(Integer.toString(id)))
 
-            if (cursor!!.moveToFirst()) {
-                val created = cursor.getString(cursor.getColumnIndex("created"))
-                val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                val mount = cursor.getString(cursor.getColumnIndex("mount"))
-                val body = cursor.getInt(cursor.getColumnIndex("body"))
-                val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                val modelName = cursor.getString(cursor.getColumnIndex("model_name"))
-                val focalLength = cursor.getString(cursor.getColumnIndex("focal_length"))
-                val fSteps = cursor.getString(cursor.getColumnIndex("f_steps"))
+            if (cursor.moveToFirst()) {
+                val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                val mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"))
+                val body = cursor.getInt(cursor.getColumnIndexOrThrow("body"))
+                val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                val modelName = cursor.getString(cursor.getColumnIndexOrThrow("model_name"))
+                val focalLength = cursor.getString(cursor.getColumnIndexOrThrow("focal_length"))
+                val fSteps = cursor.getString(cursor.getColumnIndexOrThrow("f_steps"))
                 l = LensSpec(id, created, lastModified, mount, body, manufacturer, modelName, focalLength, fSteps)
             }
         } finally {
@@ -669,10 +703,32 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         //nullの場合どうする？
         return l
     }
-
+    fun getLensUsage(id: Int): Boolean {
+        //return DatabaseUtils.longForQuery(
+        //    mDb, "select count(*) from photo where lens = ?", arrayOf(Integer.toString(id))
+        //)
+        /*        long isEmpty = longForQuery(db, "select exists(select 1 from " + table + ")", null);
+        return isEmpty == 0;*/
+        var result = false
+        var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.query(
+                "select exists(select 1 from photo where lens = ?)",
+                arrayOf(Integer.toString(id))
+            )
+            if (cursor.moveToFirst()){
+                result = true
+            }
+        }finally {
+            cursor?.close()
+        }
+        return result
+    }
+    /*
     fun getLensUsageCount(id: Int): Long {
         return DatabaseUtils.queryNumEntries(mDb, "photo", "lens = ?", arrayOf(Integer.toString(id)))
     }
+    */
 
     /* Film roll */
     fun addFilmRoll(f: FilmRoll): Long {
@@ -685,7 +741,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("manufacturer", f.manufacturer)
         cval.put("brand", f.brand)
         cval.put("iso", f.iso)
-        return mDb!!.insert("filmroll", null, cval)
+        return mDb!!.insert("filmroll", SQLiteDatabase.CONFLICT_ABORT, cval)
     }
 
     fun updateFilmRoll(f: FilmRoll): Int {
@@ -699,7 +755,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("manufacturer", f.manufacturer)
         cval.put("brand", f.brand)
         cval.put("iso", f.iso)
-        return mDb!!.update("filmroll",
+        return mDb!!.update("filmroll", SQLiteDatabase.CONFLICT_ABORT,
                 cval,
                 "_id = ?",
                 selectArgs)
@@ -718,16 +774,16 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var f: FilmRoll? = null
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from filmroll where _id = ?;", arrayOf(Integer.toString(id)))
+            cursor = mDb!!.query("select * from filmroll where _id = ?;", arrayOf(Integer.toString(id)))
 
-            if (cursor!!.moveToFirst()) {
-                val name = cursor.getString(cursor.getColumnIndex("name"))
-                val created = cursor.getString(cursor.getColumnIndex("created"))
-                val lastModified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                val manufacturer = cursor.getString(cursor.getColumnIndex("manufacturer"))
-                val brand = cursor.getString(cursor.getColumnIndex("brand"))
-                val iso = cursor.getInt(cursor.getColumnIndex("iso"))
+            if (cursor.moveToFirst()) {
+                val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
+                val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
+                val brand = cursor.getString(cursor.getColumnIndexOrThrow("brand"))
+                val iso = cursor.getInt(cursor.getColumnIndexOrThrow("iso"))
                 f = FilmRoll(id, name, created, lastModified, getCamera(camera)!!, manufacturer, brand, iso, 36/* temp value */)
             }
         } finally {
@@ -742,36 +798,36 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from photo where favorite = 1 order by date desc;", null)
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                val filmroll = cursor.getInt(cursor.getColumnIndex("filmroll"))
-                val index = cursor.getInt(cursor.getColumnIndex("_index"))
-                val date = cursor.getString(cursor.getColumnIndex("date"))
-                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                val lens = cursor.getInt(cursor.getColumnIndex("lens"))
-                val focalLength = cursor.getDouble(cursor.getColumnIndex("focal_length"))
-                val aperture = cursor.getDouble(cursor.getColumnIndex("aperture"))
-                val shutterSpeed = cursor.getDouble(cursor.getColumnIndex("shutter_speed"))
-                val ev = cursor.getDouble(cursor.getColumnIndex("exp_compensation"))
-                val ttl = cursor.getDouble(cursor.getColumnIndex("ttl_light_meter"))
-                val location = cursor.getString(cursor.getColumnIndex("location"))
-                val memo = cursor.getString(cursor.getColumnIndex("memo"))
-                val accessoriesStr = cursor.getString(cursor.getColumnIndex("accessories"))
+            cursor = mDb!!.query("select * from photo where favorite = 1 order by date desc;")
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                val filmroll = cursor.getInt(cursor.getColumnIndexOrThrow("filmroll"))
+                val index = cursor.getInt(cursor.getColumnIndexOrThrow("_index"))
+                val date = cursor.getString(cursor.getColumnIndexOrThrow("date"))
+                val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
+                val lens = cursor.getInt(cursor.getColumnIndexOrThrow("lens"))
+                val focalLength = cursor.getDouble(cursor.getColumnIndexOrThrow("focal_length"))
+                val aperture = cursor.getDouble(cursor.getColumnIndexOrThrow("aperture"))
+                val shutterSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow("shutter_speed"))
+                val ev = cursor.getDouble(cursor.getColumnIndexOrThrow("exp_compensation"))
+                val ttl = cursor.getDouble(cursor.getColumnIndexOrThrow("ttl_light_meter"))
+                val location = cursor.getString(cursor.getColumnIndexOrThrow("location"))
+                val memo = cursor.getString(cursor.getColumnIndexOrThrow("memo"))
+                val accessoriesStr = cursor.getString(cursor.getColumnIndexOrThrow("accessories"))
                 val latitude: Double
                 val longitude: Double
-                if (cursor.getType(cursor.getColumnIndex("latitude")) == FIELD_TYPE_NULL) {
+                if (cursor.getType(cursor.getColumnIndexOrThrow("latitude")) == FIELD_TYPE_NULL) {
                     latitude = 999.0
                 } else {
-                    latitude = cursor.getDouble(cursor.getColumnIndex("latitude"))
+                    latitude = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude"))
                 }
-                if (cursor.getType(cursor.getColumnIndex("longitude")) == FIELD_TYPE_NULL) {
+                if (cursor.getType(cursor.getColumnIndexOrThrow("longitude")) == FIELD_TYPE_NULL) {
                     longitude = 999.0
                 } else {
-                    longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
+                    longitude = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude"))
                 }
-                val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
-                val favorite = cursor.getInt(cursor.getColumnIndex("favorite"))
+                val supplementalImgStr = cursor.getString(cursor.getColumnIndexOrThrow("suppimgs"))
+                val favorite = cursor.getInt(cursor.getColumnIndexOrThrow("favorite"))
                 photos.add(Photo(id, filmroll, index, date, camera, lens, focalLength,
                         aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo,
                         accessoriesStr, supplementalImgStr, favorite != 0))
@@ -790,35 +846,35 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var cursor: Cursor? = null
         try {
             val selectArgs = arrayOf(Integer.toString(filmRollId))
-            cursor = mDb!!.rawQuery("select * from photo where filmroll = ? order by _index asc;", selectArgs)
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                val index = cursor.getInt(cursor.getColumnIndex("_index"))
-                val date = cursor.getString(cursor.getColumnIndex("date"))
-                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                val lens = cursor.getInt(cursor.getColumnIndex("lens"))
-                val focalLength = cursor.getDouble(cursor.getColumnIndex("focal_length"))
-                val aperture = cursor.getDouble(cursor.getColumnIndex("aperture"))
-                val shutterSpeed = cursor.getDouble(cursor.getColumnIndex("shutter_speed"))
-                val ev = cursor.getDouble(cursor.getColumnIndex("exp_compensation"))
-                val ttl = cursor.getDouble(cursor.getColumnIndex("ttl_light_meter"))
-                val location = cursor.getString(cursor.getColumnIndex("location"))
-                val memo = cursor.getString(cursor.getColumnIndex("memo"))
-                val accessoriesStr = cursor.getString(cursor.getColumnIndex("accessories"))
+            cursor = mDb!!.query("select * from photo where filmroll = ? order by _index asc;", selectArgs)
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                val index = cursor.getInt(cursor.getColumnIndexOrThrow("_index"))
+                val date = cursor.getString(cursor.getColumnIndexOrThrow("date"))
+                val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
+                val lens = cursor.getInt(cursor.getColumnIndexOrThrow("lens"))
+                val focalLength = cursor.getDouble(cursor.getColumnIndexOrThrow("focal_length"))
+                val aperture = cursor.getDouble(cursor.getColumnIndexOrThrow("aperture"))
+                val shutterSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow("shutter_speed"))
+                val ev = cursor.getDouble(cursor.getColumnIndexOrThrow("exp_compensation"))
+                val ttl = cursor.getDouble(cursor.getColumnIndexOrThrow("ttl_light_meter"))
+                val location = cursor.getString(cursor.getColumnIndexOrThrow("location"))
+                val memo = cursor.getString(cursor.getColumnIndexOrThrow("memo"))
+                val accessoriesStr = cursor.getString(cursor.getColumnIndexOrThrow("accessories"))
                 val latitude: Double
                 val longitude: Double
-                if (cursor.getType(cursor.getColumnIndex("latitude")) == FIELD_TYPE_NULL) {
+                if (cursor.getType(cursor.getColumnIndexOrThrow("latitude")) == FIELD_TYPE_NULL) {
                     latitude = 999.0
                 } else {
-                    latitude = cursor.getDouble(cursor.getColumnIndex("latitude"))
+                    latitude = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude"))
                 }
-                if (cursor.getType(cursor.getColumnIndex("longitude")) == FIELD_TYPE_NULL) {
+                if (cursor.getType(cursor.getColumnIndexOrThrow("longitude")) == FIELD_TYPE_NULL) {
                     longitude = 999.0
                 } else {
-                    longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
+                    longitude = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude"))
                 }
-                val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
-                val favorite = cursor.getInt(cursor.getColumnIndex("favorite"))
+                val supplementalImgStr = cursor.getString(cursor.getColumnIndexOrThrow("suppimgs"))
+                val favorite = cursor.getInt(cursor.getColumnIndexOrThrow("favorite"))
                 photos.add(Photo(id, filmRollId, index, date, camera, lens, focalLength,
                         aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo,
                         accessoriesStr, supplementalImgStr, favorite != 0))
@@ -850,7 +906,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("accessories", p.accessoriesStr)
         cval.put("suppimgs", p.supplementalImagesStr)
         cval.put("favorite", if(p.favorite) 1 else 0)
-        return mDb!!.insert("photo", null, cval)
+        return mDb!!.insert("photo", SQLiteDatabase.CONFLICT_ABORT, cval)
     }
 
     fun updatePhoto(p: Photo): Int {
@@ -873,7 +929,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("accessories", p.accessoriesStr)
         cval.put("suppimgs", p.supplementalImagesStr)
         cval.put("favorite", if(p.favorite) 1 else 0)
-        return mDb!!.update("photo",
+        return mDb!!.update("photo", SQLiteDatabase.CONFLICT_ABORT,
                 cval,
                 "_id = ?",
                 selectArgs)
@@ -901,36 +957,36 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var p: Photo? = null
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from photo where _id = ?;", arrayOf(Integer.toString(id)))
-            if (cursor!!.moveToFirst()) {
-                //int id = cursor.getInt(cursor.getColumnIndex("_id"));
-                val index = cursor.getInt(cursor.getColumnIndex("_index"))
-                val filmroll = cursor.getInt(cursor.getColumnIndex("filmroll"))
-                val date = cursor.getString(cursor.getColumnIndex("date"))
-                val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-                val lens = cursor.getInt(cursor.getColumnIndex("lens"))
-                val focalLength = cursor.getDouble(cursor.getColumnIndex("focal_length"))
-                val aperture = cursor.getDouble(cursor.getColumnIndex("aperture"))
-                val shutterSpeed = cursor.getDouble(cursor.getColumnIndex("shutter_speed"))
-                val ev = cursor.getDouble(cursor.getColumnIndex("exp_compensation"))
-                val ttl = cursor.getDouble(cursor.getColumnIndex("ttl_light_meter"))
-                val location = cursor.getString(cursor.getColumnIndex("location"))
-                val memo = cursor.getString(cursor.getColumnIndex("memo"))
-                val accessoriesStr = cursor.getString(cursor.getColumnIndex("accessories"))
+            cursor = mDb!!.query("select * from photo where _id = ?;", arrayOf(Integer.toString(id)))
+            if (cursor.moveToFirst()) {
+                //int id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"));
+                val index = cursor.getInt(cursor.getColumnIndexOrThrow("_index"))
+                val filmroll = cursor.getInt(cursor.getColumnIndexOrThrow("filmroll"))
+                val date = cursor.getString(cursor.getColumnIndexOrThrow("date"))
+                val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
+                val lens = cursor.getInt(cursor.getColumnIndexOrThrow("lens"))
+                val focalLength = cursor.getDouble(cursor.getColumnIndexOrThrow("focal_length"))
+                val aperture = cursor.getDouble(cursor.getColumnIndexOrThrow("aperture"))
+                val shutterSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow("shutter_speed"))
+                val ev = cursor.getDouble(cursor.getColumnIndexOrThrow("exp_compensation"))
+                val ttl = cursor.getDouble(cursor.getColumnIndexOrThrow("ttl_light_meter"))
+                val location = cursor.getString(cursor.getColumnIndexOrThrow("location"))
+                val memo = cursor.getString(cursor.getColumnIndexOrThrow("memo"))
+                val accessoriesStr = cursor.getString(cursor.getColumnIndexOrThrow("accessories"))
                 val latitude: Double
                 val longitude: Double
-                if (cursor.getType(cursor.getColumnIndex("latitude")) == FIELD_TYPE_NULL) {
+                if (cursor.getType(cursor.getColumnIndexOrThrow("latitude")) == FIELD_TYPE_NULL) {
                     latitude = 999.0
                 } else {
-                    latitude = cursor.getDouble(cursor.getColumnIndex("latitude"))
+                    latitude = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude"))
                 }
-                if (cursor.getType(cursor.getColumnIndex("longitude")) == FIELD_TYPE_NULL) {
+                if (cursor.getType(cursor.getColumnIndexOrThrow("longitude")) == FIELD_TYPE_NULL) {
                     longitude = 999.0
                 } else {
-                    longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
+                    longitude = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude"))
                 }
-                val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
-                val favorite = cursor.getInt(cursor.getColumnIndex("favorite"))
+                val supplementalImgStr = cursor.getString(cursor.getColumnIndexOrThrow("suppimgs"))
+                val favorite = cursor.getInt(cursor.getColumnIndexOrThrow("favorite"))
                 p = Photo(id, filmroll, index, date, camera, lens, focalLength,
                         aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo, accessoriesStr,
                         supplementalImgStr, favorite != 0)
@@ -950,7 +1006,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("last_modified", Util.dateToStringUTC(a.last_modified))
         cval.put("mount", a.mount)
         cval.put("focal_length_factor", a.focal_length_factor)
-        return mDb!!.insert("accessory", null, cval)
+        return mDb!!.insert("accessory", SQLiteDatabase.CONFLICT_ABORT, cval)
     }
 
     fun updateAccessory(a: Accessory): Int {
@@ -962,7 +1018,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("last_modified", Util.dateToStringUTC(a.last_modified))
         cval.put("mount", a.mount)
         cval.put("focal_length_factor", a.focal_length_factor)
-        return mDb!!.update("accessory",
+        return mDb!!.update("accessory", SQLiteDatabase.CONFLICT_ABORT,
                 cval,
                 "_id = ?",
                 selectArgs)
@@ -977,14 +1033,14 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var a: Accessory? = null
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from accessory where _id = ?;", arrayOf(Integer.toString(id)))
-            if (cursor!!.moveToFirst()) {
-                val type = cursor.getInt(cursor.getColumnIndex("type"))
-                val created = cursor.getString(cursor.getColumnIndex("created"))
-                val last_modified = cursor.getString(cursor.getColumnIndex("last_modified"))
-                val name = cursor.getString(cursor.getColumnIndex("name"))
-                val mount = cursor.getString(cursor.getColumnIndex("mount"))
-                val focal_length_factor = cursor.getDouble(cursor.getColumnIndex("focal_length_factor"))
+            cursor = mDb!!.query("select * from accessory where _id = ?;", arrayOf(Integer.toString(id)))
+            if (cursor.moveToFirst()) {
+                val type = cursor.getInt(cursor.getColumnIndexOrThrow("type"))
+                val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
+                val last_modified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
+                val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+                val mount = cursor.getString(cursor.getColumnIndexOrThrow("mount"))
+                val focal_length_factor = cursor.getDouble(cursor.getColumnIndexOrThrow("focal_length_factor"))
                 a = Accessory(id, created, last_modified, type, name, mount, focal_length_factor)
             }
         } finally {
@@ -1004,8 +1060,8 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var cursor: Cursor? = null
         var result = false
         try {
-            cursor = mDb!!.rawQuery("select * from photo where accessories like '%/" + Integer.toString(id) + "/%';", null)
-            while (cursor!!.moveToNext()) {
+            cursor = mDb!!.query("select * from photo where accessories like '%/" + Integer.toString(id) + "/%';")
+            while (cursor.moveToNext()) {
                 result = true
                 break
             }
@@ -1021,7 +1077,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         val cval = ContentValues()
         cval.put("label", t.label)
         cval.put("refcnt", t.refcnt)
-        return mDb!!.insert("tag", null, cval)
+        return mDb!!.insert("tag", SQLiteDatabase.CONFLICT_ABORT, cval)
     }
 
     fun updateTag(t: Tag): Int {
@@ -1029,7 +1085,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         val cval = ContentValues()
         cval.put("label", t.label)
         cval.put("refcnt", t.refcnt)
-        return mDb!!.update("tag",
+        return mDb!!.update("tag", SQLiteDatabase.CONFLICT_ABORT,
                 cval,
                 "_id = ?",
                 selectArgs)
@@ -1045,7 +1101,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         cval.put("tag_id", tm.tagId)
         cval.put("photo_id", tm.photoId)
         cval.put("filmroll_id", tm.filmRollId)
-        return mDb!!.insert("tagmap", null, cval)
+        return mDb!!.insert("tagmap", SQLiteDatabase.CONFLICT_ABORT, cval)
     }
 
     fun deleteTagMap(tmid: Int){
@@ -1057,11 +1113,11 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var t: Tag? = null
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from tag where _id = ?;", arrayOf(Integer.toString(tagid)))
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                val label = cursor.getString(cursor.getColumnIndex("label"))
-                val refcnt = cursor.getInt(cursor.getColumnIndex("refcnt"))
+            cursor = mDb!!.query("select * from tag where _id = ?;", arrayOf(Integer.toString(tagid)))
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                val label = cursor.getString(cursor.getColumnIndexOrThrow("label"))
+                val refcnt = cursor.getInt(cursor.getColumnIndexOrThrow("refcnt"))
                 t = Tag(id, label, refcnt)
             }
         } finally {
@@ -1074,11 +1130,11 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var t: Tag? = null
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from tag where label = ?;", arrayOf(label))
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                val label = cursor.getString(cursor.getColumnIndex("label"))
-                val refcnt = cursor.getInt(cursor.getColumnIndex("refcnt"))
+            cursor = mDb!!.query("select * from tag where label = ?;", arrayOf(label))
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                val label = cursor.getString(cursor.getColumnIndexOrThrow("label"))
+                val refcnt = cursor.getInt(cursor.getColumnIndexOrThrow("refcnt"))
                 t = Tag(id, label, refcnt)
             }
         } finally {
@@ -1136,12 +1192,12 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
 
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select * from tagmap where photo_id = ?;", arrayOf(Integer.toString(photoId)))
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
-                val photoId = cursor.getInt(cursor.getColumnIndex("photo_id"))
-                val tagId = cursor.getInt(cursor.getColumnIndex("tag_id"))
-                val filmRollId = cursor.getInt(cursor.getColumnIndex("filmroll_id"))
+            cursor = mDb!!.query("select * from tagmap where photo_id = ?;", arrayOf(Integer.toString(photoId)))
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+                val photoId = cursor.getInt(cursor.getColumnIndexOrThrow("photo_id"))
+                val tagId = cursor.getInt(cursor.getColumnIndexOrThrow("tag_id"))
+                val filmRollId = cursor.getInt(cursor.getColumnIndexOrThrow("filmroll_id"))
                 tagMapList.add(TagMap(id, photoId, filmRollId, tagId))
             }
         } finally {
@@ -1174,35 +1230,35 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     }
 
     fun getPhotoFromCursor(cursor: Cursor):Photo{
-        Log.d("getPhotoFromCursor", cursor.getInt(cursor.getColumnIndex("count(*)")).toString())
-        val id = cursor.getInt(cursor.getColumnIndex("_id"))
-        val filmroll = cursor.getInt(cursor.getColumnIndex("filmroll"))
-        val index = cursor.getInt(cursor.getColumnIndex("_index"))
-        val date = cursor.getString(cursor.getColumnIndex("date"))
-        val camera = cursor.getInt(cursor.getColumnIndex("camera"))
-        val lens = cursor.getInt(cursor.getColumnIndex("lens"))
-        val focalLength = cursor.getDouble(cursor.getColumnIndex("focal_length"))
-        val aperture = cursor.getDouble(cursor.getColumnIndex("aperture"))
-        val shutterSpeed = cursor.getDouble(cursor.getColumnIndex("shutter_speed"))
-        val ev = cursor.getDouble(cursor.getColumnIndex("exp_compensation"))
-        val ttl = cursor.getDouble(cursor.getColumnIndex("ttl_light_meter"))
-        val location = cursor.getString(cursor.getColumnIndex("location"))
-        val memo = cursor.getString(cursor.getColumnIndex("memo"))
-        val accessoriesStr = cursor.getString(cursor.getColumnIndex("accessories"))
+        Log.d("getPhotoFromCursor", cursor.getInt(cursor.getColumnIndexOrThrow("count(*)")).toString())
+        val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
+        val filmroll = cursor.getInt(cursor.getColumnIndexOrThrow("filmroll"))
+        val index = cursor.getInt(cursor.getColumnIndexOrThrow("_index"))
+        val date = cursor.getString(cursor.getColumnIndexOrThrow("date"))
+        val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
+        val lens = cursor.getInt(cursor.getColumnIndexOrThrow("lens"))
+        val focalLength = cursor.getDouble(cursor.getColumnIndexOrThrow("focal_length"))
+        val aperture = cursor.getDouble(cursor.getColumnIndexOrThrow("aperture"))
+        val shutterSpeed = cursor.getDouble(cursor.getColumnIndexOrThrow("shutter_speed"))
+        val ev = cursor.getDouble(cursor.getColumnIndexOrThrow("exp_compensation"))
+        val ttl = cursor.getDouble(cursor.getColumnIndexOrThrow("ttl_light_meter"))
+        val location = cursor.getString(cursor.getColumnIndexOrThrow("location"))
+        val memo = cursor.getString(cursor.getColumnIndexOrThrow("memo"))
+        val accessoriesStr = cursor.getString(cursor.getColumnIndexOrThrow("accessories"))
         val latitude: Double
         val longitude: Double
-        if (cursor.getType(cursor.getColumnIndex("latitude")) == FIELD_TYPE_NULL) {
+        if (cursor.getType(cursor.getColumnIndexOrThrow("latitude")) == FIELD_TYPE_NULL) {
             latitude = 999.0
         } else {
-            latitude = cursor.getDouble(cursor.getColumnIndex("latitude"))
+            latitude = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude"))
         }
-        if (cursor.getType(cursor.getColumnIndex("longitude")) == FIELD_TYPE_NULL) {
+        if (cursor.getType(cursor.getColumnIndexOrThrow("longitude")) == FIELD_TYPE_NULL) {
             longitude = 999.0
         } else {
-            longitude = cursor.getDouble(cursor.getColumnIndex("longitude"))
+            longitude = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude"))
         }
-        val supplementalImgStr = cursor.getString(cursor.getColumnIndex("suppimgs"))
-        val favorite = cursor.getInt(cursor.getColumnIndex("favorite"))
+        val supplementalImgStr = cursor.getString(cursor.getColumnIndexOrThrow("suppimgs"))
+        val favorite = cursor.getInt(cursor.getColumnIndexOrThrow("favorite"))
         return Photo(id, filmroll, index, date, camera, lens, focalLength,
                 aperture, shutterSpeed, ev, ttl, location, latitude, longitude, memo,
                 accessoriesStr, supplementalImgStr, favorite != 0)
@@ -1213,7 +1269,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var cursor: Cursor? = null
         try {
             val selectionArgs = tags.map { it.label }
-            cursor = mDb!!.rawQuery(
+            cursor = mDb!!.query(
                     "select p.*, count(*) from photo p, tagmap tm, tag t "+
                             "where tm.tag_id = t._id "+
                             "and (t.label in ("+makeArray(tags.size)+")) "+
@@ -1236,7 +1292,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var cursor: Cursor? = null
         try {
             val selectionArgs = tags.map { it.label }
-            cursor = mDb!!.rawQuery(
+            cursor = mDb!!.query(
                     "select p.* from photo p, tagmap tm, tag t "+
                             "where tm.tag_id = t._id "+
                             "and (t.label in ("+makeArray(tags.size)+")) "+
@@ -1255,20 +1311,31 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
     fun getConversionState() : Int {
         var cursor: Cursor? = null
         try {
-            cursor = mDb!!.rawQuery("select path_conv_done from trisquel_metadata;", null,null)
-            if(cursor.moveToFirst()){
-                return cursor.getInt(cursor.getColumnIndex("path_conv_done"))
+            cursor = mDb!!.query("select * from trisquel_metadata;")
+            if (cursor.moveToNext()) { // 1つしかないはず
+                val pathConvDone = cursor.getInt(cursor.getColumnIndexOrThrow("path_conv_done"))
+                return pathConvDone
             }
         } finally {
             cursor?.close()
         }
         return 0
+        /*var cursor: Cursor? = null
+        try {
+            cursor = mDb!!.query("select path_conv_done from trisquel_metadata;")
+            if(cursor.moveToFirst()){
+                return cursor.getInt(cursor.getColumnIndexOrThrow("path_conv_done"))
+            }
+        } finally {
+            cursor?.close()
+        }
+        return 0*/
     }
 
     fun setConversionState(value : Int){
         val cval = ContentValues()
         cval.put("path_conv_done", value)
-        mDb!!.update("trisquel_metadata", cval, "rowid = ?", arrayOf("1"))
+        mDb!!.update("trisquel_metadata", SQLiteDatabase.CONFLICT_ABORT, cval, "rowid = ?", arrayOf("1"))
     }
 
     // suppImgは生の絶対パスが入っているが、これはAndroid11では使えなくなるので、content://に変換する必要がある
@@ -1277,9 +1344,9 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         var cursor: Cursor? = null
         try {
             // ["/path/to/file"] となっているものは変換する必要がある。先頭の ["\/ で判定可能。
-            cursor = mDb!!.rawQuery("select _id from photo where suppimgs like ? || '%';", arrayOf("[\"\\/"),null)
-            while (cursor!!.moveToNext()) {
-                val id = cursor.getInt(cursor.getColumnIndex("_id"))
+            cursor = mDb!!.query("select _id from photo where suppimgs like ? || '%';", arrayOf("[\"\\/"))
+            while (cursor.moveToNext()) {
+                val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
                 photoList.add(getPhoto(id)!!)
             }
         } finally {
@@ -1294,7 +1361,7 @@ class TrisquelDao(context: Context?) : DatabaseHelper(context) {
         val cval = ContentValues()
         cval.put("suppimgs", p.supplementalImagesStr)
         cval.put("memo", p.memo)
-        mDb!!.update("photo",
+        mDb!!.update("photo", SQLiteDatabase.CONFLICT_ABORT,
                 cval,
                 "_id = ?",
                 selectArgs)

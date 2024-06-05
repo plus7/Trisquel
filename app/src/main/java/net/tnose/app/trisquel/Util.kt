@@ -9,6 +9,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
 
+sealed class Optional<T>
+data class Some<T>(val value: T) : Optional<T>()
+class None<T> : Optional<T>()
+
 class Util {
 
     inner class ZoomRange {

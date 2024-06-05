@@ -1,15 +1,241 @@
 package net.tnose.app.trisquel
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import androidx.lifecycle.LiveData
+import androidx.room.ColumnInfo
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Delete
+import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.PrimaryKey
+import androidx.room.Query
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
 
 /**
  * Created by user on 2018/02/07.
  */
+@Entity(tableName = "camera")
+data class CameraEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")            val id: Int,
+    @ColumnInfo(name = "created")        val created: String,
+    @ColumnInfo(name = "type")           val type: Int?,
+    @ColumnInfo(name = "last_modified")  val lastModified: String,
+    @ColumnInfo(name = "mount")          val mount: String,
+    @ColumnInfo(name = "manufacturer")   val manufacturer: String,
+    @ColumnInfo(name = "model_name")     val modelName: String,
+    @ColumnInfo(name = "format")         val format: Int?,
+    @ColumnInfo(name = "ss_grain_size")  val ssGrainSize: Int?,
+    @ColumnInfo(name = "fastest_ss")     val fastestSs: Double?,
+    @ColumnInfo(name = "slowest_ss")     val slowestSs: Double?,
+    @ColumnInfo(name = "bulb_available") val bulbAvailable: Int?,
+    @ColumnInfo(name = "shutter_speeds") val shutterSpeeds: String,
+    @ColumnInfo(name = "ev_grain_size")  val evGrainSize: Int?,
+    @ColumnInfo(name = "ev_width")       val evWidth: Int?
+)
 
-open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+@Entity(tableName = "lens")
+data class LensEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")           val id: Int,
+    @ColumnInfo(name = "created")       val created: String,
+    @ColumnInfo(name = "last_modified") val lastModified: String,
+    @ColumnInfo(name = "mount")         val mount: String,
+    @ColumnInfo(name = "body")          val body: Int?,
+    @ColumnInfo(name = "manufacturer")  val manufacturer: String,
+    @ColumnInfo(name = "model_name")    val modelName: String,
+    @ColumnInfo(name = "focal_length")  val focalLength: String,
+    @ColumnInfo(name = "f_steps")       val fSteps: String,
+)
 
+@Entity(tableName = "filmroll")
+data class FilmrollEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")           val id: Int,
+    @ColumnInfo(name = "created")       val created: String,
+    @ColumnInfo(name = "name")          val name: String,
+    @ColumnInfo(name = "last_modified") val lastModified: String,
+    @ColumnInfo(name = "camera")        val camera: Int?,
+    @ColumnInfo(name = "format")        val format: String,
+    @ColumnInfo(name = "manufacturer")  val manufacturer: String,
+    @ColumnInfo(name = "brand")         val brand: String,
+    @ColumnInfo(name = "iso")           val iso: String
+)
+
+@Entity(tableName = "photo")
+data class PhotoEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")              val id: Int,
+    @ColumnInfo(name = "filmroll")         val filmroll: Int?,
+    @ColumnInfo(name = "_index")           val _index: Int?,
+    @ColumnInfo(name = "date")             val date: String,
+    @ColumnInfo(name = "camera")           val camera: Int?,
+    @ColumnInfo(name = "lens")             val lens: Int?,
+    @ColumnInfo(name = "focal_length")     val focalLength: Double?,
+    @ColumnInfo(name = "aperture")         val aperture: Double?,
+    @ColumnInfo(name = "shutter_speed")    val shutterSpeed: Double?,
+    @ColumnInfo(name = "exp_compensation") val expCompensation: Double?,
+    @ColumnInfo(name = "ttl_light_meter")  val ttlLightMeter: Double?,
+    @ColumnInfo(name = "location")         val location: String,
+    @ColumnInfo(name = "latitude")         val latitude: Double?,
+    @ColumnInfo(name = "longitude")        val longitude: Double?,
+    @ColumnInfo(name = "memo")             val memo: String,
+    @ColumnInfo(name = "accessories")      val accessories: String,
+    @ColumnInfo(name = "suppimgs")         val suppimgs: String,
+    @ColumnInfo(name = "favorite")         val favorite: Int?,
+)
+
+@Entity(tableName = "accessory")
+data class AccessoryEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")                 val id: Int,
+    @ColumnInfo(name = "created")             val created: String,
+    @ColumnInfo(name = "last_modified")       val lastModified: String,
+    @ColumnInfo(name = "type")                val type: Int?,
+    @ColumnInfo(name = "name")                val name: String,
+    @ColumnInfo(name = "mount")               val mount: String,
+    @ColumnInfo(name = "focal_length_factor") val focalLengthFactor: Double?,
+)
+
+@Entity(tableName = "suppimg")
+data class SuppimgEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")      val id: Int,
+    @ColumnInfo(name = "photo_id") val photoId: Int?,
+    @ColumnInfo(name = "path")     val path: String,
+    @ColumnInfo(name = "_index")   val _index: Int?,
+)
+
+@Entity(tableName = "tag")
+data class TagEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")    val id: Int,
+    @ColumnInfo(name = "label")  val label: String,
+    @ColumnInfo(name = "refcnt") val refcnt: Int?,
+)
+
+@Entity(tableName = "tagmap")
+data class TagMapEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")         val id: Int,
+    @ColumnInfo(name = "photo_id")    val photoId: Int?,
+    @ColumnInfo(name = "tag_id")      val tagId: Int?,
+    @ColumnInfo(name = "filmroll_id") val filmrollId: Int?,
+)
+
+@Entity(tableName = "trisquel_metadata")
+data class TrisquelMetadataEntity(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "_id")            val id: Int,
+    @ColumnInfo(name = "path_conv_done") val pathConvDone: Int?,
+)
+
+@Dao
+interface TrisquelDao2 {
+
+    @Query("select * from camera order by created desc;")
+    fun allCameras () : LiveData<List<CameraEntity>>
+
+    @Query("select * from accessory order by created desc;")
+    fun allAccessories() : LiveData<List<AccessoryEntity>>
+
+    @Upsert
+    suspend fun upsertAccessory(entity: AccessoryEntity)
+
+    @Delete
+    suspend fun deleteAccessory(vararg entity: AccessoryEntity)
+
+    @Query("select * from tag;")
+    fun allTags() : LiveData<List<TagEntity>>
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMetadata(metadata: TrisquelMetadataEntity)
+}
+
+// 元々のバージョンが17だったので、一つ上の18に設定する
+@Database(entities = [CameraEntity::class,
+    LensEntity::class,
+    FilmrollEntity::class,
+    PhotoEntity::class,
+    AccessoryEntity::class,
+    SuppimgEntity::class,
+    TagEntity::class,
+    TagMapEntity::class,
+    TrisquelMetadataEntity::class ], version = 18)
+abstract class TrisquelRoomDatabase : RoomDatabase() {
+    abstract fun trisquelDao(): TrisquelDao2
+    companion object {
+
+        const val USER_DB_NAME = "trisquel.db"
+
+        @Volatile
+        private var INSTANCE: TrisquelRoomDatabase? = null
+
+        @JvmStatic
+        fun getInstance(context: Context): TrisquelRoomDatabase {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: Room.databaseBuilder(
+                    context,
+                    TrisquelRoomDatabase::class.java,
+                    USER_DB_NAME
+                )
+                    .addMigrations(MIGRATION_17_18)
+                    .addCallback(object : Callback() {
+                        private val applicationScope = CoroutineScope(SupervisorJob())
+                        override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
+                            applicationScope.launch(Dispatchers.IO) {
+                                populateDatabase()
+                            }
+                            // XXX: ここjoinでブロックしないといけなかったりしないか？
+                        }
+                        private suspend fun populateDatabase() {
+                            getInstance(context).trisquelDao().insertMetadata(TrisquelMetadataEntity(0,1))
+                        }
+                    })
+                    .build()
+                    .also { INSTANCE = it }
+            }
+        }
+        // Migration継承objectを定義
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.beginTransaction()
+                try {
+                    // 新しいテーブルを一時テーブルとして構築
+                    database.execSQL("create table tmp_trisquel_metadata( _id integer primary key autoincrement not null, path_conv_done integer );" )
+
+                    // 旧テーブルのデータを全て一時テーブルに追加
+                    database.execSQL("""
+                insert into tmp_trisquel_metadata (path_conv_done)
+                select path_conv_done from trisquel_metadata
+                """.trimIndent()
+                    )
+                    // 旧テーブルを削除
+                    database.execSQL("drop table trisquel_metadata")
+                    // 新テーブルをリネーム
+                    database.execSQL("alter table tmp_trisquel_metadata rename to trisquel_metadata")
+
+                    database.setTransactionSuccessful()
+                } finally {
+                    database.endTransaction()
+                }
+            }
+        }
+    }
+}
+open class DatabaseHelper(context: Context?){ //} : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+    /*
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
                 "create table camera ("
@@ -121,129 +347,25 @@ open class DatabaseHelper(context: Context?) : SQLiteOpenHelper(context, DATABAS
                         + ");"
         )
 
-        db.execSQL( "create table trisquel_metadata( path_conv_done integer );" )
-        db.execSQL( "insert into trisquel_metadata values(1);" )
+        //db.execSQL( "create table trisquel_metadata( path_conv_done integer );" )
+        db.execSQL( "create table trisquel_metadata( _id integer primary key autoincrement not null, path_conv_done integer );" )
+        db.execSQL( "insert into trisquel_metadata(path_conv_done) values(1);" )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         /*
-        if(oldVersion <= 8) {
-            db.execSQL("alter table photo rename to tmp_photo;");
-            db.execSQL(
-                    "create table photo ("
-                            + "_id  integer primary key autoincrement not null,"
-                            + "filmroll integer,"
-                            + "_index integer,"
-                            + "date text not null,"
-                            + "camera integer,"
-                            + "lens integer,"
-                            + "focal_length real,"
-                            + "aperture real,"
-                            + "shutter_speed real,"
-                            + "exp_compensation real,"
-                            + "ttl_light_meter real,"
-                            + "location text not null,"
-                            + "latitude real,"
-                            + "longitude real,"
-                            + "memo text not null"
-                            + ");"
-            );
-            db.execSQL("insert into photo(_id, filmroll, _index, date, camera, lens, focal_length, aperture, shutter_speed, exp_compensation, ttl_light_meter, location, memo) select _id, filmroll, _index, date, camera, lens, focal_length, aperture, shutter_speed, exp_compensation, ttl_light_meter, location, memo from tmp_photo;");
-            db.execSQL("drop table tmp_photo;");
-        }*/
-        /*if(oldVersion <= 9){
-            db.execSQL(
-                    "create table accessory ("
-                            + "_id  integer primary key autoincrement not null,"
-                            + "created text not null,"
-                            + "last_modified text not null,"
-                            + "type integer,"
-                            + "name text not null,"
-                            + "lens_mount text not null,"
-                            + "camera_mount text not null,"
-                            + "mount text not null,"
-                            + "focal_length_factor real"
-                            + ");"
-            );
-        }*/
-        /*if(oldVersion <= 10){
-            db.execSQL("alter table photo add column accessories text not null default '' ;");
-        }*/
-        /*
-        if(oldVersion <= 11){
-            db.execSQL("drop table accessory;");
-            db.execSQL(
-                    "create table accessory ("
-                            + "_id  integer primary key autoincrement not null,"
-                            + "created text not null,"
-                            + "last_modified text not null,"
-                            + "type integer,"
-                            + "name text not null,"
-                            + "mount text not null,"
-                            + "focal_length_factor real"
-                            + ");"
-            );
-        }
+        もっと昔のバージョンを使っている人が統計上ほぼいなくなったので、oldVersionが16以前の処理は削除
         */
-        if (oldVersion <= 11) {
-            db.execSQL("alter table photo add column accessories text not null default '' ;")
-            db.execSQL(
-                    "create table accessory ("
-                            + "_id  integer primary key autoincrement not null,"
-                            + "created text not null,"
-                            + "last_modified text not null,"
-                            + "type integer,"
-                            + "name text not null,"
-                            + "mount text not null,"
-                            + "focal_length_factor real"
-                            + ");"
-            )
-        }
-
-        if (oldVersion <= 12) {
-            db.execSQL("alter table photo add column suppimgs text not null default '' ;")
-        }
-
-        if (oldVersion <= 13) {
-            db.execSQL("alter table photo add column favorite integer default 0 ;")
-        }
-
-        if (oldVersion <= 14){
-            db.execSQL(
-                    "create table tag ("
-                            + "_id  integer primary key autoincrement not null,"
-                            + "label text not null,"
-                            + "refcnt integer"
-                            + ");"
-            )
-
-            db.execSQL(
-                    "create table tagmap ("
-                            + "_id  integer primary key autoincrement not null,"
-                            + "photo_id integer,"
-                            + "tag_id integer"
-                            + ");"
-            )
-        }
-
-        if (oldVersion <= 15){
-            db.execSQL("alter table tagmap add column filmroll_id integer default 0 ;")
-        }
-
-        if (oldVersion <= 16){
-            db.execSQL( "create table trisquel_metadata( path_conv_done integer );" )
-            db.execSQL( "insert into trisquel_metadata values(0);" )
-        }
     }
 
     fun open(): SQLiteDatabase {
         return super.getWritableDatabase()
-    }
+    }*/
 
     companion object {
         internal val DATABASE_NAME = "trisquel.db"
 
-        internal val DATABASE_VERSION = 17
+        internal val DATABASE_VERSION = 18
     }
 }
 
