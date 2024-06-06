@@ -41,7 +41,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
     }
 
     fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?){
-        val id = data.getIntExtra("id", -1)
+        val id = data.getIntExtra("id", 0)
         this.id = id
         // savedInstanceStateに関係ない部分
         if(id < 0)
