@@ -3,12 +3,11 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.os.Bundle
 import android.preference.PreferenceManager
-import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.ViewModelProvider
+
 
 /**
  * A fragment representing a list of Items.
@@ -27,7 +26,7 @@ class AccessoryFragment : androidx.fragment.app.Fragment() {
     private var mListener: OnListFragmentInteractionListener? = null
     private var mView: RecyclerViewEmptySupport? = null
     private var accessoryRecyclerViewAdapter: MyAccessoryRecyclerViewAdapter? = null
-    private var list:MutableList<Accessory>? = null
+    private var mAccessoryViewModel: AccessoryViewModel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,15 +40,9 @@ class AccessoryFragment : androidx.fragment.app.Fragment() {
                               savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_accessory_list, container, false)
 
-        val dao = TrisquelDao(this.context)
-        dao.connection()
-        list = dao.accessories
-        dao.close()
-
         //ここでいいのか？
         val pref = PreferenceManager.getDefaultSharedPreferences(this.context)
         val key  = pref.getInt("accessory_sortkey", 0)
-        changeSortKey(key)
 
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
@@ -63,8 +56,14 @@ class AccessoryFragment : androidx.fragment.app.Fragment() {
             } else {
                 view.layoutManager = androidx.recyclerview.widget.GridLayoutManager(context, mColumnCount)
             }
-            this.accessoryRecyclerViewAdapter = MyAccessoryRecyclerViewAdapter(list!!, mListener)
+            this.accessoryRecyclerViewAdapter = MyAccessoryRecyclerViewAdapter(MyAccessoryRecyclerViewAdapter.AccessoryDiff(), mListener)
             view.adapter = accessoryRecyclerViewAdapter
+
+            mAccessoryViewModel = ViewModelProvider(this).get(AccessoryViewModel::class.java)
+            mAccessoryViewModel!!.allAccessories.observe(viewLifecycleOwner) { accessories ->
+                accessoryRecyclerViewAdapter!!.submitList(accessories)
+            }
+            changeSortKey(key)
         }
         return view
     }
@@ -85,65 +84,19 @@ class AccessoryFragment : androidx.fragment.app.Fragment() {
     }
 
     fun changeSortKey(key: Int){
-        if(list != null){
-            when(key){
-                0 -> {list!!.sortByDescending { it.created }}
-                1 -> {list!!.sortBy { it.name }}
-                2 -> {list!!.sortBy { it.type }}
-                else -> {}
-            }
-            accessoryRecyclerViewAdapter?.notifyDataSetChanged()
-        }
+        mAccessoryViewModel!!.sortingRule.value = key
     }
 
     fun insertAccessory(accessory: Accessory) {
-        if (list != null) {
-            val index = list!!.indexOf(accessory)
-            if (-1 == index) {
-                list!!.add(0, accessory)
-                val dao = TrisquelDao(this.context)
-                dao.connection()
-                val id = dao.addAccessory(accessory)
-                dao.close()
-                accessory.id = id.toInt()
-                accessoryRecyclerViewAdapter?.notifyItemInserted(0)
-                mView?.layoutManager?.scrollToPosition(0)
-            }
-        }
+        mAccessoryViewModel!!.insert(accessory.toEntity())
     }
 
     fun updateAccessory(accessory: Accessory) {
-        if (list != null) {
-            for (i in list!!.indices) {
-                val a = list!!.get(i)
-                if (a.id == accessory.id) {
-                    list!!.removeAt(i)
-                    list!!.add(i, accessory)
-                    val dao = TrisquelDao(this.context)
-                    dao.connection()
-                    dao.updateAccessory(accessory)
-                    dao.close()
-                    accessoryRecyclerViewAdapter?.notifyItemChanged(i)
-                }
-            }
-        }
+        mAccessoryViewModel!!.update(accessory.toEntity())
     }
 
     fun deleteAccessory(id: Int) {
-        if (list != null) {
-            for (i in list!!.indices) {
-                val a = list!!.get(i)
-                if (a.id == id) {
-                    list!!.removeAt(i)
-                    val dao = TrisquelDao(this.context)
-                    dao.connection()
-                    dao.deleteAccessory(id)
-                    dao.close()
-                    accessoryRecyclerViewAdapter?.notifyItemRemoved(i)
-                    break
-                }
-            }
-        }
+        mAccessoryViewModel!!.delete(id)
     }
     /**
      * This interface must be implemented by activities that contain this

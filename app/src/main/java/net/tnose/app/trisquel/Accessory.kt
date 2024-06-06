@@ -1,6 +1,6 @@
 package net.tnose.app.trisquel
 
-import java.util.*
+import java.util.Date
 
 /**
  * Created by user on 2018/07/12.
@@ -62,11 +62,23 @@ class Accessory {
         this.focal_length_factor = focal_length_factor
     }
 
+    fun toEntity(): AccessoryEntity {
+        return AccessoryEntity(id,
+            Util.dateToStringUTC(created),
+            Util.dateToStringUTC(last_modified),
+            type, name, mount, focal_length_factor)
+    }
+
     companion object {
         const val ACCESSORY_UNKNOWN = 0
         const val ACCESSORY_FILTER = 1
         const val ACCESSORY_TELE_CONVERTER = 2
         const val ACCESSORY_WIDE_CONVERTER = 3
         const val ACCESSORY_EXT_TUBE = 4
+
+        internal fun fromEntity(entity : AccessoryEntity) : Accessory {
+            return Accessory(entity.id, entity.created, entity.lastModified,
+                entity.type!!, entity.name, entity.mount, entity.focalLengthFactor!!)
+        }
     }
 }

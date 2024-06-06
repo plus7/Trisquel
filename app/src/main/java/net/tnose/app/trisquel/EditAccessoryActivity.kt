@@ -49,7 +49,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         else
             setTitle(R.string.title_activity_edit_accessory)
 
-        if(id >= 0 && savedInstanceState == null) { //既存データを開きたて
+        if(id > 0 && savedInstanceState == null) { //既存データを開きたて
             val a = dao.getAccessory(id)
             this.created = Util.dateToStringUTC(a!!.created)
 

@@ -1,16 +1,15 @@
 package net.tnose.app.trisquel
 
-import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 
-import net.tnose.app.trisquel.AccessoryFragment.OnListFragmentInteractionListener
 
-class MyAccessoryRecyclerViewAdapter(private val mValues: List<Accessory>, private val mListener: OnListFragmentInteractionListener?) : androidx.recyclerview.widget.RecyclerView.Adapter<MyAccessoryRecyclerViewAdapter.ViewHolder>() {
-
+//private val mValues: List<Accessory>, private val mListener: OnListFragmentInteractionListener?
+class MyAccessoryRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<AccessoryEntity>, private val mListener: AccessoryFragment.OnListFragmentInteractionListener?) : androidx.recyclerview.widget.ListAdapter<AccessoryEntity, MyAccessoryRecyclerViewAdapter.ViewHolder>(diffCallback) {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.fragment_accessory, parent, false)
@@ -18,8 +17,8 @@ class MyAccessoryRecyclerViewAdapter(private val mValues: List<Accessory>, priva
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.mItem = mValues[position]
-        holder.mContentView.text = mValues[position].name
+        holder.mItem = getItem(position)
+        holder.mContentView.text = getItem(position).name
 
         when(holder.mItem?.type){
             Accessory.ACCESSORY_FILTER          ->{holder.mIconView.setImageResource(R.drawable.ic_filter_plane)}
@@ -30,23 +29,35 @@ class MyAccessoryRecyclerViewAdapter(private val mValues: List<Accessory>, priva
         }
 
         holder.mView.setOnClickListener {
-            mListener?.onListFragmentInteraction(holder.mItem!!, false)
+            mListener?.onListFragmentInteraction(Accessory.fromEntity(holder.mItem!!), false)
         }
 
         holder.mView.setOnLongClickListener {
-            mListener?.onListFragmentInteraction(holder.mItem!!, true)
+            mListener?.onListFragmentInteraction(Accessory.fromEntity(holder.mItem!!), true)
             true
         }
     }
 
-    override fun getItemCount(): Int {
-        return mValues.size
+
+    internal class AccessoryDiff : DiffUtil.ItemCallback<AccessoryEntity>() {
+        override fun areItemsTheSame(oldItem: AccessoryEntity, newItem: AccessoryEntity): Boolean {
+            return oldItem === newItem
+        }
+
+        override fun areContentsTheSame(oldItem: AccessoryEntity, newItem: AccessoryEntity): Boolean {
+            //return oldItem.getWord().equals(newItem.getWord())
+            return oldItem == newItem
+        }
     }
+
+    /*override fun getItemCount(): Int {
+        return mValues.size
+    }*/
 
     inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mContentView: TextView
         val mIconView: ImageView
-        var mItem: Accessory? = null
+        var mItem: AccessoryEntity? = null
 
         init {
             mContentView = mView.findViewById<View>(R.id.content) as TextView

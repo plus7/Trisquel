@@ -149,6 +149,10 @@ interface TrisquelDao2 {
 
     @Query("select * from accessory order by created desc;")
     fun allAccessories() : LiveData<List<AccessoryEntity>>
+    @Query("select * from accessory order by name asc;") //ダサいがこうするしかない？
+    fun allAccessoriesSortByName() : LiveData<List<AccessoryEntity>>
+    @Query("select * from accessory order by type asc;")
+    fun allAccessoriesSortByType() : LiveData<List<AccessoryEntity>>
 
     @Upsert
     suspend fun upsertAccessory(entity: AccessoryEntity)

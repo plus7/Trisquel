@@ -34,9 +34,17 @@ import com.google.android.material.navigation.NavigationView
 import net.tnose.app.trisquel.dummy.DummyContent
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.*
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Arrays
+import java.util.Calendar
+import java.util.Date
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -793,7 +801,8 @@ class MainActivity : AppCompatActivity(),
             }
             REQCODE_ADD_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val a = Accessory(-1, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()),
+                // Room化したときは、新規作成時のidは0でよい
+                val a = Accessory(0, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()),
                         bundle!!.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
                         bundle.getDouble("focal_length_factor"))
                 if (frag is AccessoryFragment) frag.insertAccessory(a)

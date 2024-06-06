@@ -66,7 +66,7 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
                     val cname = cursor.getColumnName(i)
                     val ctype = cursor.getType(i)
                     when(ctype){
-                        Cursor.FIELD_TYPE_NULL -> obj.put(cname, null)
+                        FIELD_TYPE_NULL -> obj.put(cname, null)
                         Cursor.FIELD_TYPE_FLOAT -> obj.put(cname, cursor.getDouble(i))
                         Cursor.FIELD_TYPE_INTEGER -> obj.put(cname, cursor.getInt(i))
                         Cursor.FIELD_TYPE_STRING -> obj.put(cname, cursor.getString(i))
@@ -477,9 +477,10 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
         mDb = helper.writableDatabase
     }
 
-    override fun close() {
-        mDb?.close()
-        mDb = null
+    fun close() {
+        //ここのクローズをやめるとなぜかRoomのエラー(no such table: room_table_modification_logなど)がなくなる
+        //mDb?.close()
+        //mDb = null
     }
 
     /* Camera */
@@ -1277,7 +1278,7 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
                             "group by p._id "+
                             "having count(*) = "+tags.size.toString()+";", selectionArgs.toTypedArray())
                                                //having count(*) = ?ではダメらしい。
-            while (cursor!!.moveToNext()) {
+            while (cursor.moveToNext()) {
                 photos.add(getPhotoFromCursor(cursor))
             }
         } finally {
@@ -1298,7 +1299,7 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
                             "and (t.label in ("+makeArray(tags.size)+")) "+
                             "and p._id = tm.photo_id "+
                             "group by p._id;", selectionArgs.toTypedArray())
-            while (cursor!!.moveToNext()) {
+            while (cursor.moveToNext()) {
                 photos.add(getPhotoFromCursor(cursor))
             }
         } finally {
