@@ -4,7 +4,6 @@ import android.os.Parcel
 import android.os.Parcelable
 import org.json.JSONArray
 import org.json.JSONException
-import java.util.*
 
 /**
  * Created by user on 2018/01/13.
@@ -38,6 +37,14 @@ class Photo(var id: Int, var filmrollid: Int, var frameIndex: Int, var date: Str
             override fun newArray(size: Int): Array<Photo?> {
                 return arrayOfNulls<Photo?>(size)
             }
+        }
+        internal fun fromEntity(entity: PhotoEntity) : Photo {
+            return Photo(entity.id, entity.filmroll!!, entity._index!!,
+                entity.date, entity.camera!!, entity.lens!!,
+                entity.focalLength!!, entity.aperture!!, entity.shutterSpeed!!,
+                entity.expCompensation!!, entity.ttlLightMeter!!,
+                entity.location, entity.latitude!!, entity.longitude!!,
+                entity.memo, entity.accessories, entity.suppimgs, entity.favorite!! == 1)
         }
     }
 

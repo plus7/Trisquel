@@ -763,7 +763,7 @@ class MainActivity : AppCompatActivity(),
                 val c = dao.getCamera(bundle!!.getInt("camera"))
                 dao.close()
                 val f = FilmRoll(
-                        -1,
+                        0,
                         bundle.getString("name")!!,
                         c!!,
                         bundle.getString("manufacturer")!!,
@@ -796,7 +796,8 @@ class MainActivity : AppCompatActivity(),
             }
             REQCODE_EDIT_PHOTO_LIST -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                if (frag is FilmRollFragment) frag.refreshFilmRoll(bundle!!.getInt("filmroll"))
+                // Room化に伴いいらなくなった
+                // if (frag is FilmRollFragment) frag.refreshFilmRoll(bundle!!.getInt("filmroll"))
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_ADD_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
@@ -892,7 +893,8 @@ class MainActivity : AppCompatActivity(),
                 val bundle = data.extras
                 val dirtyFilmRolls = bundle?.getIntegerArrayList("dirtyFilmRolls") ?: ArrayList()
                 if (dirtyFilmRolls.size > 0 && currentFragment is FilmRollFragment) {
-                    (currentFragment as FilmRollFragment).refreshAll(ArrayList(dirtyFilmRolls.filterNotNull()))
+                //TODO: ここのコードの目的がもうよくわからないがとりあえずコンパイルを通すためにコメントアウト
+                //(currentFragment as FilmRollFragment).refreshAll(ArrayList(dirtyFilmRolls.filterNotNull()))
                 }
             }
             else -> {

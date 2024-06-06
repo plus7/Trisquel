@@ -50,14 +50,14 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         }
 
     protected fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?) {
-        val id = data.getIntExtra("id", -1)
+        val id = data.getIntExtra("id", 0)
         this.id = id
-        if(id < 0)
+        if(id <= 0)
             setTitle(R.string.title_activity_reg_filmroll)
         else
             setTitle(R.string.title_activity_edit_filmroll)
 
-        if(id >= 0 && savedInstanceState == null) { //既存データを開きたて
+        if(id > 0 && savedInstanceState == null) { //既存データを開きたて
             val f = dao.getFilmRoll(id)
             this.created = Util.dateToStringUTC(f!!.created)
             binding.editName.setText(f.name)

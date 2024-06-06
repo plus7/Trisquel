@@ -2,7 +2,7 @@ package net.tnose.app.trisquel
 
 import android.os.Parcel
 import android.os.Parcelable
-import java.util.*
+import java.util.Date
 
 /**
  * Created by user on 2018/01/13.
@@ -147,6 +147,13 @@ class CameraSpec: Parcelable {
             override fun newArray(size: Int): Array<CameraSpec?> {
                 return arrayOfNulls<CameraSpec?>(size)
             }
+        }
+        internal fun fromEntity(entity: CameraEntity) : CameraSpec {
+            return CameraSpec(entity.id, entity.type!!, entity.created,
+                entity.lastModified, entity.mount, entity.manufacturer,
+                entity.modelName, entity.format!!, entity.ssGrainSize!!,
+                entity.fastestSs, entity.slowestSs, entity.bulbAvailable!! == 1,
+                entity.shutterSpeeds, entity.evGrainSize!!, entity.evWidth!!)
         }
     }
 }

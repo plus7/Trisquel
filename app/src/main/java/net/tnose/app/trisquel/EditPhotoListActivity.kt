@@ -17,6 +17,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
@@ -51,6 +52,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     private var mFilmRoll: FilmRoll? = null
     private var thumbnailEditingPhoto: Photo? = null
     private var photo_fragment: PhotoFragment? = null
+    private var mFilmRollViewModel: FilmRollViewModel? = null
 
     private val filmRollText: String
         get() {
@@ -115,7 +117,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         actionBar!!.setDisplayHomeAsUpEnabled(true)
 
         val data = intent
-        val id = data.getIntExtra("id", -1)
+        val id = data.getIntExtra("id", 0)
 
         val dao = TrisquelDao(applicationContext)
         dao.connection()
@@ -145,6 +147,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             intent.putExtra("filmroll", mFilmRoll!!.id)
             startActivityForResult(intent, REQCODE_ADD_PHOTO)
         }
+        mFilmRollViewModel = ViewModelProvider(this).get(FilmRollViewModel::class.java)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -219,6 +222,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 val dao = TrisquelDao(this.applicationContext)
                 dao.connection()
                 val c = dao.getCamera(bundle!!.getInt("camera"))
+                dao.close()
                 val f = FilmRoll(
                         bundle.getInt("id"),
                         bundle.getString("name")!!,
@@ -233,8 +237,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
 
                 setTitles(f)
 
-                dao.updateFilmRoll(f)
-                dao.close()
+                mFilmRollViewModel!!.update(f.toEntity())
             } else if (resultCode == Activity.RESULT_CANCELED) {
             }
             REQCODE_SELECT_THUMBNAIL -> if (resultCode == RESULT_OK) {

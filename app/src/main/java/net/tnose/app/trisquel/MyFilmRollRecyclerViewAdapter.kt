@@ -1,16 +1,22 @@
 package net.tnose.app.trisquel
 
 import android.graphics.Typeface
-import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import net.tnose.app.trisquel.FilmRollFragment.OnListFragmentInteractionListener
-import java.util.*
 
 class MyFilmRollRecyclerViewAdapter(
-        private val mValues: ArrayList<FilmRoll>, private val mListener: OnListFragmentInteractionListener?) : androidx.recyclerview.widget.RecyclerView.Adapter<MyFilmRollRecyclerViewAdapter.ViewHolder>() {
+    diffCallback: DiffUtil.ItemCallback<FilmRollAndRels>,
+    private val mListener: OnListFragmentInteractionListener?
+) :
+    androidx.recyclerview.widget.ListAdapter<
+            FilmRollAndRels,
+            MyFilmRollRecyclerViewAdapter.ViewHolder
+            >(diffCallback)
+{
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -19,23 +25,25 @@ class MyFilmRollRecyclerViewAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.mItem = mValues[position]
+        holder.mItem = getItem(position)
         //holder.mIdView.setText(Integer.toString(mValues.get(position).id));
-        if (mValues[position].name.isEmpty()) {
+        if (holder.mItem!!.filmRoll.name.isEmpty()) {
             holder.mNameView.setTypeface(Typeface.SANS_SERIF, Typeface.ITALIC)
             holder.mNameView.setText(R.string.empty_name)
         } else {
             holder.mNameView.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL)
-            holder.mNameView.text = mValues[position].name
+            holder.mNameView.text = holder.mItem!!.filmRoll.name
         }
         holder.mCameraAndBrandView.text =
-                mValues[position].camera.manufacturer + " " + mValues[position].camera.modelName + "   " +
-                mValues[position].manufacturer + " " + mValues[position].brand
+            holder.mItem!!.camera.manufacturer + " " + holder.mItem!!.camera.modelName + "   " +
+                    holder.mItem!!.filmRoll.manufacturer + " " + holder.mItem!!.filmRoll.brand
 
-        val exp = mValues[position].exposures
+        val exp = holder.mItem!!.photos.size
         val array = arrayListOf<String>()
-        if(mValues[position].dateRange.isNotEmpty())
-            array.add(mValues[position].dateRange)
+        val f = FilmRoll.fromEntity(holder.mItem!!)
+        val dateRange = f.dateRange
+        if(dateRange.isNotEmpty())
+            array.add(dateRange)
         array.add(
                 if(exp == 1) "%d shot".format(exp)
                 else         "%d shots".format(exp)
@@ -43,17 +51,24 @@ class MyFilmRollRecyclerViewAdapter(
         holder.mDateAndShotView.text = array.joinToString("   ")
 
         holder.mView.setOnClickListener {
-            mListener?.onListFragmentInteraction(holder.mItem!!, false)
+            mListener?.onListFragmentInteraction(FilmRoll.fromEntity(holder.mItem!!), false)
         }
 
         holder.mView.setOnLongClickListener {
-            mListener?.onListFragmentInteraction(holder.mItem!!, true)
+            mListener?.onListFragmentInteraction(FilmRoll.fromEntity(holder.mItem!!), true)
             true
         }
     }
 
-    override fun getItemCount(): Int {
-        return mValues.size
+    internal class FilmRollDiff : DiffUtil.ItemCallback<FilmRollAndRels>() {
+        override fun areItemsTheSame(oldItem: FilmRollAndRels, newItem: FilmRollAndRels): Boolean {
+            return oldItem === newItem
+        }
+
+        override fun areContentsTheSame(oldItem: FilmRollAndRels, newItem: FilmRollAndRels): Boolean {
+            //return oldItem.getWord().equals(newItem.getWord())
+            return oldItem == newItem
+        }
     }
 
     inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
@@ -61,7 +76,7 @@ class MyFilmRollRecyclerViewAdapter(
         val mNameView: TextView
         val mCameraAndBrandView: TextView
         val mDateAndShotView: TextView
-        var mItem: FilmRoll? = null
+        var mItem: FilmRollAndRels? = null
 
         init {
             //mIdView = (TextView) view.findViewById(R.id.id);

@@ -2,7 +2,8 @@ package net.tnose.app.trisquel
 
 import java.text.ParseException
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.TimeZone
 
 /**
  * Created by user on 2018/01/13.
@@ -103,5 +104,44 @@ class FilmRoll {
         this.brand = brand
         this.iso = iso
         this.photos = photos
+    }
+
+    fun toEntity(): FilmRollEntity {
+        return FilmRollEntity(id,
+            Util.dateToStringUTC(created),
+            name,
+            Util.dateToStringUTC(lastModified),
+            camera.id, camera.format.toString(), manufacturer, brand, iso.toString())
+    }
+
+    companion object {
+        internal fun fromEntity(filmRollAndRels: FilmRollAndRels) : FilmRoll {
+            val fEntity = filmRollAndRels.filmRoll
+            val cEntity = filmRollAndRels.camera
+            val pEntities = ArrayList(filmRollAndRels.photos.map { Photo.fromEntity(it) })
+
+            //constructor(id: Int, name: String, created: String,
+            // lastModified: String, camera: CameraSpec,
+            // manufacturer: String, brand: String,
+            // iso: Int, exposures: Int) {
+            //
+            return FilmRoll(fEntity.id, fEntity.name, fEntity.created,
+                fEntity.lastModified, CameraSpec.fromEntity(cEntity),
+                fEntity.manufacturer, fEntity.brand,
+                fEntity.iso.toInt(), 0, pEntities)
+        }
+        /*
+        internal fun fromEntity(fEntity : FilmrollEntity, cEntity: CameraEntity) : FilmRoll {
+
+            return FilmRoll(fEntity.id, fEntity.created, fEntity.lastModified,
+                CameraSpec.fromEntity(cEntity), fEntity.manufacturer, fEntity.brand,
+                fEntity.iso, 0)
+        }
+        */
+        /*
+        internal fun fromEntity(fentity : FilmrollEntity, pentities : List<PhotoEntity>) : FilmRoll {
+        }
+
+         */
     }
 }

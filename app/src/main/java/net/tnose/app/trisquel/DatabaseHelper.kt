@@ -6,11 +6,13 @@ import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Relation
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Upsert
@@ -60,7 +62,7 @@ data class LensEntity(
 )
 
 @Entity(tableName = "filmroll")
-data class FilmrollEntity(
+data class FilmRollEntity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "_id")           val id: Int,
     @ColumnInfo(name = "created")       val created: String,
@@ -141,11 +143,40 @@ data class TrisquelMetadataEntity(
     @ColumnInfo(name = "path_conv_done") val pathConvDone: Int?,
 )
 
+data class ExpDate(
+    val date: String
+)
+data class FilmRollAndRels(
+    @Embedded
+    val filmRoll: FilmRollEntity,
+
+    @Relation(parentColumn = "camera", entityColumn = "_id")
+    val camera: CameraEntity,
+
+    @Relation(parentColumn = "_id", entityColumn = "filmroll") //, projection = arrayOf("date"), entity = PhotoEntity.class)
+    val photos: List<PhotoEntity>
+)
 @Dao
 interface TrisquelDao2 {
 
     @Query("select * from camera order by created desc;")
     fun allCameras () : LiveData<List<CameraEntity>>
+
+    @Query("SELECT * from filmroll where _id = :id")
+    fun getFilmRoll(id : Int): LiveData<FilmRollEntity>
+
+    @Query("SELECT * from filmroll order by created desc")
+    fun allFilmRollAndRels(): LiveData<List<FilmRollAndRels>>
+    @Query("SELECT * from filmroll WHERE cast(camera as text) LIKE :camera AND brand LIKE :filmbrand;")
+    fun allFilmRollAndRelsWithFilter(camera : String, filmbrand : String): LiveData<List<FilmRollAndRels>>
+    @Query("SELECT * from filmroll WHERE cast(camera as text) LIKE :camera AND brand LIKE :filmbrand order by name asc; ")
+    fun allFilmRollAndRelsSortByName(camera : String, filmbrand : String): LiveData<List<FilmRollAndRels>>
+    // フィルムブランドやカメラでのソートの実装が難しい
+
+    @Upsert
+    suspend fun upsertFilmRoll(entity: FilmRollEntity)
+    @Delete
+    suspend fun deleteFilmRoll(vararg entity: FilmRollEntity)
 
     @Query("select * from accessory order by created desc;")
     fun allAccessories() : LiveData<List<AccessoryEntity>>
@@ -169,7 +200,7 @@ interface TrisquelDao2 {
 // 元々のバージョンが17だったので、一つ上の18に設定する
 @Database(entities = [CameraEntity::class,
     LensEntity::class,
-    FilmrollEntity::class,
+    FilmRollEntity::class,
     PhotoEntity::class,
     AccessoryEntity::class,
     SuppimgEntity::class,

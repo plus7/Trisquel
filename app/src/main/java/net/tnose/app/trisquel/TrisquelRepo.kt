@@ -7,12 +7,61 @@ import androidx.lifecycle.LiveData
 
 class TrisquelRepo {
     protected lateinit var mTrisquelDao: TrisquelDao2
-    protected lateinit var mAllAccessory: LiveData<List<AccessoryEntity>>
     constructor (application: Application?) {
         val db : TrisquelRoomDatabase = TrisquelRoomDatabase.getInstance(application!!.applicationContext)
         mTrisquelDao = db.trisquelDao()
-        mAllAccessory = mTrisquelDao.allAccessories()
     }
+
+    fun getFilmRoll(id : Int) : LiveData<FilmRollEntity> {
+        return mTrisquelDao.getFilmRoll(id)
+    }
+
+    fun getAllFilmRolls(sortBy : Int, filterByKind : Int, filterByValue : String): LiveData<List<FilmRollAndRels>> {
+        var cameraVal = "%"
+        var filmBrandVal = "%"
+
+        if (filterByKind == 1) {
+            cameraVal = filterByValue
+        }else if (filterByKind == 2){
+            filmBrandVal = filterByValue
+        }
+
+        when(sortBy) {
+            0 -> {
+                if (filterByKind == 0) {
+                    return mTrisquelDao.allFilmRollAndRels()
+                } else {
+                    return mTrisquelDao.allFilmRollAndRelsWithFilter(cameraVal, filmBrandVal)
+                }
+            }
+
+            1 -> {
+                return mTrisquelDao.allFilmRollAndRelsSortByName(cameraVal, filmBrandVal)
+            }
+
+            /*2 -> {
+                return mTrisquelDao.allAccessoriesSortByType()
+            }*/
+
+            else -> {
+                if (filterByKind == 0) {
+                    return mTrisquelDao.allFilmRollAndRels()
+                } else {
+                    return mTrisquelDao.allFilmRollAndRelsWithFilter(cameraVal, filmBrandVal)
+                }
+            }
+        }
+    }
+    @WorkerThread
+    suspend fun upsertFilmRoll(entity: FilmRollEntity) {
+        mTrisquelDao.upsertFilmRoll(entity)
+    }
+
+    @WorkerThread
+    suspend fun deleteFilmRoll(id: Int) {
+        mTrisquelDao.deleteFilmRoll(FilmRollEntity(id, "", "","",0, "", "", "", ""))
+    }
+
     fun getAllAccessories(sortBy : Int): LiveData<List<AccessoryEntity>> {
         when(sortBy) {
             0 -> { return mTrisquelDao.allAccessories() }
