@@ -595,13 +595,6 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
         }
         return result
     }
-    /*
-    fun getCameraUsageCount(id: Int): Long {
-        val filmrolls = DatabaseUtils.queryNumEntries(mDb, "filmroll", "camera = ?", arrayOf(Integer.toString(id)))
-        val photos = DatabaseUtils.queryNumEntries(mDb, "photo", "camera = ?", arrayOf(Integer.toString(id)))
-        return filmrolls + photos
-    }
-    */
 
     /* Lens */
     fun addLens(lens: LensSpec): Long {
@@ -732,44 +725,6 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
     */
 
     /* Film roll */
-    fun addFilmRoll(f: FilmRoll): Long {
-        val cval = ContentValues()
-        cval.put("name", f.name)
-        cval.put("created", Util.dateToStringUTC(f.created))
-        cval.put("last_modified", Util.dateToStringUTC(f.lastModified))
-        cval.put("camera", f.camera.id)
-        cval.put("format", f.camera.format)
-        cval.put("manufacturer", f.manufacturer)
-        cval.put("brand", f.brand)
-        cval.put("iso", f.iso)
-        return mDb!!.insert("filmroll", SQLiteDatabase.CONFLICT_ABORT, cval)
-    }
-
-    fun updateFilmRoll(f: FilmRoll): Int {
-        val selectArgs = arrayOf(Integer.toString(f.id))
-        val cval = ContentValues()
-        cval.put("name", f.name)
-        cval.put("created", Util.dateToStringUTC(f.created))
-        cval.put("last_modified", Util.dateToStringUTC(f.lastModified))
-        cval.put("camera", f.camera.id)
-        cval.put("format", f.camera.format)
-        cval.put("manufacturer", f.manufacturer)
-        cval.put("brand", f.brand)
-        cval.put("iso", f.iso)
-        return mDb!!.update("filmroll", SQLiteDatabase.CONFLICT_ABORT,
-                cval,
-                "_id = ?",
-                selectArgs)
-    }
-
-    fun deleteFilmRoll(id: Int) {
-        val selectArgs = arrayOf(Integer.toString(id))
-        val photos = getPhotosByFilmRollId(id)
-        for(p in photos){
-            deletePhoto(p.id) //tagのリファレンスカウントも管理する必要があるため
-        }
-        mDb!!.delete("filmroll", "_id = ?", selectArgs)
-    }
 
     fun getFilmRoll(id: Int): FilmRoll? {
         var f: FilmRoll? = null
@@ -887,29 +842,6 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
         return photos
     }
 
-    /* Photo */
-    fun addPhoto(p: Photo): Long {
-        val cval = ContentValues()
-        cval.put("filmroll", p.filmrollid)
-        cval.put("_index", p.frameIndex)
-        cval.put("date", p.date)
-        cval.put("camera", p.cameraid)
-        cval.put("lens", p.lensid)
-        cval.put("focal_length", p.focalLength)
-        cval.put("aperture", p.aperture)
-        cval.put("shutter_speed", p.shutterSpeed)
-        cval.put("exp_compensation", p.expCompensation)
-        cval.put("ttl_light_meter", p.ttlLightMeter)
-        cval.put("location", p.location)
-        cval.put("latitude", p.latitude)
-        cval.put("longitude", p.longitude)
-        cval.put("memo", p.memo)
-        cval.put("accessories", p.accessoriesStr)
-        cval.put("suppimgs", p.supplementalImagesStr)
-        cval.put("favorite", if(p.favorite) 1 else 0)
-        return mDb!!.insert("photo", SQLiteDatabase.CONFLICT_ABORT, cval)
-    }
-
     fun updatePhoto(p: Photo): Int {
         val selectArgs = arrayOf(Integer.toString(p.id))
         val cval = ContentValues()
@@ -997,37 +929,6 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
         }
         //nullの場合どうする？
         return p
-    }
-
-    fun addAccessory(a: Accessory): Long {
-        val cval = ContentValues()
-        cval.put("name", a.name)
-        cval.put("type", a.type)
-        cval.put("created", Util.dateToStringUTC(a.created))
-        cval.put("last_modified", Util.dateToStringUTC(a.last_modified))
-        cval.put("mount", a.mount)
-        cval.put("focal_length_factor", a.focal_length_factor)
-        return mDb!!.insert("accessory", SQLiteDatabase.CONFLICT_ABORT, cval)
-    }
-
-    fun updateAccessory(a: Accessory): Int {
-        val selectArgs = arrayOf(Integer.toString(a.id))
-        val cval = ContentValues()
-        cval.put("name", a.name)
-        cval.put("type", a.type)
-        cval.put("created", Util.dateToStringUTC(a.created))
-        cval.put("last_modified", Util.dateToStringUTC(a.last_modified))
-        cval.put("mount", a.mount)
-        cval.put("focal_length_factor", a.focal_length_factor)
-        return mDb!!.update("accessory", SQLiteDatabase.CONFLICT_ABORT,
-                cval,
-                "_id = ?",
-                selectArgs)
-    }
-
-    fun deleteAccessory(id: Int) {
-        val selectArgs = arrayOf(Integer.toString(id))
-        mDb!!.delete("accessory", "_id = ?", selectArgs)
     }
 
     fun getAccessory(id: Int): Accessory? {
