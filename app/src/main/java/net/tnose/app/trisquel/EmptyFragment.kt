@@ -17,9 +17,7 @@ import androidx.fragment.app.Fragment
  * Use the [EmptyFragment.newInstance] factory method to
  * create an instance of this fragment.
  */
-class EmptyFragment : androidx.fragment.app.Fragment() {
-
-    // TODO: Rename and change types of parameters
+class EmptyFragment : Fragment() {
     private var mParam1: String? = null
     private var mParam2: String? = null
 
@@ -37,7 +35,6 @@ class EmptyFragment : androidx.fragment.app.Fragment() {
         return inflater.inflate(R.layout.fragment_empty, container, false)
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
     fun onButtonPressed(uri: Uri) {
         if (mListener != null) {
             mListener!!.onFragmentInteraction(uri)
@@ -68,13 +65,10 @@ class EmptyFragment : androidx.fragment.app.Fragment() {
      * See the Android Training lesson [Communicating with Other Fragments](http://developer.android.com/training/basics/fragments/communicating.html) for more information.
      */
     interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
         fun onFragmentInteraction(uri: Uri)
     }
 
     companion object {
-        // TODO: Rename parameter arguments, choose names that match
-        // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
         private val ARG_PARAM1 = "param1"
         private val ARG_PARAM2 = "param2"
 
@@ -86,7 +80,6 @@ class EmptyFragment : androidx.fragment.app.Fragment() {
          * @param param2 Parameter 2.
          * @return A new instance of fragment EmptyFragment.
          */
-        // TODO: Rename and change types and number of parameters
         fun newInstance(param1: String, param2: String): EmptyFragment {
             val fragment = EmptyFragment()
             val args = Bundle()

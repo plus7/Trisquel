@@ -2,9 +2,6 @@ package net.tnose.app.trisquel
 
 import android.content.Context
 import android.os.Bundle
-import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,8 +15,6 @@ import com.github.chuross.recyclerviewadapters.SpanSizeLookupBuilder
  * [FavoritePhotoFragment.OnListFragmentInteractionListener] interface.
  */
 class FavoritePhotoFragment : androidx.fragment.app.Fragment() {
-
-    // TODO: Customize parameters
     private var columnCount = 3
 
     private var listener: OnListFragmentInteractionListener? = null
@@ -98,16 +93,11 @@ class FavoritePhotoFragment : androidx.fragment.app.Fragment() {
      * for more information.
      */
     interface OnListFragmentInteractionListener {
-        // TODO: Update argument type and name
         fun onListFragmentInteraction(item: Photo?, list: List<Photo?>)
     }
 
     companion object {
-
-        // TODO: Customize parameter argument names
         const val ARG_COLUMN_COUNT = "column-count"
-
-        // TODO: Customize parameter initialization
         @JvmStatic
         fun newInstance(columnCount: Int) =
                 FavoritePhotoFragment().apply {

@@ -21,7 +21,6 @@ import androidx.lifecycle.ViewModelProvider
  * fragment (e.g. upon screen orientation changes).
  */
 class AccessoryFragment : androidx.fragment.app.Fragment() {
-    // TODO: Customize parameters
     private var mColumnCount = 1
     private var mListener: OnListFragmentInteractionListener? = null
     private var mView: RecyclerViewEmptySupport? = null
@@ -108,16 +107,12 @@ class AccessoryFragment : androidx.fragment.app.Fragment() {
      * See the Android Training lesson [Communicating with Other Fragments](http://developer.android.com/training/basics/fragments/communicating.html) for more information.
      */
     interface OnListFragmentInteractionListener {
-        // TODO: Update argument type and name
         fun onListFragmentInteraction(accessory: Accessory, isLong: Boolean)
     }
 
     companion object {
-
-        // TODO: Customize parameter argument names
         private val ARG_COLUMN_COUNT = "column-count"
 
-        // TODO: Customize parameter initialization
         fun newInstance(columnCount: Int): AccessoryFragment {
             val fragment = AccessoryFragment()
             val args = Bundle()
