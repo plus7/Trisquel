@@ -62,7 +62,7 @@ class MyFilmRollRecyclerViewAdapter(
 
     internal class FilmRollDiff : DiffUtil.ItemCallback<FilmRollAndRels>() {
         override fun areItemsTheSame(oldItem: FilmRollAndRels, newItem: FilmRollAndRels): Boolean {
-            return oldItem === newItem
+            return oldItem.filmRoll.id == newItem.filmRoll.id
         }
 
         override fun areContentsTheSame(oldItem: FilmRollAndRels, newItem: FilmRollAndRels): Boolean {

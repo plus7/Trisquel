@@ -41,7 +41,7 @@ class MyAccessoryRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<Accesso
 
     internal class AccessoryDiff : DiffUtil.ItemCallback<AccessoryEntity>() {
         override fun areItemsTheSame(oldItem: AccessoryEntity, newItem: AccessoryEntity): Boolean {
-            return oldItem === newItem
+            return oldItem.id == newItem.id
         }
 
         override fun areContentsTheSame(oldItem: AccessoryEntity, newItem: AccessoryEntity): Boolean {
