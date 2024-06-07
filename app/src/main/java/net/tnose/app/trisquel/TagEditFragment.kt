@@ -14,8 +14,6 @@ import com.google.android.material.chip.Chip
 import net.tnose.app.trisquel.databinding.FragmentTagEditBinding
 
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
 private const val ARG_PARAM1 = "param1"
 private const val ARG_PARAM2 = "param2"
 
@@ -29,7 +27,6 @@ private const val ARG_PARAM2 = "param2"
  *
  */
 class TagEditFragment : Fragment() {
-    // TODO: Rename and change types of parameters
     private var mFilmRollId: Int = -1
     private var mId: Int = -1
     private var listener: OnFragmentInteractionListener? = null
@@ -150,7 +147,6 @@ class TagEditFragment : Fragment() {
         super.onSaveInstanceState(outState)
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
     fun onButtonPressed(uri: Uri) {
         listener?.onFragmentInteraction(uri)
     }
@@ -182,7 +178,6 @@ class TagEditFragment : Fragment() {
      * for more information.
      */
     interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
         fun onFragmentInteraction(uri: Uri)
         fun onFragmentAttached(f: TagEditFragment)
     }
@@ -196,7 +191,6 @@ class TagEditFragment : Fragment() {
          * @param param2 Parameter 2.
          * @return A new instance of fragment TagEditFragment.
          */
-        // TODO: Rename and change types and number of parameters
         @JvmStatic
         fun newInstance(filmroll: Int, id: Int) =
                 TagEditFragment().apply {

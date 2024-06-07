@@ -16,7 +16,6 @@ import java.io.File
 /**
  * [RecyclerView.Adapter] that can display a [DummyItem] and makes a call to the
  * specified [OnListFragmentInteractionListener].
- * TODO: Replace the implementation with code for your data type.
  */
 class MyFavPhotoRecyclerViewAdapter(
         private val mValues: ArrayList<Photo>,

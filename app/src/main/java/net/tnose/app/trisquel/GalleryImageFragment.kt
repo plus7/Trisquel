@@ -13,9 +13,6 @@ import it.sephiroth.android.library.imagezoom.ImageViewTouchBase
 import net.tnose.app.trisquel.databinding.FragmentGalleryImageBinding
 import java.io.File
 
-
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
 private const val ARG_PARAM_PHOTOID = "photoId"
 private const val ARG_PARAM_SUPPIMGIDX = "suppImgIdx"
 
@@ -29,7 +26,6 @@ private const val ARG_PARAM_SUPPIMGIDX = "suppImgIdx"
  *
  */
 class GalleryImageFragment : Fragment() {
-    // TODO: Rename and change types of parameters
     private var photoId: Int? = 0
     private var suppImgIdx: Int? = 0
     private var listener: OnFragmentInteractionListener? = null
@@ -86,7 +82,6 @@ class GalleryImageFragment : Fragment() {
         _binding = null
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
     fun onButtonPressed(uri: Uri) {
         listener?.onFragmentInteraction(uri)
     }
@@ -117,7 +112,6 @@ class GalleryImageFragment : Fragment() {
      * for more information.
      */
     interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
         fun onFragmentInteraction(uri: Uri)
     }
 
@@ -130,7 +124,6 @@ class GalleryImageFragment : Fragment() {
          * @param param2 Parameter 2.
          * @return A new instance of fragment GalleryImageFragment.
          */
-        // TODO: Rename and change types and number of parameters
         @JvmStatic
         fun newInstance(photoId: Int, suppImgIdx: Int) =
                 GalleryImageFragment().apply {

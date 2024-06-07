@@ -142,69 +142,6 @@ class FilmRollFragment : androidx.fragment.app.Fragment() {
     fun deleteFilmRoll(id: Int) {
         mFilmRollViewModel!!.delete(id)
     }
-/*
-    fun insertFilmRoll(filmroll: FilmRoll) {
-        if (list != null) {
-            val index = list!!.indexOf(filmroll)
-            if (-1 == index) {
-                list!!.add(0, filmroll)
-                val dao = TrisquelDao(this.context)
-                dao.connection()
-                val id = dao.addFilmRoll(filmroll)
-                filmroll.id = id.toInt()
-                dao.close()
-                filmrollRecyclerViewAdapter!!.notifyItemInserted(0)
-                mRecyclerView?.layoutManager?.scrollToPosition(0)
-            }
-        }
-    }
-
-    fun updateFilmRoll(filmroll: FilmRoll) {
-        if (list != null) {
-            for (i in list!!.indices) {
-                val c = list!![i]
-                if (list!![i].id == filmroll.id) {
-                    list!!.removeAt(i)
-                    list!!.add(i, filmroll)
-                    val dao = TrisquelDao(this.context)
-                    dao.connection()
-                    dao.updateFilmRoll(filmroll)
-                    val p = dao.getPhotosByFilmRollId(filmroll.id)
-                    filmroll.photos = p
-                    dao.close()
-                    filmrollRecyclerViewAdapter!!.notifyItemChanged(i)
-                }
-            }
-        }
-    }
-
-    fun refreshAll(filmrolls: ArrayList<Int>){
-        val uniqFilmRolls = filmrolls.distinct()
-        for(id in uniqFilmRolls){
-            refreshFilmRoll(id)
-        }
-    }
-*/
-    fun refreshFilmRoll(id: Int) {
-        mFilmRollViewModel!!.refresh(id)
-    }
-/*
-    fun deleteFilmRoll(id: Int) {
-        if (list != null) {
-            for (i in list!!.indices) {
-                val c = list!![i]
-                if (list!![i].id == id) {
-                    list!!.removeAt(i)
-                    val dao = TrisquelDao(this.context)
-                    dao.connection()
-                    dao.deleteFilmRoll(id)
-                    dao.close()
-                    filmrollRecyclerViewAdapter!!.notifyItemRemoved(i)
-                    break
-                }
-            }
-        }
-    }*/
 
     /**
      * This interface must be implemented by activities that contain this
