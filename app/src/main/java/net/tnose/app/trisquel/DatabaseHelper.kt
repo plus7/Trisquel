@@ -21,6 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 
@@ -162,7 +163,7 @@ interface TrisquelDao2 {
     @Query("select * from camera order by created desc;")
     fun allCameras () : LiveData<List<CameraEntity>>
 
-    @Query("SELECT * from filmroll where _id = :id")
+    @Query("SELECT * from filmroll where _id = :id LIMIT 1")
     fun getFilmRoll(id : Int): LiveData<FilmRollEntity>
 
     @Query("SELECT * from filmroll order by created desc")
@@ -177,6 +178,14 @@ interface TrisquelDao2 {
     suspend fun upsertFilmRoll(entity: FilmRollEntity)
     @Delete
     suspend fun deleteFilmRoll(vararg entity: FilmRollEntity)
+    @Query("select * from photo where filmroll = :id order by _index asc;")
+    fun photosByFilmRollId(id : Int) : Flow<List<PhotoEntity>>
+
+    @Upsert
+    suspend fun upsertPhoto(entity: PhotoEntity)
+
+    @Delete
+    suspend fun deletePhoto(vararg entity: PhotoEntity)
 
     @Query("select * from accessory order by created desc;")
     fun allAccessories() : LiveData<List<AccessoryEntity>>

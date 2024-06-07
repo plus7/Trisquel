@@ -392,14 +392,14 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                     val id: Int
                     val index: Int
                     which = data.getIntExtra("which", -1)
-                    id = data.getIntExtra("id", -1)
+                    id = data.getIntExtra("id", 0)
                     val dao = TrisquelDao(this.applicationContext)
                     dao.connection()
                     val p = dao.getPhoto(id)
                     dao.close()
                     index = p!!.frameIndex
                     when (which) {
-                        0 -> if (id != -1) photo_fragment!!.deletePhoto(id)
+                        0 -> if (id != 0) photo_fragment!!.deletePhoto(id)
                         1 -> {
                             val intent = Intent(application, EditPhotoActivity::class.java)
                             intent.putExtra("filmroll", mFilmRoll!!.id)
@@ -412,7 +412,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             REQCODE_EDIT_PHOTOINDEX -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val newindex = data.getStringExtra("value")!!.toInt() - 1
                 if(newindex < 0) return
-                val id = data.getIntExtra("id", -1)
+                val id = data.getIntExtra("id", 0)
                 val dao = TrisquelDao(this.applicationContext)
                 dao.connection()
                 val p = dao.getPhoto(id)
@@ -426,7 +426,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             REQCODE_INDEX_SHIFT -> if (resultCode == DialogInterface.BUTTON_POSITIVE){
                 val newindex = data.getStringExtra("value")!!.toInt() - 1
 
-                val id = data.getIntExtra("id", -1)
+
+                val id = data.getIntExtra("id", 0)
                 val dao = TrisquelDao(this.applicationContext)
                 dao.connection()
                 val p = dao.getPhoto(id)

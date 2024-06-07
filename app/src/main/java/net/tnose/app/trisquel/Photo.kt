@@ -98,6 +98,15 @@ class Photo(var id: Int, var filmrollid: Int, var frameIndex: Int, var date: Str
         favorite = inp.readInt() > 0
     }
 
+    fun toEntity() : PhotoEntity {
+        return PhotoEntity(id, filmrollid, frameIndex,
+            date, cameraid, lensid, focalLength, aperture,
+            shutterSpeed, expCompensation, ttlLightMeter,
+            location, latitude, longitude, memo,
+            accessoriesStr, supplementalImagesStr,
+            if(favorite){ 1 } else { 0 })
+    }
+
     init {
         this.accessories = ArrayList()
         for (idStr in accessories.split(splitter).dropLastWhile { it.isEmpty() }.toTypedArray()) {

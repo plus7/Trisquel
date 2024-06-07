@@ -14,11 +14,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import net.tnose.app.trisquel.PhotoFragment.OnListFragmentInteractionListener
 import java.io.File
-import java.util.*
 
 // Based on https://stackoverflow.com/a/34623367
 class RoundedBackgroundSpan(private val context: Context,
@@ -68,9 +68,14 @@ class RoundedBackgroundSpan(private val context: Context,
     }
 }
 
-class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
-                                 private val mFilmRollId: Int, private val mListener: OnListFragmentInteractionListener?) : androidx.recyclerview.widget.RecyclerView.Adapter<MyPhotoRecyclerViewAdapter.ViewHolder>() {
-
+class MyPhotoRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<Pair<String, PhotoEntity>>,
+                                 private val mFilmRollId: Int,
+                                 private val mListener: OnListFragmentInteractionListener?
+) : androidx.recyclerview.widget.ListAdapter<
+            Pair<String, PhotoEntity>,
+            MyPhotoRecyclerViewAdapter.ViewHolder
+            >(diffCallback)
+{
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.fragment_photo, parent, false)
@@ -99,16 +104,16 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.mItem = mValues[position]
+        holder.mPrevDate = getItem(position).first
+        holder.mItem = getItem(position).second
+        val p = Photo.fromEntity(holder.mItem!!)
         val dao = TrisquelDao(holder.mView.context) //これでいいのか？？？
         dao.connection()
-        val p = mValues[position]
-        val prev_p = if(position > 0) mValues[position - 1] else null
         val l = dao.getLens(p.lensid)
         val tags = dao.getTagsByPhoto(p.id)
         dao.close()
         holder.mIdView.text = Integer.toString(p.frameIndex + 1)
-        if(prev_p != null && prev_p.date.equals(p.date)){
+        if(holder.mPrevDate == p.date){
             holder.mDateView.visibility = View.GONE
         }else {
             holder.mDateView.text = p.date
@@ -158,29 +163,29 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
             holder.mFavorite.setImageResource(R.drawable.ic_fav_border)
 
         holder.mView.setOnClickListener {
-            mListener?.onListFragmentInteraction(holder.mItem!!, false)
+            mListener?.onListFragmentInteraction(Photo.fromEntity(holder.mItem!!), false)
         }
 
         holder.mView.setOnLongClickListener {
-            mListener?.onListFragmentInteraction(holder.mItem!!, true)
+            mListener?.onListFragmentInteraction(Photo.fromEntity(holder.mItem!!), true)
             true
         }
 
         holder.mIdView.setOnClickListener{
-            mListener?.onIndexClick(holder.mItem!!)
+            mListener?.onIndexClick(Photo.fromEntity(holder.mItem!!))
         }
 
         holder.mIdView.setOnLongClickListener{
-            mListener?.onIndexLongClick(holder.mItem!!)
+            mListener?.onIndexLongClick(Photo.fromEntity(holder.mItem!!))
             true
         }
 
         holder.mThumbnailView.setOnClickListener{
-            mListener?.onThumbnailClick(holder.mItem!!)
+            mListener?.onThumbnailClick(Photo.fromEntity(holder.mItem!!))
         }
 
         holder.mFavorite.setOnClickListener {
-            mListener?.onFavoriteClick(holder.mItem!!)
+            mListener?.onFavoriteClick(Photo.fromEntity(holder.mItem!!))
         }
     }
 
@@ -197,8 +202,16 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         }
     }
 
-    override fun getItemCount(): Int {
-        return mValues.size
+    internal class PhotoDiff : DiffUtil.ItemCallback<Pair<String, PhotoEntity>>() {
+        override fun areItemsTheSame(oldItem: Pair<String, PhotoEntity>, newItem: Pair<String, PhotoEntity>): Boolean {
+            val result = oldItem.second.id == newItem.second.id
+            return result
+        }
+
+        override fun areContentsTheSame(oldItem: Pair<String, PhotoEntity>, newItem: Pair<String, PhotoEntity>): Boolean {
+            val ret = (oldItem.first == newItem.first) && (oldItem.second == newItem.second)
+            return ret
+        }
     }
 
     inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
@@ -208,7 +221,8 @@ class MyPhotoRecyclerViewAdapter(private val mValues: ArrayList<Photo>,
         val mParamsView: TextView
         val mContentView: TextView
         val mThumbnailView: ImageView
-        var mItem: Photo? = null
+        var mItem: PhotoEntity? = null
+        var mPrevDate : String = "" // 日付の切り替わりタイミングだけで日付ラベルを表示する仕掛けのため、アイテムと直前のアイテムのDateは組で持つ必要がある
         val mFavorite: ImageView
 
         init {

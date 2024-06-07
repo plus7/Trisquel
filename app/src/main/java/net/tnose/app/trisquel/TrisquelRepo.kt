@@ -3,7 +3,8 @@ package net.tnose.app.trisquel
 import android.app.Application
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
-
+import androidx.lifecycle.asLiveData
+import kotlinx.coroutines.flow.map
 
 class TrisquelRepo {
     protected lateinit var mTrisquelDao: TrisquelDao2
@@ -60,6 +61,36 @@ class TrisquelRepo {
     @WorkerThread
     suspend fun deleteFilmRoll(id: Int) {
         mTrisquelDao.deleteFilmRoll(FilmRollEntity(id, "", "","",0, "", "", "", ""))
+    }
+
+    // 日付の切り替わりタイミングで日付を出すという表示の都合上、
+    // 直前のショットのDateとPairにするという変則的なデータとなっている。
+    fun getPhotosByFilmRollId(filmRollId: Int): LiveData<List<Pair<String, PhotoEntity>>> {
+        return mTrisquelDao.photosByFilmRollId(filmRollId).map{
+            it -> it.runningFold(
+            Pair("", PhotoEntity(
+                0, 0, 0, "", 0, 0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, "", 0.0, 0.0,
+                "", "", "", 0))) {
+                acc, value -> Pair(acc.second.date, value)
+            }.drop(1)
+        }.asLiveData()
+    }
+
+    @WorkerThread
+    suspend fun upsertPhoto(entity: PhotoEntity) {
+        mTrisquelDao.upsertPhoto(entity)
+    }
+
+    @WorkerThread
+    suspend fun deletePhoto(id: Int) {
+        mTrisquelDao.deletePhoto(
+            PhotoEntity(id, 0, 0, "",0,0,
+                0.0, 0.0,0.0,0.0,
+                0.0, "", 0.0, 0.0,"","", "",0
+                )
+        )
     }
 
     fun getAllAccessories(sortBy : Int): LiveData<List<AccessoryEntity>> {

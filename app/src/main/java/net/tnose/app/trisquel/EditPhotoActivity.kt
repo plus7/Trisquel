@@ -239,9 +239,9 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }
 
     protected fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?) {
-        this.id = data.getIntExtra("id", -1)
+        this.id = data.getIntExtra("id", 0)
         this.frameIndex = data.getIntExtra("frameIndex", -1)
-        val filmrollid = data.getIntExtra("filmroll", -1)
+        val filmrollid = data.getIntExtra("filmroll", 0)
         this.filmroll = dao.getFilmRoll(filmrollid)
         this.photo = dao.getPhoto(id)
 
@@ -272,7 +272,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         } else {
         }
 
-        if(id >= 0 && savedInstanceState == null) { //既存データを開きたて
+        if(id > 0 && savedInstanceState == null) { //既存データを開きたて
             lensid = photo!!.lensid
             lens = dao.getLens(lensid)
             if(photo!!.date.isNotEmpty())
@@ -362,10 +362,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     } else if (pos < 0 && ps.size > 0) {
                         lensid = ps[ps.size - 1].lensid
                     } else {
-                        lensid = -1
+                        lensid = 0
                     }
                 } else {
-                    lensid = -1
+                    lensid = 0
                 }
             }
 
