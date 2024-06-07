@@ -149,10 +149,10 @@ class CameraSpec: Parcelable {
             }
         }
         internal fun fromEntity(entity: CameraEntity) : CameraSpec {
-            return CameraSpec(entity.id, entity.type!!, entity.created,
+            return CameraSpec(entity.id, entity.type?:0, entity.created,
                 entity.lastModified, entity.mount, entity.manufacturer,
                 entity.modelName, entity.format!!, entity.ssGrainSize!!,
-                entity.fastestSs, entity.slowestSs, entity.bulbAvailable!! == 1,
+                entity.fastestSs, entity.slowestSs, (entity.bulbAvailable?:0) == 1,
                 entity.shutterSpeeds, entity.evGrainSize!!, entity.evWidth!!)
         }
     }

@@ -39,12 +39,12 @@ class Photo(var id: Int, var filmrollid: Int, var frameIndex: Int, var date: Str
             }
         }
         internal fun fromEntity(entity: PhotoEntity) : Photo {
-            return Photo(entity.id, entity.filmroll!!, entity._index!!,
-                entity.date, entity.camera!!, entity.lens!!,
-                entity.focalLength!!, entity.aperture!!, entity.shutterSpeed!!,
-                entity.expCompensation!!, entity.ttlLightMeter!!,
-                entity.location, entity.latitude!!, entity.longitude!!,
-                entity.memo, entity.accessories, entity.suppimgs, entity.favorite!! == 1)
+            return Photo(entity.id, entity.filmroll?:0, entity._index?:0,
+                entity.date, entity.camera?:0, entity.lens?:0,
+                entity.focalLength?:0.0, entity.aperture!!, entity.shutterSpeed!!,
+                entity.expCompensation?:0.0, entity.ttlLightMeter?:0.0,
+                entity.location, entity.latitude?:999.0, entity.longitude?:999.0,
+                entity.memo, entity.accessories, entity.suppimgs, (entity.favorite?:0) == 1)
         }
     }
 
