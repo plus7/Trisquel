@@ -154,8 +154,10 @@ data class FilmRollAndRels(
     @Relation(parentColumn = "camera", entityColumn = "_id")
     val camera: CameraEntity,
 
-    @Relation(parentColumn = "_id", entityColumn = "filmroll") //, projection = arrayOf("date"), entity = PhotoEntity.class)
-    val photos: List<PhotoEntity>
+    //@Relation(parentColumn = "_id", entityColumn = "filmroll") //, projection = arrayOf("date"), entity = PhotoEntity.class)
+    //val photos: List<PhotoEntity>
+    @Relation(parentColumn = "_id", entity = PhotoEntity::class, entityColumn = "filmroll", projection = arrayOf("date"))
+    val photoDates: List<String>
 )
 @Dao
 interface TrisquelDao2 {

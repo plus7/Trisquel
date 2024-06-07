@@ -118,7 +118,7 @@ class FilmRoll {
         internal fun fromEntity(filmRollAndRels: FilmRollAndRels) : FilmRoll {
             val fEntity = filmRollAndRels.filmRoll
             val cEntity = filmRollAndRels.camera
-            val pEntities = ArrayList(filmRollAndRels.photos.map { Photo.fromEntity(it) })
+            //val pEntities = ArrayList(filmRollAndRels.photos.map { Photo.fromEntity(it) })
 
             //constructor(id: Int, name: String, created: String,
             // lastModified: String, camera: CameraSpec,
@@ -128,7 +128,7 @@ class FilmRoll {
             return FilmRoll(fEntity.id, fEntity.name, fEntity.created,
                 fEntity.lastModified, CameraSpec.fromEntity(cEntity),
                 fEntity.manufacturer, fEntity.brand,
-                fEntity.iso.toInt(), 0, pEntities)
+                fEntity.iso.toInt(), 0, ArrayList())// pEntities)
         }
         /*
         internal fun fromEntity(fEntity : FilmrollEntity, cEntity: CameraEntity) : FilmRoll {

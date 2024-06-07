@@ -7,6 +7,11 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import net.tnose.app.trisquel.FilmRollFragment.OnListFragmentInteractionListener
+import java.lang.Long
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.TimeZone
 
 class MyFilmRollRecyclerViewAdapter(
     diffCallback: DiffUtil.ItemCallback<FilmRollAndRels>,
@@ -24,6 +29,37 @@ class MyFilmRollRecyclerViewAdapter(
         return ViewHolder(view)
     }
 
+    fun getDateRange(dates : List<String>): String {
+        if (dates.size == 0) return ""
+
+        var minDate = Date(Long.MAX_VALUE)
+        var maxDate = Date(0)
+        val sdf = SimpleDateFormat("yyyy/MM/dd")
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+
+        for (date in dates) {
+            var d = Date(0)
+            try {
+                d = sdf.parse(date)
+            } catch (e: ParseException) {
+
+            }
+
+            if (minDate.after(d)) {
+                minDate = d
+            }
+            if (maxDate.before(d)) {
+                maxDate = d
+            }
+        }
+
+        return if (minDate == maxDate) {
+            sdf.format(minDate)
+        } else {
+            sdf.format(minDate) + "-" + sdf.format(maxDate)
+        }
+    }
+
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.mItem = getItem(position)
         //holder.mIdView.setText(Integer.toString(mValues.get(position).id));
@@ -38,10 +74,10 @@ class MyFilmRollRecyclerViewAdapter(
             holder.mItem!!.camera.manufacturer + " " + holder.mItem!!.camera.modelName + "   " +
                     holder.mItem!!.filmRoll.manufacturer + " " + holder.mItem!!.filmRoll.brand
 
-        val exp = holder.mItem!!.photos.size
+        val exp = holder.mItem!!.photoDates.size
         val array = arrayListOf<String>()
         val f = FilmRoll.fromEntity(holder.mItem!!)
-        val dateRange = f.dateRange
+        val dateRange = getDateRange(holder.mItem!!.photoDates)
         if(dateRange.isNotEmpty())
             array.add(dateRange)
         array.add(
