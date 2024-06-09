@@ -37,12 +37,40 @@ class TrisquelRepo {
             }
 
             1 -> {
-                return mTrisquelDao.allFilmRollAndRelsSortByName(cameraVal, filmBrandVal)
+                if (filterByKind == 0) {
+                    return mTrisquelDao.allFilmRollAndRelsFlow().map {
+                            it -> it.sortedBy { it.filmRoll.name }
+                    }.asLiveData()
+                } else {
+                    return mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
+                            it -> it.sortedBy { it.filmRoll.name }
+                    }.asLiveData()
+                }
             }
 
-            /*2 -> {
-                return mTrisquelDao.allAccessoriesSortByType()
-            }*/
+            2 -> {
+                if (filterByKind == 0) {
+                    return mTrisquelDao.allFilmRollAndRelsFlow().map {
+                        it -> it.sortedBy { it.camera.manufacturer + " " + it.camera.modelName }
+                    }.asLiveData()
+                } else {
+                    return mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
+                            it -> it.sortedBy { it.camera.manufacturer + " " + it.camera.modelName }
+                    }.asLiveData()
+                }
+            }
+
+            3 -> {
+                if (filterByKind == 0) {
+                    return mTrisquelDao.allFilmRollAndRelsFlow().map {
+                            it -> it.sortedBy { it.filmRoll.manufacturer + " " + it.filmRoll.brand }
+                    }.asLiveData()
+                } else {
+                    return mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
+                            it -> it.sortedBy { it.filmRoll.manufacturer + " " + it.filmRoll.brand }
+                    }.asLiveData()
+                }
+            }
 
             else -> {
                 if (filterByKind == 0) {

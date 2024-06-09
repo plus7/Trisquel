@@ -25,7 +25,7 @@ class FilmRollFragment : androidx.fragment.app.Fragment() {
     private var mRecyclerView: RecyclerViewEmptySupport? = null
     private var filmrollRecyclerViewAdapter: MyFilmRollRecyclerViewAdapter? = null
     private var mFilmRollViewModel: FilmRollViewModel? = null
-    private var _currentFilter:Pair<Int, ArrayList<String>> = Pair(0, arrayListOf(""))
+    private var _currentFilter: Pair<Int, ArrayList<String>> = Pair(0, arrayListOf(""))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,13 +35,15 @@ class FilmRollFragment : androidx.fragment.app.Fragment() {
         _currentFilter = Pair(filtertype, filterstr)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         val view = inflater.inflate(R.layout.fragment_filmroll_list, container, false)
 
         //ここでいいのか？
         val pref = PreferenceManager.getDefaultSharedPreferences(this.context)
-        val key  = pref.getInt("filmroll_sortkey", 0)
+        val key = pref.getInt("filmroll_sortkey", 0)
 
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
@@ -49,16 +51,19 @@ class FilmRollFragment : androidx.fragment.app.Fragment() {
             mRecyclerView = view
             mRecyclerView!!.setEmptyMessage(getString(R.string.warning_filmroll_not_registered))
             mRecyclerView!!.setEmptyView(container!!.findViewById(R.id.empty_view))
-            mRecyclerView!!.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
+            mRecyclerView!!.layoutManager =
+                androidx.recyclerview.widget.LinearLayoutManager(context)
 
-            filmrollRecyclerViewAdapter = MyFilmRollRecyclerViewAdapter(MyFilmRollRecyclerViewAdapter.FilmRollDiff(), mListener)
+            filmrollRecyclerViewAdapter = MyFilmRollRecyclerViewAdapter(
+                MyFilmRollRecyclerViewAdapter.FilmRollDiff(),
+                mListener
+            )
             view.adapter = filmrollRecyclerViewAdapter
 
             mFilmRollViewModel = ViewModelProvider(this).get(FilmRollViewModel::class.java)
             mFilmRollViewModel!!.allFilmRollAndRels.observe(viewLifecycleOwner) { filmrollandrels ->
                 filmrollRecyclerViewAdapter!!.submitList(filmrollandrels)
             }
-            changeSortKey(key)
         }
         return view
     }
@@ -85,51 +90,24 @@ class FilmRollFragment : androidx.fragment.app.Fragment() {
 
     // 0: No filtering, 1: Filter by camera, 2: Filter by film brand
     // そのうち詳細なフィルタリングにも対応する
-    var currentFilter:Pair<Int, ArrayList<String>>
+    var currentFilter: Pair<Int, ArrayList<String>>
         get() = _currentFilter //filmrollRecyclerViewAdapter?.currentFilter ?: Pair<Int, String>(0, "")
         set(value) {
-            /*
-            TODO: 当分触らない
-            val dao = TrisquelDao(this.context)
-            dao.connection()
-            list = when(value.first){
-                0 -> dao.allFilmRolls
-                1 -> dao.getFilmRollsByCamera(value.second[0].toInt())
-                2 -> dao.getFilmRollsByFilmBrand(value.second[0], value.second[1])
-                else -> dao.allFilmRolls
-            }
-            dao.close()
+            val searchStr = when(value.first){
+                1 -> value.second[0].toInt()
+                //XXX: 本当はフィルム銘柄での検索はmanufacturerを含めないとダメなのだが、
+                // 会社間で商標がかぶるなんてことはそうないしこれでも問題にはならないだろう
+                2 -> /*value.second[0] + " " +*/ value.second[1]
+                else -> ""
+            }.toString()
 
             val pref = PreferenceManager.getDefaultSharedPreferences(this.context)
-            val key  = pref.getInt("filmroll_sortkey", 0)
-            changeSortKey(key)
-
-            filmrollRecyclerViewAdapter = MyFilmRollRecyclerViewAdapter(list!!, mListener)
-
-            mRecyclerView?.adapter = filmrollRecyclerViewAdapter
-            _currentFilter = value
-            //if(list != null){
-            //    filmrollRecyclerViewAdapter?.setFilter(value.first, value.second)
-            //}
-            
-             */
+            val key = pref.getInt("filmroll_sortkey", 0)
+            mFilmRollViewModel!!.viewRule.value = Pair(key, Pair(value.first, searchStr))
         }
 
-    fun changeSortKey(key: Int){
-        /*
-        TODO: 当分触らない
-        if(list != null){
-            when(key){
-                0 -> {list!!.sortByDescending { it.created }}
-                1 -> {list!!.sortBy { it.name }}
-                2 -> {list!!.sortBy { it.camera.manufacturer + " " + it.camera.modelName }}
-                3 -> {list!!.sortBy { it.manufacturer + " " + it.brand }}
-                else -> {}
-            }
-            filmrollRecyclerViewAdapter?.notifyDataSetChanged()
-        }*
-        
-         */
+    fun changeSortKey(key:Int) {
+        currentFilter = _currentFilter
     }
     fun insertFilmRoll(FilmRoll: FilmRoll) {
         mFilmRollViewModel!!.insert(FilmRoll.toEntity())

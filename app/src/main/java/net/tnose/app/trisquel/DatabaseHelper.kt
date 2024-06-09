@@ -170,11 +170,14 @@ interface TrisquelDao2 {
 
     @Query("SELECT * from filmroll order by created desc")
     fun allFilmRollAndRels(): LiveData<List<FilmRollAndRels>>
-    @Query("SELECT * from filmroll WHERE cast(camera as text) LIKE :camera AND brand LIKE :filmbrand;")
+    @Query("SELECT * from filmroll WHERE cast(camera as text) LIKE :camera AND brand LIKE :filmbrand order by created desc;")
     fun allFilmRollAndRelsWithFilter(camera : String, filmbrand : String): LiveData<List<FilmRollAndRels>>
-    @Query("SELECT * from filmroll WHERE cast(camera as text) LIKE :camera AND brand LIKE :filmbrand order by name asc; ")
-    fun allFilmRollAndRelsSortByName(camera : String, filmbrand : String): LiveData<List<FilmRollAndRels>>
-    // フィルムブランドやカメラでのソートの実装が難しい
+
+    @Query("SELECT * from filmroll order by created desc")
+    fun allFilmRollAndRelsFlow(): Flow<List<FilmRollAndRels>>
+    @Query("SELECT * from filmroll WHERE cast(camera as text) LIKE :camera AND brand LIKE :filmbrand order by created desc;")
+    fun allFilmRollAndRelsWithFilterFlow(camera : String, filmbrand : String): Flow<List<FilmRollAndRels>>
+
 
     @Upsert
     suspend fun upsertFilmRoll(entity: FilmRollEntity)
