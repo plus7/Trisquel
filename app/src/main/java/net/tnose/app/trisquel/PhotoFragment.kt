@@ -119,7 +119,6 @@ class PhotoFragment : androidx.fragment.app.Fragment() {
         if(tags != null){
             val dao = TrisquelDao(this.context)
             dao.connection()
-            dao.updatePhoto(p)
             dao.tagPhoto(p.id, mFilmRollId, tags)
             dao.close()
         }
@@ -138,7 +137,6 @@ class PhotoFragment : androidx.fragment.app.Fragment() {
         if(tags != null){
             val dao = TrisquelDao(this.context)
             dao.connection()
-            dao.updatePhoto(p)
             dao.tagPhoto(p.id, mFilmRollId, tags)
             dao.close()
         }
