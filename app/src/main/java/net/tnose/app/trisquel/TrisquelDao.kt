@@ -345,34 +345,6 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
             return fbs
         }
 
-    val allFilmRolls: ArrayList<FilmRoll>
-        get() {
-            val filmList = ArrayList<FilmRoll>()
-
-            var cursor: Cursor? = null
-            try {
-                cursor = mDb!!.query("select * from filmroll order by created desc;")
-                while (cursor.moveToNext()) {
-                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("_id"))
-                    val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
-                    val created = cursor.getString(cursor.getColumnIndexOrThrow("created"))
-                    val lastModified = cursor.getString(cursor.getColumnIndexOrThrow("last_modified"))
-                    val camera = cursor.getInt(cursor.getColumnIndexOrThrow("camera"))
-                    val manufacturer = cursor.getString(cursor.getColumnIndexOrThrow("manufacturer"))
-                    val brand = cursor.getString(cursor.getColumnIndexOrThrow("brand"))
-                    val iso = cursor.getInt(cursor.getColumnIndexOrThrow("iso"))
-
-                    val f = FilmRoll(id, name, created, lastModified, getCamera(camera)!!, manufacturer, brand, iso, 36)
-                    filmList.add(f)
-                    f.photos = getPhotosByFilmRollId(f.id)
-                }
-            } finally {
-                cursor?.close()
-            }
-
-            return filmList
-        }
-
     val allTags: ArrayList<Tag>
         get() {
             val tagList = ArrayList<Tag>()
