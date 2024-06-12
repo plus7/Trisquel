@@ -86,7 +86,7 @@ class PhotoFragment : androidx.fragment.app.Fragment() {
         val list = mPhotoViewModel!!.photosByFilmRollId.value!!
         if(curpos > 0){
             val prev = list[curpos - 1]
-            return prev.second._index!!
+            return prev.second.photo._index!!
         }else{
             return 0
         }
@@ -96,7 +96,7 @@ class PhotoFragment : androidx.fragment.app.Fragment() {
         var curpos = -1
         val list = mPhotoViewModel!!.photosByFilmRollId.value!!
         for(i in list.indices){
-            if(list[i].second.id == p.id){
+            if(list[i].second.photo.id == p.id){
                 curpos = i
                 break
             }
@@ -110,23 +110,21 @@ class PhotoFragment : androidx.fragment.app.Fragment() {
         val curpos = curPosOf(p)
         val list = mPhotoViewModel!!.photosByFilmRollId.value!!
         for(i in curpos..(list.size-1)){
-            var p = list[i].second.copy(_index = list[i].second._index!! + amount)
+            var p = list[i].second.photo.copy(_index = list[i].second.photo._index!! + amount)
             mPhotoViewModel!!.update(p)
         }
     }
 
     fun insertPhoto(p: Photo, tags: ArrayList<String>?) {
-        if(tags != null){
-            val dao = TrisquelDao(this.context)
-            dao.connection()
-            dao.tagPhoto(p.id, mFilmRollId, tags)
-            dao.close()
-        }
         if (p.frameIndex == -1) {
             val list = mPhotoViewModel!!.photosByFilmRollId.value
-            p.frameIndex = if(list.isNullOrEmpty()) 0 else (list.last().second._index ?: 0) + 1
+            p.frameIndex = if(list.isNullOrEmpty()) 0 else (list.last().second.photo._index ?: 0) + 1
         }
-        mPhotoViewModel!!.insert(p.toEntity())
+        if(tags != null){
+            mPhotoViewModel!!.insertWithTag(p.toEntity(), mFilmRollId, tags)
+        }else{
+            mPhotoViewModel!!.insert(p.toEntity())
+        }
     }
 
     fun toggleFavPhoto(p: Photo){
@@ -135,10 +133,7 @@ class PhotoFragment : androidx.fragment.app.Fragment() {
 
     fun updatePhoto(p: Photo, tags: ArrayList<String>?) {
         if(tags != null){
-            val dao = TrisquelDao(this.context)
-            dao.connection()
-            dao.tagPhoto(p.id, mFilmRollId, tags)
-            dao.close()
+            mPhotoViewModel!!.tagPhoto(p.id, mFilmRollId, tags)
         }
         mPhotoViewModel!!.update(p.toEntity())
     }

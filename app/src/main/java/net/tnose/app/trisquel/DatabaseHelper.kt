@@ -159,6 +159,30 @@ data class FilmRollAndRels(
     @Relation(parentColumn = "_id", entity = PhotoEntity::class, entityColumn = "filmroll", projection = arrayOf("date"))
     val photoDates: List<String>
 )
+
+data class PhotoAndTagIds(
+    @Embedded
+    val photo: PhotoEntity,
+    @Relation(parentColumn = "_id", entity = TagMapEntity::class, entityColumn = "photo_id",  projection = arrayOf("tag_id"))
+    val tagIds: List<Int>
+)
+
+data class PhotoAndRels(
+    @Embedded
+    val photo: PhotoEntity,
+    @Relation(parentColumn = "filmroll", entity = FilmRollEntity::class, entityColumn = "_id",  projection = arrayOf("name"))
+    val filmRoll: String,
+    @Relation(parentColumn = "_id", entity = TagMapEntity::class, entityColumn = "photo_id",  projection = arrayOf("tag_id"))
+    val tagIds: List<Int>
+)
+
+data class TagMapAndTag(
+    @Embedded
+    val tagMap: TagMapEntity,
+    @Relation(parentColumn = "tag_id", entityColumn = "_id")
+    val tag: TagEntity
+)
+
 @Dao
 interface TrisquelDao2 {
 
@@ -184,10 +208,10 @@ interface TrisquelDao2 {
     @Delete
     suspend fun deleteFilmRoll(vararg entity: FilmRollEntity)
     @Query("select * from photo where filmroll = :id order by _index asc;")
-    fun photosByFilmRollId(id : Int) : Flow<List<PhotoEntity>>
+    fun photosByFilmRollId(id : Int) : Flow<List<PhotoAndTagIds>>
 
     @Upsert
-    suspend fun upsertPhoto(entity: PhotoEntity)
+    suspend fun upsertPhoto(entity: PhotoEntity) : Long
 
     @Delete
     suspend fun deletePhoto(vararg entity: PhotoEntity)
@@ -207,6 +231,32 @@ interface TrisquelDao2 {
 
     @Query("select * from tag;")
     fun allTags() : LiveData<List<TagEntity>>
+    @Query("SELECT * from tag where _id = :id LIMIT 1")
+    fun getTag(id : Int): LiveData<TagEntity>
+    @Query("SELECT * from tag where label = :label LIMIT 1")
+    suspend fun getTagByLabel(label : String): TagEntity?
+    @Query("SELECT * from tag where label = :label LIMIT 1")
+    fun getTagByLabelFlow(label : String): Flow<TagEntity?>
+    @Upsert
+    suspend fun upsertTag(entity: TagEntity) : Long
+    @Delete
+    suspend fun deleteTag(vararg entity: TagEntity)
+
+    @Query("SELECT * from tagmap where photo_id = :photoId")
+    fun getTagMapsByPhoto(photoId : Int): Flow<List<TagMapEntity>>
+    @Query("SELECT * from tagmap where photo_id = :photoId")
+    suspend fun getTagMapAndTagsByPhoto(photoId : Int): List<TagMapAndTag>
+    @Query("SELECT * from tagmap where photo_id = :photoId")
+    fun getTagMapAndTagsByPhotoFlow(photoId : Int): Flow<List<TagMapAndTag>>
+
+    @Query("select p.* from photo p, tagmap tm, tag t where tm.tag_id = t._id and (t.label in (:tags)) and p._id = tm.photo_id group by p._id having count(*) = :count;")
+    fun getPhotosByAndQuery(tags:List<String>, count: Int) : Flow<List<PhotoAndRels>>
+
+    @Upsert
+    suspend fun upsertTagMap(entity: TagMapEntity) : Long
+    @Delete
+    suspend fun deleteTagMap(vararg entity: TagMapEntity)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMetadata(metadata: TrisquelMetadataEntity)
 }

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class TrisquelRepo {
@@ -93,22 +94,39 @@ class TrisquelRepo {
 
     // 日付の切り替わりタイミングで日付を出すという表示の都合上、
     // 直前のショットのDateとPairにするという変則的なデータとなっている。
-    fun getPhotosByFilmRollId(filmRollId: Int): LiveData<List<Pair<String, PhotoEntity>>> {
+    fun getPhotosByFilmRollId(filmRollId: Int): LiveData<List<Pair<String, PhotoAndTagIds>>> {
         return mTrisquelDao.photosByFilmRollId(filmRollId).map{
             it -> it.runningFold(
-            Pair("", PhotoEntity(
+            Pair("", PhotoAndTagIds(PhotoEntity(
                 0, 0, 0, "", 0, 0,
                 0.0, 0.0, 0.0, 0.0,
                 0.0, "", 0.0, 0.0,
-                "", "", "", 0))) {
-                acc, value -> Pair(acc.second.date, value)
+                "", "", "", 0), listOf())
+            )) {
+                acc, value -> Pair(acc.second.photo.date, value)
+            }.drop(1)
+        }.asLiveData()
+    }
+
+    fun getPhotosByAndQuery(tags: List<String>): LiveData<List<Pair<Pair<String, Int>, PhotoAndRels>>> {
+        return mTrisquelDao.getPhotosByAndQuery(tags, tags.count()).map{
+            it -> it.runningFold(
+            Pair(Pair("",0),
+                PhotoAndRels(PhotoEntity(
+                            0, 0, 0, "", 0, 0,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, "", 0.0, 0.0,
+                        "", "", "", 0),
+                    "", listOf()
+                ))) {
+                acc, value -> Pair(Pair(acc.second.photo.date, acc.second.photo.filmroll!!), value)
             }.drop(1)
         }.asLiveData()
     }
 
     @WorkerThread
-    suspend fun upsertPhoto(entity: PhotoEntity) {
-        mTrisquelDao.upsertPhoto(entity)
+    suspend fun upsertPhoto(entity: PhotoEntity) : Long {
+        return mTrisquelDao.upsertPhoto(entity)
     }
 
     @WorkerThread
@@ -137,5 +155,76 @@ class TrisquelRepo {
     @WorkerThread
     suspend fun deleteAccessory(id: Int) {
         mTrisquelDao.deleteAccessory(AccessoryEntity(id, "", "",0,"", "", 0.0))
+    }
+
+    fun getTag(id : Int) : LiveData<TagEntity> {
+        return mTrisquelDao.getTag(id)
+    }
+    suspend fun getTagByLabel(label : String) : TagEntity? {
+        return mTrisquelDao.getTagByLabel(label)
+    }
+    @WorkerThread
+    suspend fun tagPhoto(photoId: Int, filmRollId: Int, tags: ArrayList<String>) {
+        val currentTags = getTagMapAndTagsByPhoto(photoId)
+        val createList = ArrayList<String>()
+        val removeList = currentTags.toMutableList()
+        for(label in tags) {
+            val existingTag = currentTags.find { it.tag.label == label }
+            if (existingTag == null){
+                createList.add(label)
+            }else{
+                removeList.remove(existingTag) //existingTagは現状維持の対象なのでremoveListから外す
+            }
+        }
+        //作成またはrefcntをインクリメント
+        for(label in createList){
+            val t = getTagByLabel(label)
+            if(t == null) {
+                val tagId = mTrisquelDao.upsertTag(TagEntity(0, label, 1))
+                mTrisquelDao.upsertTagMap(TagMapEntity(0, photoId, tagId.toInt(), filmRollId))
+            }else{
+                mTrisquelDao.upsertTag(TagEntity(t.id, label, t.refcnt!! + 1))
+                mTrisquelDao.upsertTagMap(TagMapEntity(0, photoId, t.id, filmRollId))
+            }
+        }
+        //removeList内はrefcntをデクリメントもしくは削除の対象
+        for(t in removeList){
+            deleteTagMap(t.tagMap.tagId!!)
+            if(t.tag.refcnt == 1){ // 削除対象
+                deleteTag(t.tag.id)
+            }else{ // デクリメントだけ
+                upsertTag(TagEntity(t.tag.id, t.tag.label, t.tag.refcnt!! - 1))
+            }
+        }
+    }
+    @WorkerThread
+    suspend fun upsertTag(entity: TagEntity) : Long {
+        return mTrisquelDao.upsertTag(entity)
+    }
+
+    @WorkerThread
+    suspend fun deleteTag(id: Int) {
+        mTrisquelDao.deleteTag(TagEntity(id, "", 0))
+    }
+
+    fun getTagMapsByPhoto(photoId : Int) : Flow<List<TagMapEntity>> {
+        return mTrisquelDao.getTagMapsByPhoto(photoId)
+    }
+    @WorkerThread
+    suspend fun getTagMapAndTagsByPhoto(photoId : Int) : List<TagMapAndTag> {
+        return mTrisquelDao.getTagMapAndTagsByPhoto(photoId)
+    }
+    fun getTagMapAndTagsByPhotoFlow(photoId : Int) : Flow<List<TagMapAndTag>> {
+        return mTrisquelDao.getTagMapAndTagsByPhotoFlow(photoId)
+    }
+
+    @WorkerThread
+    suspend fun upsertTagMap(entity: TagMapEntity) : Long {
+        return mTrisquelDao.upsertTagMap(entity)
+    }
+
+    @WorkerThread
+    suspend fun deleteTagMap(id: Int) {
+        mTrisquelDao.deleteTagMap(TagMapEntity(id, 0, 0,0))
     }
 }

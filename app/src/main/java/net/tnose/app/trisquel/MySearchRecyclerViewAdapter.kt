@@ -1,14 +1,9 @@
 package net.tnose.app.trisquel
 
-import android.content.Context
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.RectF
 import android.net.Uri
 import android.text.Spannable
 import android.text.SpannableString
-import android.text.style.ReplacementSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,68 +12,21 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
-import net.tnose.app.trisquel.PhotoFragment.OnListFragmentInteractionListener
+import net.tnose.app.trisquel.SearchFragment.OnListFragmentInteractionListener
 import java.io.File
 
-// Based on https://stackoverflow.com/a/34623367
-class RoundedBackgroundSpan(private val context: Context,
-                            private val mBackgroundColor: Int,
-                            private val mTextColor: Int,
-                            private val mTextSize: Float) : ReplacementSpan() {
-
-    override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
-        var paint = Paint(paint) // make a copy for not editing the referenced paint
-        paint.textSize = mTextSize
-        paint.color = mBackgroundColor
-        val textHeightWrapping = convertDpToPx(4f)
-        val tagBottom = top.toFloat() + textHeightWrapping + PADDING_Y + mTextSize + PADDING_Y + textHeightWrapping
-        val tagRight = x + getTagWidth(text, start, end, paint)
-        val rect = RectF(x, top.toFloat(), tagRight, tagBottom)
-        canvas.drawRoundRect(rect, CORNER_RADIUS.toFloat(), CORNER_RADIUS.toFloat(), paint)
-
-        paint.color = mTextColor
-        canvas.drawText(text, start, end, x + PADDING_X, tagBottom - PADDING_Y - textHeightWrapping - MAGIC_NUMBER, paint)
-    }
-
-    private fun getTagWidth(text: CharSequence, start: Int, end: Int, paint: Paint): Int {
-        return Math.round(PADDING_X + paint.measureText(text.subSequence(start, end).toString()) + PADDING_X)
-    }
-
-    override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
-        var paint = paint
-        paint = Paint(paint) // make a copy for not editing the referenced paint
-        paint.textSize = mTextSize
-        return getTagWidth(text, start, end, paint)
-    }
-
-    fun convertDpToPx(dp: Float): Float {
-        val metrics = context.resources.displayMetrics
-        return dp * metrics.density
-    }
-
-    private val PADDING_X
-        get() = convertDpToPx(6.toFloat())
-    private val PADDING_Y
-        get() = convertDpToPx(0f)
-    private val MAGIC_NUMBER
-        get() = convertDpToPx(2.toFloat())
-
-    companion object {
-        private val CORNER_RADIUS = 8
-    }
-}
-
-class MyPhotoRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<Pair<String, PhotoAndTagIds>>,
-                                 private val mFilmRollId: Int,
+// class RoundedBackgroundSpanはMyPhotoRecyclerViewAdapter.ktと同じ定義を流用
+class MySearchRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<Pair<Pair<String, Int>, PhotoAndRels>>,
+                                 //private val mFilmRollId: Int,
                                  private val mListener: OnListFragmentInteractionListener?
 ) : androidx.recyclerview.widget.ListAdapter<
-            Pair<String, PhotoAndTagIds>,
-            MyPhotoRecyclerViewAdapter.ViewHolder
+            Pair<Pair<String, Int>, PhotoAndRels>,
+            MySearchRecyclerViewAdapter.ViewHolder
             >(diffCallback)
 {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.fragment_photo, parent, false)
+                .inflate(R.layout.fragment_photo_search, parent, false)
         return ViewHolder(view)
     }
 
@@ -104,15 +52,22 @@ class MyPhotoRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<Pair<String
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.mPrevDate = getItem(position).first
-        holder.mItem = getItem(position).second.photo
-        val p = Photo.fromEntity(holder.mItem!!)
+        holder.mPrevDate = getItem(position).first.first
+        holder.mPrevFilmRoll = getItem(position).first.second
+        holder.mItem = getItem(position).second
+        val p = Photo.fromEntity(holder.mItem!!.photo)
         val dao = TrisquelDao(holder.mView.context) //これでいいのか？？？
         dao.connection()
         val l = dao.getLens(p.lensid)
         val tags = dao.getTagsByPhoto(p.id)
         dao.close()
         holder.mIdView.text = Integer.toString(p.frameIndex + 1)
+        if(holder.mPrevFilmRoll == p.filmrollid){
+            holder.mFilmRollView.visibility = View.GONE
+        }else {
+            holder.mFilmRollView.text = getItem(position).second.filmRoll
+            holder.mFilmRollView.visibility = View.VISIBLE
+        }
         if(holder.mPrevDate == p.date){
             holder.mDateView.visibility = View.GONE
         }else {
@@ -163,29 +118,29 @@ class MyPhotoRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<Pair<String
             holder.mFavorite.setImageResource(R.drawable.ic_fav_border)
 
         holder.mView.setOnClickListener {
-            mListener?.onListFragmentInteraction(Photo.fromEntity(holder.mItem!!), false)
+            mListener?.onListFragmentInteraction(Photo.fromEntity(holder.mItem!!.photo), false)
         }
 
         holder.mView.setOnLongClickListener {
-            mListener?.onListFragmentInteraction(Photo.fromEntity(holder.mItem!!), true)
+            mListener?.onListFragmentInteraction(Photo.fromEntity(holder.mItem!!.photo), true)
             true
         }
 
         holder.mIdView.setOnClickListener{
-            mListener?.onIndexClick(Photo.fromEntity(holder.mItem!!))
+            mListener?.onIndexClick(Photo.fromEntity(holder.mItem!!.photo))
         }
 
         holder.mIdView.setOnLongClickListener{
-            mListener?.onIndexLongClick(Photo.fromEntity(holder.mItem!!))
+            mListener?.onIndexLongClick(Photo.fromEntity(holder.mItem!!.photo))
             true
         }
 
         holder.mThumbnailView.setOnClickListener{
-            mListener?.onThumbnailClick(Photo.fromEntity(holder.mItem!!))
+            mListener?.onThumbnailClick(Photo.fromEntity(holder.mItem!!.photo))
         }
 
         holder.mFavorite.setOnClickListener {
-            mListener?.onFavoriteClick(Photo.fromEntity(holder.mItem!!))
+            mListener?.onFavoriteClick(Photo.fromEntity(holder.mItem!!.photo))
         }
     }
 
@@ -202,13 +157,13 @@ class MyPhotoRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<Pair<String
         }
     }
 
-    internal class PhotoDiff : DiffUtil.ItemCallback<Pair<String, PhotoAndTagIds>>() {
-        override fun areItemsTheSame(oldItem: Pair<String, PhotoAndTagIds>, newItem: Pair<String, PhotoAndTagIds>): Boolean {
+    internal class PhotoDiff : DiffUtil.ItemCallback<Pair<Pair<String, Int>, PhotoAndRels>>() {
+        override fun areItemsTheSame(oldItem: Pair<Pair<String, Int>, PhotoAndRels>, newItem: Pair<Pair<String, Int>, PhotoAndRels>): Boolean {
             val result = oldItem.second.photo.id == newItem.second.photo.id
             return result
         }
 
-        override fun areContentsTheSame(oldItem: Pair<String, PhotoAndTagIds>, newItem: Pair<String, PhotoAndTagIds>): Boolean {
+        override fun areContentsTheSame(oldItem: Pair<Pair<String, Int>, PhotoAndRels>, newItem: Pair<Pair<String, Int>, PhotoAndRels>): Boolean {
             val ret = (oldItem.first == newItem.first) && (oldItem.second == newItem.second)
             return ret
         }
@@ -216,17 +171,20 @@ class MyPhotoRecyclerViewAdapter(diffCallback: DiffUtil.ItemCallback<Pair<String
 
     inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         val mIdView: TextView
+        val mFilmRollView: TextView
         val mDateView: TextView
         val mLensView: TextView
         val mParamsView: TextView
         val mContentView: TextView
         val mThumbnailView: ImageView
-        var mItem: PhotoEntity? = null
+        var mItem: PhotoAndRels? = null
         var mPrevDate : String = "" // 日付の切り替わりタイミングだけで日付ラベルを表示する仕掛けのため、アイテムと直前のアイテムのDateは組で持つ必要がある
+        var mPrevFilmRoll : Int = 0 // 日付の切り替わりタイミングだけで日付ラベルを表示する仕掛けのため、アイテムと直前のアイテムのFilmRollは組で持つ必要がある
         val mFavorite: ImageView
 
         init {
             mIdView = mView.findViewById(R.id.id)
+            mFilmRollView = mView.findViewById(R.id.label_filmrollname)
             mDateView = mView.findViewById(R.id.date)
             mLensView = mView.findViewById(R.id.lens)
             mParamsView = mView.findViewById(R.id.params)
