@@ -209,6 +209,8 @@ interface TrisquelDao2 {
     suspend fun deleteFilmRoll(vararg entity: FilmRollEntity)
     @Query("select * from photo where filmroll = :id order by _index asc;")
     fun photosByFilmRollId(id : Int) : Flow<List<PhotoAndTagIds>>
+    @Query("select * from photo where filmroll = :id order by _index asc;")
+    suspend fun photosByFilmRollIdRaw(id : Int) : List<PhotoEntity>
 
     @Upsert
     suspend fun upsertPhoto(entity: PhotoEntity) : Long

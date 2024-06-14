@@ -760,32 +760,6 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
         return photos
     }
 
-    fun updatePhoto(p: Photo): Int {
-        val selectArgs = arrayOf(Integer.toString(p.id))
-        val cval = ContentValues()
-        cval.put("filmroll", p.filmrollid)
-        cval.put("_index", p.frameIndex)
-        cval.put("date", p.date)
-        cval.put("camera", p.cameraid)
-        cval.put("lens", p.lensid)
-        cval.put("focal_length", p.focalLength)
-        cval.put("aperture", p.aperture)
-        cval.put("shutter_speed", p.shutterSpeed)
-        cval.put("exp_compensation", p.expCompensation)
-        cval.put("ttl_light_meter", p.ttlLightMeter)
-        cval.put("location", p.location)
-        cval.put("latitude", p.latitude)
-        cval.put("longitude", p.longitude)
-        cval.put("memo", p.memo)
-        cval.put("accessories", p.accessoriesStr)
-        cval.put("suppimgs", p.supplementalImagesStr)
-        cval.put("favorite", if(p.favorite) 1 else 0)
-        return mDb!!.update("photo", SQLiteDatabase.CONFLICT_ABORT,
-                cval,
-                "_id = ?",
-                selectArgs)
-    }
-
     fun deletePhoto(id: Int) {
         val tagmaps = getTagMapsByPhoto(id)
         val tags = resolveTagMaps(tagmaps)

@@ -89,6 +89,11 @@ class TrisquelRepo {
 
     @WorkerThread
     suspend fun deleteFilmRoll(id: Int) {
+        val photos = mTrisquelDao.photosByFilmRollIdRaw(id)
+        //val photos = getPhotosByFilmRollId(id).value // これだと読み込みが終わる間がないためnullが帰ってくる？
+        for (p in photos) {
+            deletePhoto(p.id) //tagのリファレンスカウントも管理する必要があるため
+        }
         mTrisquelDao.deleteFilmRoll(FilmRollEntity(id, "", "","",0, "", "", "", ""))
     }
 
@@ -131,6 +136,17 @@ class TrisquelRepo {
 
     @WorkerThread
     suspend fun deletePhoto(id: Int) {
+        val tagmaps = getTagMapAndTagsByPhoto(id)
+        for(tm in tagmaps) {
+            deleteTagMap(tm.tagMap.id)
+        }
+        for(tm in tagmaps){
+            if(tm.tag.refcnt == 1){
+                deleteTag(tm.tag.id)
+            }else{
+                upsertTag(TagEntity(tm.tag.id, tm.tag.label, tm.tag.refcnt!! - 1))
+            }
+        }
         mTrisquelDao.deletePhoto(
             PhotoEntity(id, 0, 0, "",0,0,
                 0.0, 0.0,0.0,0.0,
