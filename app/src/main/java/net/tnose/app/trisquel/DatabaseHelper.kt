@@ -172,6 +172,8 @@ data class PhotoAndRels(
     val photo: PhotoEntity,
     @Relation(parentColumn = "filmroll", entity = FilmRollEntity::class, entityColumn = "_id",  projection = arrayOf("name"))
     val filmRoll: String,
+    @Relation(parentColumn = "filmroll", entity = FilmRollEntity::class, entityColumn = "_id",  projection = arrayOf("created"))
+    val filmRollDate: String,
     @Relation(parentColumn = "_id", entity = TagMapEntity::class, entityColumn = "photo_id",  projection = arrayOf("tag_id"))
     val tagIds: List<Int>
 )

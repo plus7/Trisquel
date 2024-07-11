@@ -113,8 +113,11 @@ class TrisquelRepo {
         }.asLiveData()
     }
 
+    // 日付とフィルムの境目でヘッダーを出すために変則的なデータ構造になっている
     fun getPhotosByAndQuery(tags: List<String>): LiveData<List<Pair<Pair<String, Int>, PhotoAndRels>>> {
-        return mTrisquelDao.getPhotosByAndQuery(tags, tags.count()).map{
+        return mTrisquelDao.getPhotosByAndQuery(tags, tags.count()).map {
+                it -> it.sortedByDescending { it.filmRollDate } // 日付は新しいほう優先なのでソート
+        }.map{
             it -> it.runningFold(
             Pair(Pair("",0),
                 PhotoAndRels(PhotoEntity(
@@ -122,7 +125,7 @@ class TrisquelRepo {
                     0.0, 0.0, 0.0, 0.0,
                     0.0, "", 0.0, 0.0,
                         "", "", "", 0),
-                    "", listOf()
+                    "", "", listOf()
                 ))) {
                 acc, value -> Pair(Pair(acc.second.photo.date, acc.second.photo.filmroll!!), value)
             }.drop(1)
