@@ -1,6 +1,7 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
@@ -657,7 +658,7 @@ class MainActivity : AppCompatActivity(),
                 hs.add(path)
                 val f = File(path)
                 if(!f.exists()) continue
-                val ze = ZipEntry("imgs" + path)
+                val ze = ZipEntry("imgs$path")
                 zos.putNextEntry(ze)
                 try {
                     val buf = ByteArray(1024 * 128)
@@ -679,6 +680,7 @@ class MainActivity : AppCompatActivity(),
         zos.close()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun setProgressPercentage(percentage: Double, status: String, error: Boolean){
         val intent = Intent()
         if(percentage >= 100.0){
@@ -716,6 +718,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
+    @SuppressLint("SimpleDateFormat")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if(data == null) return
@@ -1118,6 +1121,7 @@ class MainActivity : AppCompatActivity(),
         startActivity(intent)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun onListFragmentInteraction(item: DummyContent.DummyItem?) {
 
     }
@@ -1222,6 +1226,7 @@ class MainActivity : AppCompatActivity(),
         importDBDialog(mode)
     }
 
+    @SuppressLint("SimpleDateFormat")
     private fun exportDBDialog(mode: Int) {
         val chooserIntent = Intent(Intent.ACTION_CREATE_DOCUMENT)
         chooserIntent.addCategory(Intent.CATEGORY_OPENABLE)
