@@ -265,7 +265,7 @@ class MainActivity : AppCompatActivity(),
         navigationView.setNavigationItemSelectedListener(this)
     }
 
-    fun fixOrientation(){
+    private fun fixOrientation(){
         val config = resources.configuration
         if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -527,15 +527,15 @@ class MainActivity : AppCompatActivity(),
                 nofilter_item.isVisible = (currentFragment as FilmRollFragment).currentFilter.first != 0
             }
             val filters = getPinnedFilters()
-            val dao = TrisquelDao(this)
-            dao.connection()
+            val dao_ = TrisquelDao(this) // 警告が鬱陶しいので仮にアンダースコアをつける
+            dao_.connection()
             while(filters.size > pinnedFilterViewId.size){
                 pinnedFilterViewId.add(View.generateViewId())
             }
             for((i, f) in filters.withIndex()){
                 when(f.first){
                     1 -> {
-                        val c = dao.getCamera(f.second[0].toInt())
+                        val c = dao_.getCamera(f.second[0].toInt())
                         if (c != null)
                             popupMenu.menu.add(0, pinnedFilterViewId[i], 0, c.manufacturer + " " + c.modelName)
                     }
@@ -618,8 +618,8 @@ class MainActivity : AppCompatActivity(),
         dao.connection()
 
         // Metadata
-        val ze = ZipEntry("metadata.json")
-        zos.putNextEntry(ze)
+        val metaze = ZipEntry("metadata.json")
+        zos.putNextEntry(metaze)
         val metadata = JSONObject()
         metadata.put("DB_VERSION", DatabaseHelper.DATABASE_VERSION)
 
@@ -723,39 +723,39 @@ class MainActivity : AppCompatActivity(),
         when (requestCode) {
             REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
-                if (frag is CameraFragment && c != null) frag.insertCamera(c)
+                val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
+                if (frag is CameraFragment) frag.insertCamera(c)
                 if (c.type == 1) {
-                    val l = bundle.getParcelable<LensSpec>("fixed_lens")
-                    l!!.body = c.id
+                    val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
+                    l.body = c.id
                     val dao = TrisquelDao(this)
                     dao.connection()
-                    val id = dao.addLens(l)
+                    dao.addLens(l)
                     dao.close()
                 }
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-            }
+            }/* else if (resultCode == Activity.RESULT_CANCELED) {
+            }*/
             REQCODE_EDIT_CAMERA -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
-                val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
-                if (frag is CameraFragment && c != null) frag.updateCamera(c)
+                val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
+                if (frag is CameraFragment) frag.updateCamera(c)
                 if (c.type == 1) {
                     val dao = TrisquelDao(this)
                     dao.connection()
-                    val l = bundle.getParcelable<LensSpec>("fixed_lens")!!
+                    val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
                     val lensid = dao.getFixedLensIdByBody(c.id)
                     l.id = lensid
                     dao.updateLens(l)
                     dao.close()
                 }
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-            }
+            }/* else if (resultCode == Activity.RESULT_CANCELED) {
+            }*/
             REQCODE_ADD_LENS -> if (resultCode == Activity.RESULT_OK) {
-                val l = data.extras!!.getParcelable<LensSpec>("lensspec")
+                val l = BundleCompat.getParcelable(data.extras!!, "lensspec", LensSpec::class.java)
                 if (frag is LensFragment && l != null) frag.insertLens(l)
             }
             REQCODE_EDIT_LENS -> if (resultCode == Activity.RESULT_OK) {
-                val l = data.extras!!.getParcelable<LensSpec>("lensspec")
+                val l = BundleCompat.getParcelable(data.extras!!, "lensspec", LensSpec::class.java)
                 if (frag is LensFragment && l != null) frag.updateLens(l)
             }
             REQCODE_ADD_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
@@ -774,8 +774,8 @@ class MainActivity : AppCompatActivity(),
                         36
                 )
                 if (frag is FilmRollFragment) frag.insertFilmRoll(f)
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-            }
+            }/* else if (resultCode == Activity.RESULT_CANCELED) {
+            }*/
             REQCODE_EDIT_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
                 val dao = TrisquelDao(this.applicationContext)
@@ -794,14 +794,14 @@ class MainActivity : AppCompatActivity(),
                         36
                 )
                 if (frag is FilmRollFragment) frag.updateFilmRoll(f)
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-            }
-            REQCODE_EDIT_PHOTO_LIST -> if (resultCode == Activity.RESULT_OK) {
+            }/* else if (resultCode == Activity.RESULT_CANCELED) {
+            }*/
+            /*REQCODE_EDIT_PHOTO_LIST -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
                 // Room化に伴いいらなくなった
                 // if (frag is FilmRollFragment) frag.refreshFilmRoll(bundle!!.getInt("filmroll"))
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-            }
+            }*//* else if (resultCode == Activity.RESULT_CANCELED) {
+            }*/
             REQCODE_ADD_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
                 // Room化したときは、新規作成時のidは0でよい
@@ -809,16 +809,16 @@ class MainActivity : AppCompatActivity(),
                         bundle!!.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
                         bundle.getDouble("focal_length_factor"))
                 if (frag is AccessoryFragment) frag.insertAccessory(a)
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-            }
+            }/* else if (resultCode == Activity.RESULT_CANCELED) {
+            }*/
             REQCODE_EDIT_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
                 val bundle = data.extras
                 val a = Accessory(bundle!!.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()),
                         bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
                         bundle.getDouble("focal_length_factor"))
                 if (frag is AccessoryFragment) frag.updateAccessory(a)
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-            }
+            }/* else if (resultCode == Activity.RESULT_CANCELED) {
+            }*/
             REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX,
             REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX -> if (resultCode == Activity.RESULT_OK) {
                 if (data.data != null) {
@@ -891,14 +891,14 @@ class MainActivity : AppCompatActivity(),
                     startActivity(intent)
                 }
             }
-            REQCODE_SEARCH -> {
-                val bundle = data.extras
-                val dirtyFilmRolls = bundle?.getIntegerArrayList("dirtyFilmRolls") ?: ArrayList()
-                if (dirtyFilmRolls.size > 0 && currentFragment is FilmRollFragment) {
+            /*REQCODE_SEARCH -> {
+                //val bundle = data.extras
+                //val dirtyFilmRolls = bundle?.getIntegerArrayList("dirtyFilmRolls") ?: ArrayList()
+                //if (dirtyFilmRolls.size > 0 && currentFragment is FilmRollFragment) {
                 //TODO: ここのコードの目的がもうよくわからないがとりあえずコンパイルを通すためにコメントアウト
                 //(currentFragment as FilmRollFragment).refreshAll(ArrayList(dirtyFilmRolls.filterNotNull()))
-                }
-            }
+                //}
+            }*/
             else -> {
             }
         }
@@ -1029,66 +1029,66 @@ class MainActivity : AppCompatActivity(),
         return true
     }
 
-    override fun onListFragmentInteraction(camera: CameraSpec, isLong: Boolean) {
+    override fun onListFragmentInteraction(item: CameraSpec, isLong: Boolean) {
         if (isLong) {
             val dao = TrisquelDao(applicationContext)
             dao.connection()
-            val used = dao.getCameraUsage(camera.id)
+            val used = dao.getCameraUsage(item.id)
             dao.close()
             if (used) {
                 val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(camera.modelName))
+                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(item.modelName))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(RETCODE_DELETE_CAMERA)
-                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(camera.modelName))
-                fragment.arguments?.putInt("id", camera.id)
+                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.modelName))
+                fragment.arguments?.putInt("id", item.id)
                 fragment.showOn(this, "dialog")
             }
         } else {
             val intent = Intent(application, EditCameraActivity::class.java)
-            intent.putExtra("id", camera.id)
-            intent.putExtra("type", camera.type)
+            intent.putExtra("id", item.id)
+            intent.putExtra("type", item.type)
             startActivityForResult(intent, REQCODE_EDIT_CAMERA)
         }
     }
 
-    override fun onListFragmentInteraction(lens: LensSpec, isLong: Boolean) {
+    override fun onListFragmentInteraction(item: LensSpec, isLong: Boolean) {
         if (isLong) {
 
             val dao = TrisquelDao(applicationContext)
             dao.connection()
-            val used = dao.getLensUsage(lens.id)
+            val used = dao.getLensUsage(item.id)
             dao.close()
             if (used) {
                 val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(lens.modelName))
+                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(item.modelName))
                 fragment.showOn(this, "dialog")
             } else {
                 val fragment = YesNoDialogFragment.Builder()
                         .build(RETCODE_DELETE_LENS)
-                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(lens.modelName))
-                fragment.arguments?.putInt("id", lens.id)
+                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.modelName))
+                fragment.arguments?.putInt("id", item.id)
                 fragment.showOn(this, "dialog")
             }
         } else {
             val intent = Intent(application, EditLensActivity::class.java)
-            intent.putExtra("id", lens.id)
+            intent.putExtra("id", item.id)
             startActivityForResult(intent, REQCODE_EDIT_LENS)
         }
     }
 
-    override fun onListFragmentInteraction(filmRoll: FilmRoll, isLong: Boolean) {
+    override fun onListFragmentInteraction(item: FilmRoll, isLong: Boolean) {
         if (isLong) {
             val fragment = YesNoDialogFragment.Builder()
                     .build(RETCODE_DELETE_FILMROLL)
-            fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(filmRoll.name))
-            fragment.arguments?.putInt("id", filmRoll.id)
+            fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.name))
+            fragment.arguments?.putInt("id", item.id)
             fragment.showOn(this, "dialog")
         } else {
             val intent = Intent(application, EditPhotoListActivity::class.java)
-            intent.putExtra("id", filmRoll.id)
+            intent.putExtra("id", item.id)
             startActivityForResult(intent, REQCODE_EDIT_PHOTO_LIST)
         }
     }
@@ -1145,7 +1145,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    internal fun onRequestSDCardAccessPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    private fun onRequestSDCardAccessPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         val granted =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
@@ -1174,7 +1174,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    fun checkPermAndExportDB(mode: Int) { // 0: Slim 1: Whole
+    private fun checkPermAndExportDB(mode: Int) { // 0: Slim 1: Whole
         val writeDenied =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
             else
@@ -1228,7 +1228,7 @@ class MainActivity : AppCompatActivity(),
         importDBDialog(mode)
     }
 
-    fun exportDBDialog(mode: Int) {
+    private fun exportDBDialog(mode: Int) {
         val chooserIntent = Intent(Intent.ACTION_CREATE_DOCUMENT)
         chooserIntent.addCategory(Intent.CATEGORY_OPENABLE)
         chooserIntent.type = "application/zip"
@@ -1242,7 +1242,7 @@ class MainActivity : AppCompatActivity(),
         startActivityForResult(chooserIntent, reqcode)
     }
 
-    fun importDBDialogSinceN(mode: Int) {
+    private fun importDBDialogSinceN(mode: Int) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
         intent.addCategory(Intent.CATEGORY_OPENABLE)
         if(mode == 2){
@@ -1259,7 +1259,7 @@ class MainActivity : AppCompatActivity(),
         startActivityForResult(intent, reqcode)
     }
 
-    fun importDBDialog(mode: Int) {
+    private fun importDBDialog(mode: Int) {
         importDBDialogSinceN(mode)
     }
 
