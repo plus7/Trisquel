@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
@@ -13,6 +12,7 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
+import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.databinding.ActivityEditFilmRollBinding
 import org.json.JSONArray
 import org.json.JSONException

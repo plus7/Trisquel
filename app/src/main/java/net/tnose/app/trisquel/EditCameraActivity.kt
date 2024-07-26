@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
@@ -15,6 +14,7 @@ import android.widget.ArrayAdapter
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.databinding.ActivityEditCameraBinding
 import org.json.JSONArray
 import org.json.JSONException

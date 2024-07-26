@@ -13,7 +13,6 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
@@ -31,6 +30,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
+import androidx.preference.PreferenceManager
 import com.google.android.material.chip.Chip
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType

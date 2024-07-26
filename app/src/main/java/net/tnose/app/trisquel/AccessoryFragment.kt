@@ -2,11 +2,11 @@ package net.tnose.app.trisquel
 
 import android.content.Context
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.ViewModelProvider
+import androidx.preference.PreferenceManager
 
 
 /**
@@ -40,7 +40,7 @@ class AccessoryFragment : androidx.fragment.app.Fragment() {
         val view = inflater.inflate(R.layout.fragment_accessory_list, container, false)
 
         //ここでいいのか？
-        val pref = PreferenceManager.getDefaultSharedPreferences(this.context)
+        val pref = PreferenceManager.getDefaultSharedPreferences(this.requireContext())
         val key  = pref.getInt("accessory_sortkey", 0)
 
         // Set the adapter

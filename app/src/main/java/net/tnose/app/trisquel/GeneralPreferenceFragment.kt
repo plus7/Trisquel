@@ -4,11 +4,11 @@ import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceManager
 
 /**
  * Created by user on 2018/07/12.
@@ -59,7 +59,7 @@ class GeneralPreferenceFragment : PreferenceFragmentCompat(), AbstractDialogFrag
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
             REQCODE_DELETE_SUGGEST -> if (resultCode == RESULT_OK) {
-                val pref = PreferenceManager.getDefaultSharedPreferences(activity)
+                val pref = PreferenceManager.getDefaultSharedPreferences(this.requireContext())
                 val e = pref.edit()
                 e.putString("lens_manufacturer", "[]")
                 e.putString("camera_manufacturer", "[]")
