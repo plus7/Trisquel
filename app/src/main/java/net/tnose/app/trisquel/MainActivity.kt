@@ -134,7 +134,7 @@ class MainActivity : AppCompatActivity(),
         }
 
     fun selectFragment(currentFragmentId: Int, filtertype: Int, filtervalue: ArrayList<String>){
-        val f: androidx.fragment.app.Fragment
+        //val f: androidx.fragment.app.Fragment
         val transaction = supportFragmentManager.beginTransaction()
         when (currentFragmentId) {
             ID_CAMERA -> {
@@ -892,12 +892,6 @@ class MainActivity : AppCompatActivity(),
                 }
             }
             /*REQCODE_SEARCH -> {
-                //val bundle = data.extras
-                //val dirtyFilmRolls = bundle?.getIntegerArrayList("dirtyFilmRolls") ?: ArrayList()
-                //if (dirtyFilmRolls.size > 0 && currentFragment is FilmRollFragment) {
-                //TODO: ここのコードの目的がもうよくわからないがとりあえずコンパイルを通すためにコメントアウト
-                //(currentFragment as FilmRollFragment).refreshAll(ArrayList(dirtyFilmRolls.filterNotNull()))
-                //}
             }*/
             else -> {
             }
