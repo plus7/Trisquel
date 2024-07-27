@@ -37,19 +37,13 @@ import com.google.android.material.navigation.NavigationView
 import net.tnose.app.trisquel.dummy.DummyContent
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedInputStream
-import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
-import java.io.IOException
-import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Arrays
 import java.util.Calendar
 import java.util.Date
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 class MainActivity : AppCompatActivity(),
         NavigationView.OnNavigationItemSelectedListener,
@@ -110,9 +104,10 @@ class MainActivity : AppCompatActivity(),
         const val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
     }
 
-    private var localBroadcastManager: androidx.localbroadcastmanager.content.LocalBroadcastManager? = null
-    private var progressFilter: IntentFilter? = null
-    private var progressReceiver: ProgressReceiver? = null
+    //private var localBroadcastManager: androidx.localbroadcastmanager.content.LocalBroadcastManager? = null
+    //private var progressFilter: IntentFilter? = null
+    //private var progressReceiver: ProgressReceiver? = null
+    private var mExportViewModel: ExportProgressViewModel? = null
     private var isIntentServiceWorking: Int = 0 //0: None, 1: DB conversion
 
     private lateinit var currentFragment: androidx.fragment.app.Fragment
@@ -227,14 +222,33 @@ class MainActivity : AppCompatActivity(),
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        localBroadcastManager = androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
-        progressFilter = IntentFilter()
-        progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
-        progressFilter?.addAction(ImportIntentService.ACTION_IMPORT_PROGRESS)
-        progressFilter?.addAction(DbConvIntentService.ACTION_DBCONV_PROGRESS)
-        progressReceiver = ProgressReceiver(this)
-        localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
-
+        //localBroadcastManager = androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
+        //progressFilter = IntentFilter()
+        //progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
+        //progressFilter?.addAction(ImportIntentService.ACTION_IMPORT_PROGRESS)
+        //progressFilter?.addAction(DbConvIntentService.ACTION_DBCONV_PROGRESS)
+        //progressReceiver = ProgressReceiver(this)
+        //localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
+        mExportViewModel = ViewModelProvider(this).get(ExportProgressViewModel::class.java)
+        mExportViewModel!!.workInfos.observe(this,
+            Observer { listOfWorkInfo ->
+                if (listOfWorkInfo.isNullOrEmpty()) {
+                    return@Observer
+                }
+                val workInfo = listOfWorkInfo[0]
+                if (workInfo.state.isFinished) {
+                    //WorkInfo.State.SUCCEEDED
+                    val status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.outputData.getDouble(ExportWorker.PARAM_PERCENTAGE, 100.0)
+                    setProgressPercentage(progress, status, false)
+                    Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
+                } else {
+                    val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
+                    setProgressPercentage(progress, status, false)
+                }
+            }
+        )
         setContentView(R.layout.activity_main2)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -325,11 +339,6 @@ class MainActivity : AppCompatActivity(),
         val e = pref.edit()
         e.putInt("last_version", Util.TRISQUEL_VERSION)
         e.apply()
-    }
-
-    override fun onDestroy() {
-        localBroadcastManager?.unregisterReceiver(progressReceiver!!)
-        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -545,6 +554,7 @@ class MainActivity : AppCompatActivity(),
                     }
                 }
             }
+            dao_.close() // いままでどうやらcloseを忘れていたらしい
 
             //popupMenu.menu.add(R.id.group_recent_filter, View.generateViewId() , 0, "hogehoge")
             popupMenu.setOnMenuItemClickListener {
@@ -610,7 +620,7 @@ class MainActivity : AppCompatActivity(),
 
         return super.onOptionsItemSelected(item)
     }
-
+    /*
     fun backupToZip(zipFile: File) {
         val zos = ZipOutputStream(FileOutputStream(zipFile))
         zos.setMethod(ZipOutputStream.DEFLATED)
@@ -679,6 +689,7 @@ class MainActivity : AppCompatActivity(),
         dao.close()
         zos.close()
     }
+     */
 
     @Suppress("UNUSED_PARAMETER")
     fun setProgressPercentage(percentage: Double, status: String, error: Boolean){
@@ -833,8 +844,9 @@ class MainActivity : AppCompatActivity(),
 
                     isIntentServiceWorking = 2
                     fixOrientation()
-                    ExportIntentService.shouldContinue = true
-                    ExportIntentService.startExport(this, uri.toString(), mode)
+                    mExportViewModel?.doExport(uri.toString(), mode)
+                    //ExportIntentService.shouldContinue = true
+                    //ExportIntentService.startExport(this, uri.toString(), mode)
                 }
             }
             REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP,
@@ -1278,6 +1290,9 @@ class MainActivity : AppCompatActivity(),
                     val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
                     startActivity(Intent(Intent.ACTION_VIEW, uri))
                 }
+            }
+            RETCODE_BACKUP_PROGRESS -> if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
+                mExportViewModel?.cancelExport()
             }
             RETCODE_IMPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val mode = data.getIntExtra("which", 0)

@@ -38,6 +38,9 @@ class Util {
 
     companion object {
         val TRISQUEL_VERSION = 19
+        val WORKER_TAG_EXPORT = "WORKER_TAG_EXPORT"
+        val WORKER_TAG_IMPORT = "WORKER_TAG_IMPORT"
+        val WORKER_TAG_DBCONV = "WORKER_TAG_DBCONV"
 
         /* シャッタースピードはたかだか2桁精度なのでdoubleからきれいに変換できる */
         internal fun doubleToStringShutterSpeed(ss: Double): String {
