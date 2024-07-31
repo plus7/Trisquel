@@ -1093,4 +1093,14 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
                 "_id = ?",
                 selectArgs)
     }
+
+    fun beginTransaction(){
+        mDb?.beginTransaction()
+    }
+    fun setTransactionSuccessful(){
+        mDb?.setTransactionSuccessful()
+    }
+    fun endTransaction(){
+        mDb?.endTransaction()
+    }
 }
