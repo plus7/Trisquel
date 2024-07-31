@@ -108,6 +108,7 @@ class MainActivity : AppCompatActivity(),
     //private var progressFilter: IntentFilter? = null
     //private var progressReceiver: ProgressReceiver? = null
     private var mExportViewModel: ExportProgressViewModel? = null
+    private var mImportViewModel: ImportProgressViewModel? = null
     private var isIntentServiceWorking: Int = 0 //0: None, 1: DB conversion
 
     private lateinit var currentFragment: androidx.fragment.app.Fragment
@@ -231,6 +232,26 @@ class MainActivity : AppCompatActivity(),
         //localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
         mExportViewModel = ViewModelProvider(this).get(ExportProgressViewModel::class.java)
         mExportViewModel!!.workInfos.observe(this,
+            Observer { listOfWorkInfo ->
+                if (listOfWorkInfo.isNullOrEmpty()) {
+                    return@Observer
+                }
+                val workInfo = listOfWorkInfo[0]
+                if (workInfo.state.isFinished) {
+                    //WorkInfo.State.SUCCEEDED
+                    val status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.outputData.getDouble(ExportWorker.PARAM_PERCENTAGE, 100.0)
+                    setProgressPercentage(progress, status, false)
+                    Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
+                } else {
+                    val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
+                    setProgressPercentage(progress, status, false)
+                }
+            }
+        )
+        mImportViewModel = ViewModelProvider(this).get(ImportProgressViewModel::class.java)
+        mImportViewModel!!.workInfos.observe(this,
             Observer { listOfWorkInfo ->
                 if (listOfWorkInfo.isNullOrEmpty()) {
                     return@Observer
@@ -845,8 +866,6 @@ class MainActivity : AppCompatActivity(),
                     isIntentServiceWorking = 2
                     fixOrientation()
                     mExportViewModel?.doExport(uri.toString(), mode)
-                    //ExportIntentService.shouldContinue = true
-                    //ExportIntentService.startExport(this, uri.toString(), mode)
                 }
             }
             REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP,
@@ -860,13 +879,12 @@ class MainActivity : AppCompatActivity(),
                     fragment.showOn(this, "dialog")
                     isIntentServiceWorking = 3
                     fixOrientation()
-                    ImportIntentService.shouldContinue = true
                     val mode = when (requestCode) {
                         REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP -> 0
                         REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> 1
                         else -> 2
                     }
-                    ImportIntentService.startImport(this, uri, mode)
+                    mImportViewModel?.doImport(uri.toString(), mode)
                 }
             }
             REQCODE_DBFILE_CHOSEN_FOR_REPLDB -> if (resultCode == Activity.RESULT_OK) {
@@ -1302,6 +1320,9 @@ class MainActivity : AppCompatActivity(),
                     val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
                     startActivity(Intent(Intent.ACTION_VIEW, uri))
                 }
+            }
+            RETCODE_IMPORT_PROGRESS -> if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
+                mImportViewModel?.cancelExport()
             }
             RETCODE_DELETE_FILMROLL -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val id = data.getIntExtra("id", -1)

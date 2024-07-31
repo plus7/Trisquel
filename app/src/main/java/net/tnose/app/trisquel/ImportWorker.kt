@@ -1,29 +1,21 @@
 package net.tnose.app.trisquel
 
-//import java.util.zip.ZipEntry
-//import java.util.zip.ZipFile
-//import java.util.zip.ZipInputStream
-import android.R
-import android.app.IntentService
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationChannelGroup
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.os.Handler
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.util.Log
-import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
+import androidx.work.CoroutineWorker
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkRequest
+import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.json.JSONArray
 import org.json.JSONObject
@@ -36,37 +28,33 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import kotlin.collections.set
+import kotlin.coroutines.cancellation.CancellationException
 
-/*
 class VersionUnmatchException : Exception()
 
 sealed class WrappedZipFile {
     data class JavaZipFile(val zf: java.util.zip.ZipFile): WrappedZipFile()
     data class ApacheCCZipFile(val zf: ZipFile): WrappedZipFile()
 }
-*/
-class ImportIntentService : IntentService {
 
-    companion object {
-        @Volatile
-        var shouldContinue = true
-
-        val ACTION_START_IMPORT = "net.tnose.app.trisquel.action.START_IMPORT"
-        val ACTION_IMPORT_PROGRESS = "net.tnose.app.trisquel.action.IMPORT_PROGRESS"
-        val PARAM_DIR = "dir"
+class CustomImportException : Exception ("Internal backup before import failed!")
+class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    companion object{
         val PARAM_ZIPFILE = "zipfile"
         val PARAM_URI = "uri"
         val PARAM_MODE = "mode"
         val PARAM_PERCENTAGE = "percentage"
         val PARAM_STATUS = "status"
-
-        internal fun startImport(context: Context, uri: Uri, mode: Int){
-            val intent = Intent(context, ImportIntentService::class.java)
-            intent.action = ACTION_START_IMPORT
-            intent.putExtra(PARAM_URI, uri.toString())
-            intent.putExtra(PARAM_MODE, mode)
-            context.startService(intent)
+        fun createImportRequest(zipFile : String, mode : Int): WorkRequest {
+            return OneTimeWorkRequestBuilder<ImportWorker>()
+                .setInputData(
+                    workDataOf(
+                        Pair(PARAM_ZIPFILE, zipFile),
+                        Pair(PARAM_MODE, mode)
+                    )
+                )
+                .addTag(Util.WORKER_TAG_IMPORT)
+                .build()
         }
 
         const val SUCCESS = 0
@@ -74,24 +62,50 @@ class ImportIntentService : IntentService {
         const val CANCELED = -2
         const val UNKNOWN = -999
     }
-    var handler: Handler? = null
+
     val cameraIdOld2NewMap: HashMap<Int, Int> = HashMap()
     val lensIdOld2NewMap: HashMap<Int, Int> = HashMap()
     val accessoryIdOld2NewMap: HashMap<Int, Int> = HashMap()
     val filmrollIdOld2NewMap: HashMap<Int, Int> = HashMap()
     val photoIdOld2NewMap: HashMap<Int, Int> = HashMap()
-
-    constructor() : super("ImportIntentService") {
-        handler = Handler()
+    override suspend fun doWork(): Result {
+        val uri = inputData.getString(PARAM_ZIPFILE)
+        val mode = inputData.getInt(PARAM_MODE, 0)
+        return try {
+            backupDBBeforeImport()
+            val result = importFromZip(Uri.parse(uri), (mode == 0))
+            if(result != SUCCESS){
+                val errstr = when(result){
+                    VERSION_UNMATCH -> "Database version is too new"
+                    CANCELED -> "User canceled import operation"
+                    UNKNOWN -> "Unknown error %d".format(result)
+                    else -> "Impossible error %d".format(result)
+                }
+                Result.failure(
+                    workDataOf(
+                        Pair(PARAM_PERCENTAGE, 100.0),
+                        Pair(PARAM_STATUS, errstr)))
+            }else {
+                Result.success(
+                    workDataOf(
+                        Pair(PARAM_PERCENTAGE, 100.0),
+                        Pair(PARAM_STATUS, "Import from $uri completed")))
+            }
+        } catch (error: CancellationException) {
+            Result.failure(
+                workDataOf(
+                    Pair(ExportWorker.PARAM_PERCENTAGE, 100.0),
+                    Pair(ExportWorker.PARAM_STATUS, "Backup canceled.")))
+        } catch (e: Exception){
+            Result.failure(
+                workDataOf(
+                    Pair(PARAM_PERCENTAGE, 100.0),
+                    Pair(PARAM_STATUS, e.toString())))
+        }
     }
 
-    fun bcastProgress(percentage: Double, status: String, isError: Boolean){
-        val intent = Intent()
-        intent.putExtra(PARAM_PERCENTAGE, percentage)
-        intent.putExtra(PARAM_STATUS, status)
-        intent.putExtra(DbConvIntentService.PARAM_ERROR, isError)
-        intent.action = ACTION_IMPORT_PROGRESS
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(baseContext).sendBroadcast(intent)
+    private suspend fun bcastProgress(percentage: Double, status: String){
+        setProgress(workDataOf(Pair(PARAM_PERCENTAGE, percentage), Pair(PARAM_STATUS, status)))
     }
 
     fun getStringFromEntry(wzf: WrappedZipFile, entryName: String): String{
@@ -115,12 +129,12 @@ class ImportIntentService : IntentService {
         return result
     }
 
-    fun getJSONObjectFromEntry(wzf: WrappedZipFile, entryName: String): JSONObject{
+    private fun getJSONObjectFromEntry(wzf: WrappedZipFile, entryName: String): JSONObject {
         val str = getStringFromEntry(wzf, entryName)
         return JSONObject(str)
     }
 
-    fun getJSONArrayFromEntry(wzf: WrappedZipFile, entryName: String): JSONArray{
+    private fun getJSONArrayFromEntry(wzf: WrappedZipFile, entryName: String): JSONArray {
         val str = getStringFromEntry(wzf, entryName)
         return JSONArray(str)
     }
@@ -134,7 +148,7 @@ class ImportIntentService : IntentService {
         }
     }
 
-    fun getSafeFileNameP(relPath: String, displayName: String): String {
+    private fun getSafeFileNameP(relPath: String, displayName: String): String {
         var currentCandidate = displayName
         var suffixNumber = 1
         while(true) {
@@ -153,24 +167,26 @@ class ImportIntentService : IntentService {
         var currentCandidate = displayName
         var suffixNumber = 1
         while(true) {
-            val values = ContentValues().apply {
+            /*val values = ContentValues().apply {
                 put(MediaStore.Images.Media.RELATIVE_PATH, relPath)
                 put(MediaStore.Images.Media.DISPLAY_NAME, currentCandidate)
-            }
-            val projection = arrayOf(MediaStore.Images.Media.RELATIVE_PATH,
-                    MediaStore.Images.Media.DISPLAY_NAME)
+            }*/
+            val projection = arrayOf(
+                MediaStore.Images.Media.RELATIVE_PATH,
+                MediaStore.Images.Media.DISPLAY_NAME)
             val selection = "${MediaStore.Images.Media.RELATIVE_PATH} = ? AND ${MediaStore.Images.Media.DISPLAY_NAME} = ?"
             val selectionArgs = arrayOf(relPath, currentCandidate)
 
-            val cursor: Cursor? = contentResolver.query(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    projection, selection, selectionArgs, null)
+            val cursor: Cursor? = applicationContext.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection, selection, selectionArgs, null)
 
             if(cursor == null){
                 break
             }else{
                 if(!cursor.moveToNext()) break
                 currentCandidate = appendSuffix(displayName, suffixNumber)
+                cursor.close()
             }
             suffixNumber++
         }
@@ -178,7 +194,7 @@ class ImportIntentService : IntentService {
         return currentCandidate
     }
 
-    fun writeInMediaStoreP(relPath: String, displayName: String, ist: InputStream): String{
+    private fun writeInMediaStoreP(relPath: String, displayName: String, ist: InputStream): String{
         val dirPath = Environment.getExternalStorageDirectory().absolutePath + "/" + relPath
         val dir = File(dirPath)
         if(!dir.exists()){
@@ -200,7 +216,7 @@ class ImportIntentService : IntentService {
             put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Images.Media.DATA, filePath)
         }
-        val item = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
+        val item = applicationContext.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
         return item.toString()
     }
 
@@ -213,9 +229,9 @@ class ImportIntentService : IntentService {
         }
 
         val collection = MediaStore.Images.Media
-                .getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        val item = contentResolver.insert(collection, values)!!
-        val pfd = contentResolver.openFileDescriptor(item, "w", null)
+            .getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        val item = applicationContext.contentResolver.insert(collection, values)!!
+        val pfd = applicationContext.contentResolver.openFileDescriptor(item, "w", null)
         if(pfd != null){
             val ost = FileOutputStream(pfd.fileDescriptor)
             val bost = BufferedOutputStream(ost)
@@ -227,17 +243,18 @@ class ImportIntentService : IntentService {
             }
             bost.flush()
             bost.close()
+            pfd.close()
         }
 
         values.clear()
         values.put(MediaStore.Images.Media.IS_PENDING, 0)
-        contentResolver.update(item, values, null, null)
+        applicationContext.contentResolver.update(item, values, null, null)
         return item.toString()
     }
 
-    fun newPathsFullRestore(wzf: WrappedZipFile, photo: JSONObject, dao: TrisquelDao, filmrollIdOld2NewMap: HashMap<Int, Int>): Pair<ArrayList<String>, String>{
+    private fun newPathsFullRestore(wzf: WrappedZipFile, photo: JSONObject, dao: TrisquelDao, filmrollIdOld2NewMap: HashMap<Int, Int>): Pair<ArrayList<String>, String>{
         val result = ArrayList<String>()
-        val importErrors = ArrayList<String>()
+        //val importErrors = ArrayList<String>()
 
         if(photo.getString("suppimgs").isEmpty()) return Pair(result, "")
 
@@ -285,31 +302,32 @@ class ImportIntentService : IntentService {
         return Pair(result, "")
     }
 
-    fun isContentUriExists(uri: Uri): Boolean{
+    private fun isContentUriExists(uri: Uri): Boolean{
         var result = true
         try{
-            val pfd = contentResolver.openFileDescriptor(uri, "r")
-            if(pfd==null) result = false
+            val pfd = applicationContext.contentResolver.openFileDescriptor(uri, "r")
+            if(pfd==null){ result = false }
+            pfd?.close()
         }catch(e: FileNotFoundException){
             result = false
         }
         return result
     }
 
-    fun isMd5sumMatch(uri: Uri, md5sum: String): Boolean{
-        val ist = contentResolver.openInputStream(uri)
+    private fun isMd5sumMatch(uri: Uri, md5sum: String): Boolean{
+        val ist = applicationContext.contentResolver.openInputStream(uri)
         if(ist != null)
             return MD5Util.digestAsStr(ist) == md5sum
         else
             return false
     }
 
-    fun getRealPathFromURI(contentUri: Uri): String {
+    private fun getRealPathFromURI(contentUri: Uri): String {
         var cursor: Cursor? = null
-        var result = ""
+        val result: String
         try {
             val proj = arrayOf(MediaStore.Images.Media.DATA)
-            cursor = contentResolver.query(contentUri, proj, null, null, null)
+            cursor = applicationContext.contentResolver.query(contentUri, proj, null, null, null)
             cursor!!.moveToFirst()
             val column_index = cursor.getColumnIndex(proj[0])
             result = cursor.getString(column_index)
@@ -319,32 +337,33 @@ class ImportIntentService : IntentService {
         return result
     }
 
-    fun queryCandidateUris(fileName: String): ArrayList<String>{
-        val cr = contentResolver
+    private fun queryCandidateUris(fileName: String): ArrayList<String> {
+        val cr = applicationContext.contentResolver
         val projection = arrayOf(
-                MediaStore.Images.Media._ID,
-                MediaStore.Images.Media.DISPLAY_NAME)
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DISPLAY_NAME)
         val selection = "${MediaStore.Images.Media.DISPLAY_NAME} = ?"
         val selectionArgs = arrayOf(fileName)
         val cursor: Cursor? = cr.query(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                projection, selection, selectionArgs, null)
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            projection, selection, selectionArgs, null)
         val paths = ArrayList<String>()
         while (cursor?.moveToNext() == true) {
             val idColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-            val displayNameColumn = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+            //val displayNameColumn = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
 
             val id = cursor.getLong(idColumn)
             val contentUri = Uri.withAppendedPath(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    id.toString()
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                id.toString()
             )
             paths.add(contentUri.toString())
         }
+        cursor?.close()
         return paths
     }
 
-    fun assumedPaths(photo: JSONObject): Pair<ArrayList<String>, String> {
+    private fun assumedPaths(photo: JSONObject): Pair<ArrayList<String>, String> {
         val result = ArrayList<String>()
         val importErrors = ArrayList<String>()
 
@@ -376,10 +395,10 @@ class ImportIntentService : IntentService {
                         var foundSome = false
                         for(c in candidates){
                             Log.d("ImportDebug",
-                                    "fileName:" + fileName
-                                            + " Candidate URI:" + c
-                                            + " Path:" +getRealPathFromURI(Uri.parse(c)))
-                            val ist = CompatibilityUtil.pathToInputStream(contentResolver, c, true)
+                                "fileName:" + fileName
+                                        + " Candidate URI:" + c
+                                        + " Path:" +getRealPathFromURI(Uri.parse(c)))
+                            val ist = CompatibilityUtil.pathToInputStream(applicationContext.contentResolver, c, true)
                             if(ist!=null) {
                                 val md5sumToCompare = MD5Util.digestAsStr(ist)
                                 if(md5sum == md5sumToCompare){
@@ -398,8 +417,9 @@ class ImportIntentService : IntentService {
         return Pair(result, importErrors.joinToString("\n"))
     }
     // インポート前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
-    fun backupDBBeforeImport(){
-        val dbpath = this.getDatabasePath("trisquel.db")
+    @SuppressLint("SimpleDateFormat")
+    private fun backupDBBeforeImport(){
+        val dbpath = applicationContext.getDatabasePath("trisquel.db")
         val calendar = Calendar.getInstance()
         val sdf = SimpleDateFormat("yyyyMMddHHmmss")
         val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
@@ -414,105 +434,101 @@ class ImportIntentService : IntentService {
         dst.close()
     }
 
-    fun CloseWrappedZipFile(wzf: WrappedZipFile){
+    private fun CloseWrappedZipFile(wzf: WrappedZipFile){
         when(wzf) {
             is WrappedZipFile.JavaZipFile -> wzf.zf.close()
             is WrappedZipFile.ApacheCCZipFile -> wzf.zf.close()
         }
     }
 
-    fun importFromZip(uri: Uri, merge: Boolean): Int{
+    private suspend fun importFromZip(uri: Uri, merge: Boolean): Int{
         var result = UNKNOWN
         var pfd: ParcelFileDescriptor? = null
         //どうもここでval pfdとするとファイルディスクリプタがGCされてしまう？？？
 
-        pfd = contentResolver.openFileDescriptor(uri, "r")
+        pfd = applicationContext.contentResolver.openFileDescriptor(uri, "r")
         if (pfd == null) throw FileNotFoundException(uri.toString())
         val fis = FileInputStream(pfd.fileDescriptor)
         val zipfile: WrappedZipFile = WrappedZipFile.ApacheCCZipFile(ZipFile(fis.channel))
 
-        val dao = TrisquelDao(this)
+        val dao = TrisquelDao(applicationContext)
         dao.connection()
         //try {
-            try {
-                val metadataJSON = getJSONObjectFromEntry(zipfile, "metadata.json")
-                val dbver = metadataJSON.getInt("DB_VERSION")
-                val mode = metadataJSON.getInt("EXPORT_MODE")
-                Log.d("importFromZip",
-                        "DB_VERSION=" + dbver.toString() + ", " +
-                                "EXPORT_MODE=" + mode.toString())
-                if (dbver > DatabaseHelper.DATABASE_VERSION) {
-                    throw VersionUnmatchException()
-                }
+        try {
+            val metadataJSON = getJSONObjectFromEntry(zipfile, "metadata.json")
+            val dbver = metadataJSON.getInt("DB_VERSION")
+            val mode = metadataJSON.getInt("EXPORT_MODE")
+            Log.d("importFromZip",
+                "DB_VERSION=" + dbver.toString() + ", " +
+                        "EXPORT_MODE=" + mode.toString())
+            if (dbver > DatabaseHelper.DATABASE_VERSION) {
+                throw VersionUnmatchException()
+            }
 
-                if (!merge) dao.deleteAll()
+            dao.beginTransaction()
 
-                val cameraJSON = getJSONArrayFromEntry(zipfile, "camera.json")
-                for (i in 0 until cameraJSON.length()) {
-                    val id_pair = dao.mergeCameraJSON(cameraJSON.getJSONObject(i))
-                    cameraIdOld2NewMap[id_pair.first] = id_pair.second
-                }
-                if (!shouldContinue){ throw InterruptedException() }
+            if (!merge) dao.deleteAll()
 
-                val lensJSON = getJSONArrayFromEntry(zipfile, "lens.json")
-                for (i in 0 until lensJSON.length()) {
-                    val id_pair = dao.mergeLensJSON(lensJSON.getJSONObject(i), cameraIdOld2NewMap)
-                    lensIdOld2NewMap[id_pair.first] = id_pair.second
-                }
-                if (!shouldContinue){ throw InterruptedException() }
+            val cameraJSON = getJSONArrayFromEntry(zipfile, "camera.json")
+            for (i in 0 until cameraJSON.length()) {
+                val id_pair = dao.mergeCameraJSON(cameraJSON.getJSONObject(i))
+                cameraIdOld2NewMap[id_pair.first] = id_pair.second
+            }
 
-                val accessoryJSON = getJSONArrayFromEntry(zipfile, "accessory.json")
-                for (i in 0 until accessoryJSON.length()) {
-                    val id_pair = dao.mergeAccessoryJSON(accessoryJSON.getJSONObject(i))
-                    accessoryIdOld2NewMap[id_pair.first] = id_pair.second
-                }
-                if (!shouldContinue){ throw InterruptedException() }
+            val lensJSON = getJSONArrayFromEntry(zipfile, "lens.json")
+            for (i in 0 until lensJSON.length()) {
+                val id_pair = dao.mergeLensJSON(lensJSON.getJSONObject(i), cameraIdOld2NewMap)
+                lensIdOld2NewMap[id_pair.first] = id_pair.second
+            }
 
-                val filmrollJSON = getJSONArrayFromEntry(zipfile, "filmroll.json")
-                for (i in 0 until filmrollJSON.length()) {
-                    val id_pair = dao.mergeFilmRollJSON(filmrollJSON.getJSONObject(i), cameraIdOld2NewMap)
-                    filmrollIdOld2NewMap[id_pair.first] = id_pair.second
-                }
-                if (!shouldContinue){ throw InterruptedException() }
+            val accessoryJSON = getJSONArrayFromEntry(zipfile, "accessory.json")
+            for (i in 0 until accessoryJSON.length()) {
+                val id_pair = dao.mergeAccessoryJSON(accessoryJSON.getJSONObject(i))
+                accessoryIdOld2NewMap[id_pair.first] = id_pair.second
+            }
 
-                val photoJSON = getJSONArrayFromEntry(zipfile, "photo.json")
-                for (i in 0 until photoJSON.length()) {
-                    val pjo = photoJSON.getJSONObject(i)
-                    val tmp: Pair<ArrayList<String>, String> =
-                            if (mode == 0) assumedPaths(pjo)
-                            else newPathsFullRestore(zipfile, pjo, dao, filmrollIdOld2NewMap)
-                    val newpaths = tmp.first
-                    val importErrorStr = tmp.second
-                    // val (newpaths, importErrorStr) = tmp なぜかこれができない
-                    val id_pair = dao.mergePhotoJSON(pjo, newpaths, importErrorStr,
-                            cameraIdOld2NewMap, lensIdOld2NewMap, filmrollIdOld2NewMap, accessoryIdOld2NewMap)
-                    photoIdOld2NewMap[id_pair.first] = id_pair.second
+            val filmrollJSON = getJSONArrayFromEntry(zipfile, "filmroll.json")
+            for (i in 0 until filmrollJSON.length()) {
+                val id_pair = dao.mergeFilmRollJSON(filmrollJSON.getJSONObject(i), cameraIdOld2NewMap)
+                filmrollIdOld2NewMap[id_pair.first] = id_pair.second
+            }
 
-                    if (!shouldContinue){ throw InterruptedException() }
-                    val msg = if(mode == 0) "Searching photo files..." else "Copying photo files..."
-                    bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, msg, false)
-                }
+            val photoJSON = getJSONArrayFromEntry(zipfile, "photo.json")
+            for (i in 0 until photoJSON.length()) {
+                val pjo = photoJSON.getJSONObject(i)
+                val tmp: Pair<ArrayList<String>, String> =
+                    if (mode == 0) assumedPaths(pjo)
+                    else newPathsFullRestore(zipfile, pjo, dao, filmrollIdOld2NewMap)
+                val newpaths = tmp.first
+                val importErrorStr = tmp.second
+                // val (newpaths, importErrorStr) = tmp なぜかこれができない
+                val id_pair = dao.mergePhotoJSON(pjo, newpaths, importErrorStr,
+                    cameraIdOld2NewMap, lensIdOld2NewMap, filmrollIdOld2NewMap, accessoryIdOld2NewMap)
+                photoIdOld2NewMap[id_pair.first] = id_pair.second
 
-                val tagJSON = getJSONArrayFromEntry(zipfile, "tag.json")
-                val tagmapJSON = getJSONArrayFromEntry(zipfile, "tagmap.json")
-                dao.mergeTagMapJSON(tagmapJSON, tagJSON, filmrollIdOld2NewMap, photoIdOld2NewMap)
+                val msg = if(mode == 0) "Searching photo files..." else "Copying photo files..."
+                bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, msg)
+            }
 
-                if (!shouldContinue){ throw InterruptedException() }
+            val tagJSON = getJSONArrayFromEntry(zipfile, "tag.json")
+            val tagmapJSON = getJSONArrayFromEntry(zipfile, "tagmap.json")
+            dao.mergeTagMapJSON(tagmapJSON, tagJSON, filmrollIdOld2NewMap, photoIdOld2NewMap)
+
             //} catch( e: Exception ) {
             //    Log.d("ZipFile", e.toString())
-                result = SUCCESS
-            } catch (e: InterruptedException) {
-                result = CANCELED
-            } catch (e: VersionUnmatchException) {
-                result = VERSION_UNMATCH
-            } finally {
-                CloseWrappedZipFile(zipfile)
-                dao.close()
-                //zipfile.close()
-                //tmpFile.delete()
-            }
+            dao.setTransactionSuccessful()
+            result = SUCCESS
+        } catch (e: VersionUnmatchException) {
+            result = VERSION_UNMATCH
+        } finally {
+            CloseWrappedZipFile(zipfile)
+            dao.endTransaction()
+            dao.close()
+            //zipfile.close()
+            //tmpFile.delete()
+        }
         //} catch( e: Exception ) {
-            //Log.d("ZipFile", e.toString())
+        //Log.d("ZipFile", e.toString())
         //} finally {
         //}
         pfd.close() //念のため最後にpfdを触るコードを入れてGCさせない（いいのかこれで？） ついでにクローズもしてみる
@@ -520,90 +536,4 @@ class ImportIntentService : IntentService {
 
         return result
     }
-
-    override fun onHandleIntent(intent: Intent?) {
-        if (intent == null) return
-        when(intent.action){
-            ACTION_START_IMPORT -> {
-                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                // グループ生成
-                val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
-                nm.createNotificationChannelGroups(arrayListOf(g))
-                val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
-                ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                nm.createNotificationChannel(ch)
-
-                val channelId = "trisquel_ch"
-
-                // Notificationのインスタンス化
-                var notification = Notification()
-                val i = Intent(applicationContext, MainActivity::class.java)
-                val pi = PendingIntent.getActivity(this, 0, i,
-                    PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
-                val builder = NotificationCompat.Builder(this, channelId)
-
-                //Foreground Service
-                notification = builder.setContentIntent(pi)
-                        .setGroup("trisquel_ch_grp")
-                        .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
-                        .setAutoCancel(true).setContentTitle("Importing database")
-                        .setContentText("Trisquel").build()
-
-                //ステータスバーの通知を消せないようにする
-                notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
-                startForeground(1, notification) //Foreground Service開始
-
-                /*val dir = intent.getStringExtra(PARAM_DIR)
-                val zipfile = intent.getStringExtra(PARAM_ZIPFILE)
-                val sd = File(dir!!)
-                val backupZip = File(sd, zipfile!!)*/
-                val uri = intent.getStringExtra(PARAM_URI)
-                val mode = intent.getIntExtra(PARAM_MODE, 0)
-
-                try {
-                    backupDBBeforeImport()
-                } catch (e: Exception){
-                    handler?.post(Runnable {
-                        Toast.makeText(this, "Internal backup before import failed!", Toast.LENGTH_LONG).show()
-                    })
-                    bcastProgress(100.0, "Import interrupted.", true)
-                    return
-                }
-
-                val result = importFromZip(Uri.parse(uri), (mode == 0))
-                if(result != SUCCESS){
-                    val errstr = when(result){
-                        VERSION_UNMATCH -> "Database version is too new"
-                        CANCELED -> "User canceled import operation"
-                        UNKNOWN -> "Unknown error %d".format(result)
-                        else -> "Impossible error %d".format(result)
-                    }
-                    handler?.post(Runnable {
-                        Toast.makeText(this, errstr, Toast.LENGTH_LONG).show()
-                    })
-                    bcastProgress(100.0, errstr, true)
-                }else {
-                    handler?.post(Runnable {
-                        Toast.makeText(this, "Import from " + uri + " completed", Toast.LENGTH_LONG).show()
-                    })
-                    val i2 = Intent(applicationContext, MainActivity::class.java)
-                    val pi2 = PendingIntent.getActivity(this, 0, i2, PendingIntent.FLAG_IMMUTABLE)
-
-                    val builder2 = NotificationCompat.Builder(this, channelId)
-
-                    //Foreground Service
-                    val n = builder2.setContentIntent(pi2)
-                            .setGroup("trisquel_ch_grp")
-                            .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
-                            .setAutoCancel(true).setContentTitle("Conversion finished")
-                            .setContentText("Trisquel").build()
-
-                    nm.notify(1, n)
-                    bcastProgress(100.0, "Import completed.", false)
-                }
-            }
-        }
-    }
-
 }
