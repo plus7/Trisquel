@@ -493,7 +493,7 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
                 arrayOf(Integer.toString(id))
             )
             if (cursor.moveToFirst()){
-                result = true
+                if (cursor.getInt(0) != 0) result = true
             }
         }finally {
             cursor?.close()
@@ -506,7 +506,7 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
                 arrayOf(Integer.toString(id))
             )
             if (cursor.moveToFirst()){
-                result = true
+                if (cursor.getInt(0) != 0) result = true
             }
         }finally {
             cursor?.close()
@@ -628,8 +628,8 @@ class TrisquelDao(context: Context?) { //} : DatabaseHelper(context) {
                 "select exists(select 1 from photo where lens = ?)",
                 arrayOf(Integer.toString(id))
             )
-            if (cursor.moveToFirst()){
-                result = true
+            if (cursor.moveToFirst()) {
+                if (cursor.getInt(0) != 0) result = true
             }
         }finally {
             cursor?.close()
