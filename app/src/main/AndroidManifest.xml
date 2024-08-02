@@ -107,10 +107,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
-        <service android:name=".ExportIntentService" />
-
-        <service android:name=".ImportIntentService" />
-        <service android:name=".DbConvIntentService" />
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />
