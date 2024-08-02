@@ -27,6 +27,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         const val PARAM_ZIPFILE = "zipfile"
         const val PARAM_PERCENTAGE = "percentage"
         const val PARAM_STATUS = "status"
+        const val PARAM_ERROR = "error"
         const val PARAM_MODE = "mode"
         fun createExportRequest(zipFile : String, mode : Int): WorkRequest {
             return OneTimeWorkRequestBuilder<ExportWorker>()

@@ -7,9 +7,9 @@ import android.content.Intent
 class ProgressReceiver(private val mActivity: MainActivity) : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
 
-        val percentage = intent.getDoubleExtra(ExportIntentService.PARAM_PERCENTAGE, -1.0)
-        val status = intent.getStringExtra(ExportIntentService.PARAM_STATUS)
-        val error = intent.getBooleanExtra(DbConvIntentService.PARAM_ERROR, false)
+        val percentage = intent.getDoubleExtra(ExportWorker.PARAM_PERCENTAGE, -1.0)
+        val status = intent.getStringExtra(ExportWorker.PARAM_STATUS)
+        val error = intent.getBooleanExtra(ExportWorker.PARAM_ERROR, false)
 
         mActivity.runOnUiThread {
             mActivity.setProgressPercentage(percentage, status!!, error)

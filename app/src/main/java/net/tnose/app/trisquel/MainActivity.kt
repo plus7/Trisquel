@@ -223,13 +223,6 @@ class MainActivity : AppCompatActivity(),
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //localBroadcastManager = androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
-        //progressFilter = IntentFilter()
-        //progressFilter?.addAction(ExportIntentService.ACTION_EXPORT_PROGRESS)
-        //progressFilter?.addAction(ImportIntentService.ACTION_IMPORT_PROGRESS)
-        //progressFilter?.addAction(DbConvIntentService.ACTION_DBCONV_PROGRESS)
-        //progressReceiver = ProgressReceiver(this)
-        //localBroadcastManager?.registerReceiver(progressReceiver!!, progressFilter!!)
         mExportViewModel = ViewModelProvider(this).get(ExportProgressViewModel::class.java)
         mExportViewModel!!.workInfos.observe(this,
             Observer { listOfWorkInfo ->
