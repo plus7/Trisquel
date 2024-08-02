@@ -3,6 +3,7 @@ package net.tnose.app.trisquel
 import android.app.Dialog
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Context.RECEIVER_EXPORTED
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentFilter
@@ -50,7 +51,7 @@ class ProgressDialog : AbstractDialogFragment() {
         val intentFilter = IntentFilter()
         intentFilter.addAction(MainActivity.ACTION_CLOSE_PROGRESS_DIALOG)
         intentFilter.addAction(MainActivity.ACTION_UPDATE_PROGRESS_DIALOG)
-        activity!!.registerReceiver(br, intentFilter)
+        activity!!.registerReceiver(br, intentFilter, RECEIVER_EXPORTED)
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
