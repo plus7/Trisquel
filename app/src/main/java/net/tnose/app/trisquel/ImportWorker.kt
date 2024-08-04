@@ -345,8 +345,10 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 
         val filmRollOldId = photo.getInt("filmroll")
         val filmRollNewId = filmrollIdOld2NewMap[filmRollOldId]!! // TODO: 手抜きなのであとでなおす
-        val folderName = dao.getFilmRoll(filmRollNewId)!!.name.replace('/', '_')
-
+        // もともとこうだったが、トランザクションを導入した結果、DBに格納された途中経過は
+        // 使えなくなったので、自前でフィルムのIDと名前のペアを持つことにする
+        // val folderName = dao.getFilmRoll(filmRollNewId)!!.name.replace('/', '_')
+        val folderName = filmrollNameByOldIdMap[filmRollOldId]
         val fileNames = photo.getJSONArray("suppimgs_file_name")
         val md5sums = photo.getJSONArray("suppimgs_md5sum")
 
