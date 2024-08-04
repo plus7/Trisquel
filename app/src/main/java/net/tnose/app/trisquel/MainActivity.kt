@@ -1007,17 +1007,17 @@ class MainActivity : AppCompatActivity(),
                 fragment.arguments?.putIntegerArrayList("items_icon",
                         arrayListOf(R.drawable.ic_merge,
                                 R.drawable.ic_restore,
-                                R.drawable.ic_db_restore,
+                                //R.drawable.ic_db_restore,
                                 R.drawable.ic_help))
                 fragment.arguments?.putStringArray("items_title",
                         arrayOf(getString(R.string.title_merge_zip),
                                 getString(R.string.title_import_zip),
-                                getString(R.string.title_import_db),
+                                //getString(R.string.title_import_db),
                                 getString(R.string.title_backup_help)))
                 fragment.arguments?.putStringArray("items_desc",
                         arrayOf(getString(R.string.description_merge_zip),
                                 getString(R.string.description_import_zip),
-                                getString(R.string.description_import_db),
+                                //getString(R.string.description_import_db),
                                 getString(R.string.description_backup_help)))
                 fragment.showOn(this@MainActivity, "dialog")
                 drawer.closeDrawer(GravityCompat.START)
@@ -1354,7 +1354,7 @@ class MainActivity : AppCompatActivity(),
             }
             RETCODE_IMPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val mode = data.getIntExtra("which", 0)
-                if (mode < 3)
+                if (mode < 2)
                     checkPermAndImportDB(mode)
                 else {
                     val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
