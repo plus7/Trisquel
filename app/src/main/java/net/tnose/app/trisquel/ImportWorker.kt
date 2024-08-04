@@ -348,7 +348,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         // もともとこうだったが、トランザクションを導入した結果、DBに格納された途中経過は
         // 使えなくなったので、自前でフィルムのIDと名前のペアを持つことにする
         // val folderName = dao.getFilmRoll(filmRollNewId)!!.name.replace('/', '_')
-        val folderName = filmrollNameByOldIdMap[filmRollOldId]
+        val folderName = filmrollNameByOldIdMap[filmRollOldId]!!.replace('/', '_')
         val fileNames = photo.getJSONArray("suppimgs_file_name")
         val md5sums = photo.getJSONArray("suppimgs_md5sum")
 
