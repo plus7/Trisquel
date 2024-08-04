@@ -32,6 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
+import androidx.work.WorkInfo
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.navigation.NavigationView
 import net.tnose.app.trisquel.dummy.DummyContent
@@ -117,7 +118,8 @@ class MainActivity : AppCompatActivity(),
     internal val PERMISSIONS =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.ACCESS_MEDIA_LOCATION)
+                Manifest.permission.ACCESS_MEDIA_LOCATION,
+                Manifest.permission.POST_NOTIFICATIONS)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.ACCESS_MEDIA_LOCATION)
@@ -232,7 +234,15 @@ class MainActivity : AppCompatActivity(),
                 val workInfo = listOfWorkInfo[0]
                 if (workInfo.state.isFinished) {
                     //WorkInfo.State.SUCCEEDED
-                    val status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
+                    var status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
+                    // XXX: なんかよくわからんがstatusが空で返ってきてしまうパターンがあるのでワークアラウンドを入れる
+                    if (status == "") {
+                        if(workInfo.state == WorkInfo.State.CANCELLED) {
+                            status = "Backup cancelled."
+                        }else if(workInfo.state == WorkInfo.State.FAILED) {
+                            status = "Backup failed."
+                        }
+                    }
                     val progress = workInfo.outputData.getDouble(ExportWorker.PARAM_PERCENTAGE, 100.0)
                     setProgressPercentage(progress, status, false)
                     Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
@@ -252,8 +262,16 @@ class MainActivity : AppCompatActivity(),
                 val workInfo = listOfWorkInfo[0]
                 if (workInfo.state.isFinished) {
                     //WorkInfo.State.SUCCEEDED
-                    val status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
-                    val progress = workInfo.outputData.getDouble(ExportWorker.PARAM_PERCENTAGE, 100.0)
+                    var status = workInfo.outputData.getString(ImportWorker.PARAM_STATUS) ?: ""
+                    // XXX: なんかよくわからんがstatusが空で返ってきてしまうパターンがあるのでワークアラウンドを入れる
+                    if (status == "") {
+                        if(workInfo.state == WorkInfo.State.CANCELLED) {
+                            status = "Import cancelled."
+                        }else if(workInfo.state == WorkInfo.State.FAILED) {
+                            status = "Import failed."
+                        }
+                    }
+                    val progress = workInfo.outputData.getDouble(ImportWorker.PARAM_PERCENTAGE, 100.0)
                     setProgressPercentage(progress, status, false)
                     Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
                 } else {
@@ -1170,6 +1188,7 @@ class MainActivity : AppCompatActivity(),
         val granted =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
@@ -1208,8 +1227,12 @@ class MainActivity : AppCompatActivity(),
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
                 false
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
+        val notificationDenied =
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+                false
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
-        if (writeDenied || readDenied || mediaLocDenied){
+        if (writeDenied || readDenied || mediaLocDenied || notificationDenied){
             val retcode =
                     if(mode == 0) RETCODE_SDCARD_PERM_FOR_SLIMEX
                     else RETCODE_SDCARD_PERM_FOR_FULLEX
@@ -1235,8 +1258,12 @@ class MainActivity : AppCompatActivity(),
                 }else{
                     false
                 }
+        val notificationDenied =
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+                false
+            else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
-        if (writeDenied || readDenied || mediaLocDenied){
+        if (writeDenied || readDenied || mediaLocDenied || notificationDenied){
             val retcode =
                     when(mode){
                         0 -> RETCODE_SDCARD_PERM_FOR_MERGEIP

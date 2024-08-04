@@ -1,8 +1,16 @@
 package net.tnose.app.trisquel
 
+import android.R
 import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationChannelGroup
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
@@ -11,8 +19,11 @@ import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -39,12 +50,15 @@ sealed class WrappedZipFile {
 
 class CustomImportException : Exception ("Internal backup before import failed!")
 class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    private val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     companion object{
         val PARAM_ZIPFILE = "zipfile"
         val PARAM_URI = "uri"
         val PARAM_MODE = "mode"
         val PARAM_PERCENTAGE = "percentage"
         val PARAM_STATUS = "status"
+        const val notificationId = 1
+        const val channelId = "trisquel_ch"
         fun createImportRequest(zipFile : String, mode : Int): WorkRequest {
             return OneTimeWorkRequestBuilder<ImportWorker>()
                 .setInputData(
@@ -67,11 +81,15 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     val lensIdOld2NewMap: HashMap<Int, Int> = HashMap()
     val accessoryIdOld2NewMap: HashMap<Int, Int> = HashMap()
     val filmrollIdOld2NewMap: HashMap<Int, Int> = HashMap()
+    val filmrollNameByOldIdMap: HashMap<Int, String> = HashMap()
     val photoIdOld2NewMap: HashMap<Int, Int> = HashMap()
     override suspend fun doWork(): Result {
         val uri = inputData.getString(PARAM_ZIPFILE)
         val mode = inputData.getInt(PARAM_MODE, 0)
-        return try {
+        var success = false
+        setForeground(createForegroundInfo())
+
+        val retval = try {
             backupDBBeforeImport()
             val result = importFromZip(Uri.parse(uri), (mode == 0))
             if(result != SUCCESS){
@@ -86,6 +104,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                         Pair(PARAM_PERCENTAGE, 100.0),
                         Pair(PARAM_STATUS, errstr)))
             }else {
+                success = true
                 Result.success(
                     workDataOf(
                         Pair(PARAM_PERCENTAGE, 100.0),
@@ -94,14 +113,80 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         } catch (error: CancellationException) {
             Result.failure(
                 workDataOf(
-                    Pair(ExportWorker.PARAM_PERCENTAGE, 100.0),
-                    Pair(ExportWorker.PARAM_STATUS, "Backup canceled.")))
+                    Pair(PARAM_PERCENTAGE, 100.0),
+                    Pair(PARAM_STATUS, "Backup canceled.")))
         } catch (e: Exception){
             Result.failure(
                 workDataOf(
                     Pair(PARAM_PERCENTAGE, 100.0),
                     Pair(PARAM_STATUS, e.toString())))
         }
+        notifyCompletion(success)
+        return retval
+    }
+    // https://developer.android.com/develop/background-work/background-tasks/persistent/how-to/long-running?hl=ja
+    private fun createForegroundInfo(): ForegroundInfo {
+
+        val title = "Importing"
+        val contentText = "Trisquel"
+        val cancel = "Cancel"
+        // This PendingIntent can be used to cancel the worker
+        val intent = WorkManager.getInstance(applicationContext)
+            .createCancelPendingIntent(id)
+
+        createChannel()
+
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
+            .setContentTitle(title)
+            .setTicker(title)
+            .setContentText(contentText)
+            .setSmallIcon(R.mipmap.sym_def_app_icon)
+            .setOngoing(true)
+            // Add the cancel action to the notification which can
+            // be used to cancel the worker
+            .addAction(R.drawable.ic_delete, cancel, intent)
+            .build()
+
+        //ステータスバーの通知を消せないようにする
+        notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return ForegroundInfo(
+                notificationId,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            return ForegroundInfo(
+                notificationId,
+                notification
+            )
+        }
+    }
+
+    private fun createChannel() {
+        val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
+        nm.createNotificationChannelGroups(arrayListOf(g))
+        val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
+        ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        nm.createNotificationChannel(ch)
+    }
+
+    private fun notifyCompletion(success: Boolean){
+        val i = Intent(applicationContext, MainActivity::class.java)
+        val pi = PendingIntent.getActivity(applicationContext, 0, i, PendingIntent.FLAG_IMMUTABLE)
+
+        val builder = NotificationCompat.Builder(applicationContext, channelId)
+
+        val msg = if (success) "Import completed." else "Import failed."
+        //Foreground Service
+        val n = builder.setContentIntent(pi)
+            .setGroup("trisquel_ch_grp")
+            .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
+            .setAutoCancel(true).setContentTitle(msg)
+            .setContentText("Trisquel").build()
+
+        //val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(1, n)
     }
 
     private suspend fun bcastProgress(percentage: Double, status: String){
@@ -491,6 +576,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             for (i in 0 until filmrollJSON.length()) {
                 val id_pair = dao.mergeFilmRollJSON(filmrollJSON.getJSONObject(i), cameraIdOld2NewMap)
                 filmrollIdOld2NewMap[id_pair.first] = id_pair.second
+                filmrollNameByOldIdMap[id_pair.first] = filmrollJSON.getJSONObject(i).getString("name")
             }
 
             val photoJSON = getJSONArrayFromEntry(zipfile, "photo.json")
@@ -520,6 +606,9 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             result = SUCCESS
         } catch (e: VersionUnmatchException) {
             result = VERSION_UNMATCH
+        } catch (e: Exception){
+            Log.d("Import", e.toString())
+            result = UNKNOWN
         } finally {
             CloseWrappedZipFile(zipfile)
             dao.endTransaction()

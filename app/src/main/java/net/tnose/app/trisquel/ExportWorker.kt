@@ -1,12 +1,23 @@
 package net.tnose.app.trisquel
 
+import android.R
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationChannelGroup
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.Uri
+import android.os.Build
 import android.util.Log
-import android.widget.Toast
+import androidx.core.app.NotificationCompat
 import androidx.exifinterface.media.ExifInterface
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -21,6 +32,8 @@ import java.util.zip.ZipOutputStream
 import kotlin.coroutines.cancellation.CancellationException
 
 class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    private val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
     companion object{
         @Volatile
         var shouldContinue = true
@@ -29,6 +42,8 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         const val PARAM_STATUS = "status"
         const val PARAM_ERROR = "error"
         const val PARAM_MODE = "mode"
+        const val notificationId = 1
+        const val channelId = "trisquel_ch"
         fun createExportRequest(zipFile : String, mode : Int): WorkRequest {
             return OneTimeWorkRequestBuilder<ExportWorker>()
                 .setInputData(
@@ -42,7 +57,9 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         }
     }
     override suspend fun doWork(): Result {
-        return try {
+        var success = false
+        setForeground(createForegroundInfo())
+        val retval = try {
             val appContext = applicationContext
             val zipFile = inputData.getString(PARAM_ZIPFILE)
             val uri = Uri.parse(zipFile!!)
@@ -56,6 +73,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 }
             if(backupSuccess){
                 //Toast.makeText(appContext, "Backup completed.", Toast.LENGTH_LONG).show()
+                success = true
                 Result.success(
                     workDataOf(
                         Pair(PARAM_PERCENTAGE, 100.0),
@@ -87,7 +105,74 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                     Pair(PARAM_PERCENTAGE, 100.0),
                     Pair(PARAM_STATUS, throwable.localizedMessage!!)))
         }
+        notifyCompletion(success)
+        return retval
     }
+    // https://developer.android.com/develop/background-work/background-tasks/persistent/how-to/long-running?hl=ja
+    private fun createForegroundInfo(): ForegroundInfo {
+
+        val title = "Exporting"
+        val contentText = "Trisquel"
+        val cancel = "Cancel"
+        // This PendingIntent can be used to cancel the worker
+        val intent = WorkManager.getInstance(applicationContext)
+            .createCancelPendingIntent(id)
+
+        createChannel()
+
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
+            .setContentTitle(title)
+            .setTicker(title)
+            .setContentText(contentText)
+            .setSmallIcon(R.mipmap.sym_def_app_icon)
+            .setOngoing(true)
+            // Add the cancel action to the notification which can
+            // be used to cancel the worker
+            .addAction(R.drawable.ic_delete, cancel, intent)
+            .build()
+
+        //ステータスバーの通知を消せないようにする
+        notification.flags = notification.flags or Notification.FLAG_ONGOING_EVENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return ForegroundInfo(
+                notificationId,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            return ForegroundInfo(
+                notificationId,
+                notification
+            )
+        }
+    }
+
+    private fun createChannel() {
+        val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
+        nm.createNotificationChannelGroups(arrayListOf(g))
+        val ch = NotificationChannel("trisquel_ch", "trisquel_ch", NotificationManager.IMPORTANCE_DEFAULT)
+        ch.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        nm.createNotificationChannel(ch)
+    }
+
+    private fun notifyCompletion(success: Boolean){
+        val i = Intent(applicationContext, MainActivity::class.java)
+        val pi = PendingIntent.getActivity(applicationContext, 0, i, PendingIntent.FLAG_IMMUTABLE)
+
+        val builder = NotificationCompat.Builder(applicationContext, channelId)
+
+        val msg = if (success) "Backup completed." else "Backup failed."
+        //Foreground Service
+        val n = builder.setContentIntent(pi)
+            .setGroup("trisquel_ch_grp")
+            .setSmallIcon(R.mipmap.sym_def_app_icon).setTicker("")
+            .setAutoCancel(true).setContentTitle(msg)
+            .setContentText("Trisquel").build()
+
+        //val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(1, n)
+    }
+
     suspend fun bcastProgress(percentage: Double, status: String){
         setProgress(workDataOf(Pair(PARAM_PERCENTAGE, percentage), Pair(PARAM_STATUS, status)))
     }
@@ -220,9 +305,9 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 
                         if (!shouldContinue){ throw InterruptedException() }
                     }
-                } catch (e: IOException) {
-                    Toast.makeText(appContext, e.localizedMessage, Toast.LENGTH_LONG).show()
-                } finally {
+                } /*catch (e: IOException) {
+                    //Toast.makeText(appContext, e.localizedMessage, Toast.LENGTH_LONG).show()
+                }*/ finally {
                     zos.closeEntry()
                 }
             }
