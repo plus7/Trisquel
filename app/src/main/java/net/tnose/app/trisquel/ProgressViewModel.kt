@@ -58,3 +58,28 @@ class ImportProgressViewModel(application: Application?) : AndroidViewModel(appl
     }
 
 }
+
+class DbConvProgressViewModel(application: Application?) : AndroidViewModel(application!!) {
+    private val progress = 0.0 // UI data
+    private val workManager = WorkManager.getInstance(application!!.applicationContext).also{
+        // XXX: ここも同様
+        it.pruneWork()
+    }
+    internal val workInfos: LiveData<List<WorkInfo>>
+
+    init {
+        workInfos = workManager.getWorkInfosByTagLiveData(Util.WORKER_TAG_DBCONV)
+    }
+
+    fun doDbConv() {
+        // XXX: ここも同様
+        workManager.pruneWork()
+        val req = DbConvWorker.createDbConvRequest()
+        workManager.enqueue(req)
+    }
+
+    internal fun cancelExport() {
+        workManager.cancelAllWorkByTag(Util.WORKER_TAG_DBCONV)
+    }
+
+}

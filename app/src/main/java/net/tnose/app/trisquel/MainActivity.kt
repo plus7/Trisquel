@@ -110,6 +110,7 @@ class MainActivity : AppCompatActivity(),
     //private var progressReceiver: ProgressReceiver? = null
     private var mExportViewModel: ExportProgressViewModel? = null
     private var mImportViewModel: ImportProgressViewModel? = null
+    private var mDbConvViewModel: DbConvProgressViewModel? = null
     private var isIntentServiceWorking: Int = 0 //0: None, 1: DB conversion
 
     private lateinit var currentFragment: androidx.fragment.app.Fragment
@@ -275,8 +276,28 @@ class MainActivity : AppCompatActivity(),
                     setProgressPercentage(progress, status, false)
                     Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
                 } else {
-                    val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
-                    val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
+                    val status = workInfo.progress.getString(ImportWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.progress.getDouble(ImportWorker.PARAM_PERCENTAGE, 0.0)
+                    setProgressPercentage(progress, status, false)
+                }
+            }
+        )
+        mDbConvViewModel = ViewModelProvider(this).get(DbConvProgressViewModel::class.java)
+        mDbConvViewModel!!.workInfos.observe(this,
+            Observer { listOfWorkInfo ->
+                if (listOfWorkInfo.isNullOrEmpty()) {
+                    return@Observer
+                }
+                val workInfo = listOfWorkInfo[0]
+                if (workInfo.state.isFinished) {
+                    //WorkInfo.State.SUCCEEDED
+                    val status = workInfo.outputData.getString(DbConvWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.outputData.getDouble(DbConvWorker.PARAM_PERCENTAGE, 100.0)
+                    setProgressPercentage(progress, status, false)
+                    Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
+                } else {
+                    val status = workInfo.progress.getString(DbConvWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.progress.getDouble(DbConvWorker.PARAM_PERCENTAGE, 0.0)
                     setProgressPercentage(progress, status, false)
                 }
             }
@@ -348,8 +369,7 @@ class MainActivity : AppCompatActivity(),
             fragment.arguments?.putString("title", "Updating DB")
             fragment.arguments?.putBoolean("cancellable", false)
             fragment.showOn(this, "dialog")
-            DbConvIntentService.shouldContinue = true
-            DbConvIntentService.startExport(this)
+            mDbConvViewModel?.doDbConv()
             return
         }
 
