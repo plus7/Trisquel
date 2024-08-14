@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity(),
 
         const val ACTION_CLOSE_PROGRESS_DIALOG = "ACTION_CLOSE_PROGRESS_DIALOG"
         const val ACTION_UPDATE_PROGRESS_DIALOG = "ACTION_UPDATE_PROGRESS_DIALOG"
-        const val RELEASE_NOTES_URL = "http://pentax.tnose.net/tag/trisquel_releasenotes/"
+        const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
     }
 
     //private var localBroadcastManager: androidx.localbroadcastmanager.content.LocalBroadcastManager? = null
