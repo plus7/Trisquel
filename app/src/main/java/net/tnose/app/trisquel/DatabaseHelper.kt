@@ -329,6 +329,18 @@ abstract class TrisquelRoomDatabase : RoomDatabase() {
                     // 新テーブルをリネーム
                     database.execSQL("alter table tmp_trisquel_metadata rename to trisquel_metadata")
 
+                    // だいぶ昔から引き継いだDBを使っているとsuppimgが定義されないまま来てしまってRoom化時に
+                    // クラッシュするらしい。このテーブルは使ってはいないのだが、仕方がない。
+                    // ここで作ってあげることにする。
+                    database.execSQL(
+                        "create table if not exists suppimg ("
+                                + "_id  integer primary key autoincrement not null,"
+                                + "photo_id integer,"
+                                + "path text not null,"
+                                + "_index integer"
+                                + ");"
+                    )
+
                     database.setTransactionSuccessful()
                 } finally {
                     database.endTransaction()
