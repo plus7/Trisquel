@@ -10,11 +10,11 @@ plugins {
 
 android {
     namespace "net.tnose.app.trisquel"
-    compileSdk 35
+    compileSdk 36
     defaultConfig {
         applicationId "net.tnose.app.trisquel"
         minSdkVersion 28
-        targetSdkVersion 35
+        targetSdkVersion 36
         versionCode 27
         versionName "Release 22"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
