@@ -15,8 +15,8 @@ android {
         applicationId "net.tnose.app.trisquel"
         minSdkVersion 28
         targetSdkVersion 36
-        versionCode 27
-        versionName "Release 22"
+        versionCode 28
+        versionName "Release 23"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
