@@ -20,6 +20,7 @@ import android.view.MenuItem.SHOW_AS_ACTION_NEVER
 import android.view.View
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
@@ -103,6 +104,179 @@ class MainActivity : AppCompatActivity(),
         const val ACTION_UPDATE_PROGRESS_DIALOG = "ACTION_UPDATE_PROGRESS_DIALOG"
         const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
     }
+
+    private val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val bundle = result.data?.extras ?: return@registerForActivityResult
+            val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java)!!
+            (currentFragment as? CameraFragment)?.insertCamera(c)
+            if (c.type == 1) {
+                val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
+                l.body = c.id
+                val dao = TrisquelDao(this)
+                dao.connection()
+                dao.addLens(l)
+                dao.close()
+            }
+        }
+    }
+
+    private val editCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val bundle = result.data?.extras ?: return@registerForActivityResult
+            val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java)!!
+            (currentFragment as? CameraFragment)?.updateCamera(c)
+            if (c.type == 1) {
+                val dao = TrisquelDao(this)
+                dao.connection()
+                val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
+                val lensid = dao.getFixedLensIdByBody(c.id)
+                l.id = lensid
+                dao.updateLens(l)
+                dao.close()
+            }
+        }
+    }
+
+    private val addLensLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val l = BundleCompat.getParcelable(result.data?.extras ?: return@registerForActivityResult, "lensspec", LensSpec::class.java)
+            if (l != null) (currentFragment as? LensFragment)?.insertLens(l)
+        }
+    }
+
+    private val editLensLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val l = BundleCompat.getParcelable(result.data?.extras ?: return@registerForActivityResult, "lensspec", LensSpec::class.java)
+            if (l != null) (currentFragment as? LensFragment)?.updateLens(l)
+        }
+    }
+
+    private val addFilmRollLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val bundle = result.data?.extras ?: return@registerForActivityResult
+            val dao = TrisquelDao(this.applicationContext)
+            dao.connection()
+            val c = dao.getCamera(bundle.getInt("camera"))
+            dao.close()
+            val f = FilmRoll(0, bundle.getString("name")!!, c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
+            (currentFragment as? FilmRollFragment)?.insertFilmRoll(f)
+        }
+    }
+
+    private val editFilmRollLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val bundle = result.data?.extras ?: return@registerForActivityResult
+            val dao = TrisquelDao(this.applicationContext)
+            dao.connection()
+            val c = dao.getCamera(bundle.getInt("camera"))
+            dao.close()
+            val f = FilmRoll(bundle.getInt("id"), bundle.getString("name")!!, bundle.getString("created")!!, Util.dateToStringUTC(Date()), c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
+            (currentFragment as? FilmRollFragment)?.updateFilmRoll(f)
+        }
+    }
+
+    // editPhotoListLauncherの内容はRoom化に伴い不要になった
+    private val editPhotoListLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
+
+    private val addAccessoryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val bundle = result.data?.extras ?: return@registerForActivityResult
+            // Room化したときは、新規作成時のidは0でよい
+            val a = Accessory(0, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
+            (currentFragment as? AccessoryFragment)?.insertAccessory(a)
+        }
+    }
+
+    private val editAccessoryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val bundle = result.data?.extras ?: return@registerForActivityResult
+            val a = Accessory(bundle.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
+            (currentFragment as? AccessoryFragment)?.updateAccessory(a)
+        }
+    }
+
+    private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val uri = result.data?.data ?: return@registerForActivityResult
+            val fragment = ProgressDialog.Builder().build(RETCODE_BACKUP_PROGRESS)
+            fragment.showOn(this, "dialog")
+            isIntentServiceWorking = 2
+            fixOrientation()
+            mExportViewModel?.doExport(uri.toString(), 0)
+        }
+    }
+
+    private val backupDirChosenForFullExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val uri = result.data?.data ?: return@registerForActivityResult
+            val fragment = ProgressDialog.Builder().build(RETCODE_BACKUP_PROGRESS)
+            fragment.showOn(this, "dialog")
+            isIntentServiceWorking = 2
+            fixOrientation()
+            mExportViewModel?.doExport(uri.toString(), 1)
+        }
+    }
+
+    private val zipFileChosenForMergeIpLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val uri = result.data?.data ?: return@registerForActivityResult
+            Log.d("ZipFile", uri.toString())
+            val fragment = ProgressDialog.Builder().build(RETCODE_IMPORT_PROGRESS)
+            fragment.showOn(this, "dialog")
+            isIntentServiceWorking = 3
+            fixOrientation()
+            mImportViewModel?.doImport(uri.toString(), 0)
+        }
+    }
+
+    private val zipFileChosenForReplIpLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val uri = result.data?.data ?: return@registerForActivityResult
+            Log.d("ZipFile", uri.toString())
+            val fragment = ProgressDialog.Builder().build(RETCODE_IMPORT_PROGRESS)
+            fragment.showOn(this, "dialog")
+            isIntentServiceWorking = 3
+            fixOrientation()
+            mImportViewModel?.doImport(uri.toString(), 1)
+        }
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    private val dbFileChosenForReplDbLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val uri = result.data?.data ?: return@registerForActivityResult
+            Log.d("DBFile", uri.toString())
+            val dbpath = this.getDatabasePath("trisquel.db")
+            val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException(uri.toString())
+            if (!checkSQLiteFileFormat(pfd)) {
+                Toast.makeText(this, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
+                return@registerForActivityResult
+            }
+            // DB置換前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
+            val calendar = Calendar.getInstance()
+            val sdf = SimpleDateFormat("yyyyMMddHHmmss")
+            val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+            val bu_fos = FileOutputStream(backupPath)
+            val bu_fis = FileInputStream(dbpath)
+            val bu_src = bu_fis.channel
+            val bu_dst = bu_fos.channel
+            bu_dst.transferFrom(bu_src, 0, bu_src.size())
+            bu_src.close()
+            bu_dst.close()
+            val fis = FileInputStream(pfd.fileDescriptor)
+            val src = fis.channel
+            val dst = FileOutputStream(dbpath).channel
+            dst.transferFrom(src, 0, src.size())
+            src.close()
+            dst.close()
+            //再起動する。一般ユーザーであればDB_VERSION=16以前のデータしか持っていないので、データ変換処理が走るはず
+            val intent = RestartActivity.createIntent(applicationContext)
+            startActivity(intent)
+        }
+    }
+
+    private val searchLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
 
     //private var localBroadcastManager: androidx.localbroadcastmanager.content.LocalBroadcastManager? = null
     //private var progressFilter: IntentFilter? = null
@@ -193,11 +367,11 @@ class MainActivity : AppCompatActivity(),
                 }
                 is LensFragment -> {
                     intent = Intent(application, EditLensActivity::class.java)
-                    startActivityForResult(intent, REQCODE_ADD_LENS)
+                    addLensLauncher.launch(intent)
                 }
                 is AccessoryFragment -> {
                     intent = Intent(application, EditAccessoryActivity::class.java)
-                    startActivityForResult(intent, REQCODE_ADD_ACCESSORY)
+                    addAccessoryLauncher.launch(intent)
                 }
                 else -> {
                     intent = Intent(application, EditFilmRollActivity::class.java)
@@ -211,7 +385,7 @@ class MainActivity : AppCompatActivity(),
                             }
                         }
                     }
-                    startActivityForResult(intent, REQCODE_ADD_FILMROLL)
+                    addFilmRollLauncher.launch(intent)
                 }
             }
         }
@@ -655,76 +829,6 @@ class MainActivity : AppCompatActivity(),
 
         return super.onOptionsItemSelected(item)
     }
-    /*
-    fun backupToZip(zipFile: File) {
-        val zos = ZipOutputStream(FileOutputStream(zipFile))
-        zos.setMethod(ZipOutputStream.DEFLATED)
-        val osw = OutputStreamWriter(zos, "UTF-8")
-        val dao = TrisquelDao(this)
-        dao.connection()
-
-        // Metadata
-        val metaze = ZipEntry("metadata.json")
-        zos.putNextEntry(metaze)
-        val metadata = JSONObject()
-        metadata.put("DB_VERSION", DatabaseHelper.DATABASE_VERSION)
-
-        osw.write(metadata.toString())
-        osw.flush()
-        zos.closeEntry()
-
-        val types = listOf("camera", "lens", "filmroll", "accessory", "tag", "tagmap")
-
-        for(type in types) {
-            val ze = ZipEntry(type + ".json")
-            zos.putNextEntry(ze)
-            val entries = dao.getAllEntriesJSON(type)
-            osw.write(entries.toString())
-            osw.flush()
-            zos.closeEntry()
-        }
-
-        val zep = ZipEntry("photo.json")
-        zos.putNextEntry(zep)
-        val entries = dao.getAllEntriesJSON("photo")
-        osw.write(entries.toString())
-        osw.flush()
-        zos.closeEntry()
-
-        val hs = HashSet<String>()
-        for (i in 0..entries.length()-1){
-            val e = entries.getJSONObject(i)
-            val s = e.getString("suppimgs")
-            if(s.isEmpty()) continue
-            val imgs = JSONArray(s)
-            for (j in 0..imgs.length() - 1) {
-                val path = imgs[j].toString()
-                if(hs.contains(path)) continue
-                hs.add(path)
-                val f = File(path)
-                if(!f.exists()) continue
-                val ze = ZipEntry("imgs$path")
-                zos.putNextEntry(ze)
-                try {
-                    val buf = ByteArray(1024 * 128)
-                    val bis = BufferedInputStream(FileInputStream(f))
-                    while (true) {
-                        val len = bis.read(buf)
-                        if (len < 0) break
-                        zos.write(buf, 0, len)
-                    }
-                } catch (e: IOException) {
-                    Toast.makeText(this, e.localizedMessage, Toast.LENGTH_LONG).show()
-                } finally {
-                    zos.closeEntry()
-                }
-            }
-        }
-
-        dao.close()
-        zos.close()
-    }
-     */
 
     @Suppress("UNUSED_PARAMETER")
     fun setProgressPercentage(percentage: Double, status: String, error: Boolean){
@@ -761,187 +865,6 @@ class MainActivity : AppCompatActivity(),
             return readsize == 16 && header.contentEquals(buffer)
         }catch (e: Exception){
             return false
-        }
-    }
-
-    @SuppressLint("SimpleDateFormat")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if(data == null) return
-        val frag : androidx.fragment.app.Fragment = currentFragment
-        when (requestCode) {
-            REQCODE_ADD_CAMERA -> if (resultCode == RESULT_OK) {
-                val bundle = data.extras
-                val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
-                if (frag is CameraFragment) frag.insertCamera(c)
-                if (c.type == 1) {
-                    val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
-                    l.body = c.id
-                    val dao = TrisquelDao(this)
-                    dao.connection()
-                    dao.addLens(l)
-                    dao.close()
-                }
-            }/* else if (resultCode == Activity.RESULT_CANCELED) {
-            }*/
-            REQCODE_EDIT_CAMERA -> if (resultCode == RESULT_OK) {
-                val bundle = data.extras
-                val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
-                if (frag is CameraFragment) frag.updateCamera(c)
-                if (c.type == 1) {
-                    val dao = TrisquelDao(this)
-                    dao.connection()
-                    val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
-                    val lensid = dao.getFixedLensIdByBody(c.id)
-                    l.id = lensid
-                    dao.updateLens(l)
-                    dao.close()
-                }
-            }/* else if (resultCode == Activity.RESULT_CANCELED) {
-            }*/
-            REQCODE_ADD_LENS -> if (resultCode == RESULT_OK) {
-                val l = BundleCompat.getParcelable(data.extras!!, "lensspec", LensSpec::class.java)
-                if (frag is LensFragment && l != null) frag.insertLens(l)
-            }
-            REQCODE_EDIT_LENS -> if (resultCode == RESULT_OK) {
-                val l = BundleCompat.getParcelable(data.extras!!, "lensspec", LensSpec::class.java)
-                if (frag is LensFragment && l != null) frag.updateLens(l)
-            }
-            REQCODE_ADD_FILMROLL -> if (resultCode == RESULT_OK) {
-                val bundle = data.extras
-                val dao = TrisquelDao(this.applicationContext)
-                dao.connection()
-                val c = dao.getCamera(bundle!!.getInt("camera"))
-                dao.close()
-                val f = FilmRoll(
-                        0,
-                        bundle.getString("name")!!,
-                        c!!,
-                        bundle.getString("manufacturer")!!,
-                        bundle.getString("brand")!!,
-                        bundle.getInt("iso"),
-                        36
-                )
-                if (frag is FilmRollFragment) frag.insertFilmRoll(f)
-            }/* else if (resultCode == Activity.RESULT_CANCELED) {
-            }*/
-            REQCODE_EDIT_FILMROLL -> if (resultCode == RESULT_OK) {
-                val bundle = data.extras
-                val dao = TrisquelDao(this.applicationContext)
-                dao.connection()
-                val c = dao.getCamera(bundle!!.getInt("camera"))
-                dao.close()
-                val f = FilmRoll(
-                        bundle.getInt("id"),
-                        bundle.getString("name")!!,
-                        bundle.getString("created")!!,
-                        Util.dateToStringUTC(Date()),
-                        c!!,
-                        bundle.getString("manufacturer")!!,
-                        bundle.getString("brand")!!,
-                        bundle.getInt("iso"),
-                        36
-                )
-                if (frag is FilmRollFragment) frag.updateFilmRoll(f)
-            }/* else if (resultCode == Activity.RESULT_CANCELED) {
-            }*/
-            /*REQCODE_EDIT_PHOTO_LIST -> if (resultCode == Activity.RESULT_OK) {
-                val bundle = data.extras
-                // Room化に伴いいらなくなった
-                // if (frag is FilmRollFragment) frag.refreshFilmRoll(bundle!!.getInt("filmroll"))
-            }*//* else if (resultCode == Activity.RESULT_CANCELED) {
-            }*/
-            REQCODE_ADD_ACCESSORY -> if (resultCode == RESULT_OK) {
-                val bundle = data.extras
-                // Room化したときは、新規作成時のidは0でよい
-                val a = Accessory(0, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()),
-                        bundle!!.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
-                        bundle.getDouble("focal_length_factor"))
-                if (frag is AccessoryFragment) frag.insertAccessory(a)
-            }/* else if (resultCode == Activity.RESULT_CANCELED) {
-            }*/
-            REQCODE_EDIT_ACCESSORY -> if (resultCode == RESULT_OK) {
-                val bundle = data.extras
-                val a = Accessory(bundle!!.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()),
-                        bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
-                        bundle.getDouble("focal_length_factor"))
-                if (frag is AccessoryFragment) frag.updateAccessory(a)
-            }/* else if (resultCode == Activity.RESULT_CANCELED) {
-            }*/
-            REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX,
-            REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX -> if (resultCode == RESULT_OK) {
-                if (data.data != null) {
-                    val uri: Uri = data.data!!
-                    val mode = if (requestCode == REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX) 0 else 1
-                    val fragment = ProgressDialog.Builder()
-                            .build(RETCODE_BACKUP_PROGRESS)
-                    fragment.showOn(this, "dialog")
-
-                    isIntentServiceWorking = 2
-                    fixOrientation()
-                    mExportViewModel?.doExport(uri.toString(), mode)
-                }
-            }
-            REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP,
-            REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> if (resultCode == RESULT_OK) {
-                val uri: Uri? = data.data
-                if (uri != null) {
-                    Log.d("ZipFile", uri.toString())
-
-                    val fragment = ProgressDialog.Builder()
-                            .build(RETCODE_IMPORT_PROGRESS)
-                    fragment.showOn(this, "dialog")
-                    isIntentServiceWorking = 3
-                    fixOrientation()
-                    val mode = when (requestCode) {
-                        REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP -> 0
-                        REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> 1
-                        else -> 2
-                    }
-                    mImportViewModel?.doImport(uri.toString(), mode)
-                }
-            }
-            REQCODE_DBFILE_CHOSEN_FOR_REPLDB -> if (resultCode == RESULT_OK) {
-                val uri: Uri? = data.data
-                Log.d("DBFile", uri.toString())
-                val dbpath = this.getDatabasePath("trisquel.db")
-                if (uri != null) {
-                    val pfd = contentResolver.openFileDescriptor(uri, "r")
-                    if (pfd == null) throw FileNotFoundException(uri.toString())
-
-                    if (!checkSQLiteFileFormat(pfd)) {
-                        Toast.makeText(this, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
-                        return
-                    }
-
-                    // DB置換前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
-                    val calendar = Calendar.getInstance()
-                    val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-                    val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
-                    val bu_fos = FileOutputStream(backupPath)
-                    val bu_fis = FileInputStream(dbpath)
-                    val bu_src = bu_fis.channel
-                    val bu_dst = bu_fos.channel
-                    bu_dst.transferFrom(bu_src, 0, bu_src.size())
-                    bu_src.close()
-                    bu_dst.close()
-
-                    val fis = FileInputStream(pfd.fileDescriptor)
-
-                    val src = fis.channel
-                    val dst = FileOutputStream(dbpath).channel
-                    dst.transferFrom(src, 0, src.size())
-                    src.close()
-                    dst.close()
-                    //再起動する。一般ユーザーであればDB_VERSION=16以前のデータしか持っていないので、データ変換処理が走るはず
-                    val intent: Intent = RestartActivity.createIntent(applicationContext)
-                    startActivity(intent)
-                }
-            }
-            /*REQCODE_SEARCH -> {
-            }*/
-            else -> {
-            }
         }
     }
 
@@ -1090,7 +1013,7 @@ class MainActivity : AppCompatActivity(),
             val intent = Intent(application, EditCameraActivity::class.java)
             intent.putExtra("id", item.id)
             intent.putExtra("type", item.type)
-            startActivityForResult(intent, REQCODE_EDIT_CAMERA)
+            editCameraLauncher.launch(intent)
         }
     }
 
@@ -1115,7 +1038,7 @@ class MainActivity : AppCompatActivity(),
         } else {
             val intent = Intent(application, EditLensActivity::class.java)
             intent.putExtra("id", item.id)
-            startActivityForResult(intent, REQCODE_EDIT_LENS)
+            editLensLauncher.launch(intent)
         }
     }
 
@@ -1129,7 +1052,7 @@ class MainActivity : AppCompatActivity(),
         } else {
             val intent = Intent(application, EditPhotoListActivity::class.java)
             intent.putExtra("id", item.id)
-            startActivityForResult(intent, REQCODE_EDIT_PHOTO_LIST)
+            editPhotoListLauncher.launch(intent)
         }
     }
 
@@ -1153,7 +1076,7 @@ class MainActivity : AppCompatActivity(),
         } else {
             val intent = Intent(application, EditAccessoryActivity::class.java)
             intent.putExtra("id", accessory.id)
-            startActivityForResult(intent, REQCODE_EDIT_ACCESSORY)
+            editAccessoryLauncher.launch(intent)
         }
     }
 
@@ -1266,10 +1189,8 @@ class MainActivity : AppCompatActivity(),
         val sdf = SimpleDateFormat("yyyyMMddHHmmss")
         val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
         chooserIntent.putExtra(Intent.EXTRA_TITLE, backupZipFileName)
-        val reqcode =
-                if(mode==0) REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX
-                else        REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX
-        startActivityForResult(chooserIntent, reqcode)
+        if(mode==0) backupDirChosenForSlimExLauncher.launch(chooserIntent)
+        else        backupDirChosenForFullExLauncher.launch(chooserIntent)
     }
 
     private fun importDBDialogSinceN(mode: Int) {
@@ -1280,13 +1201,11 @@ class MainActivity : AppCompatActivity(),
         }else {
             intent.type = "application/zip"
         }
-        val reqcode =
-                when(mode){
-                    0 -> REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP
-                    1 -> REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP
-                    else -> REQCODE_DBFILE_CHOSEN_FOR_REPLDB
-                }
-        startActivityForResult(intent, reqcode)
+        when(mode){
+            0 -> zipFileChosenForMergeIpLauncher.launch(intent)
+            1 -> zipFileChosenForReplIpLauncher.launch(intent)
+            else -> dbFileChosenForReplDbLauncher.launch(intent)
+        }
     }
 
     private fun importDBDialog(mode: Int) {
@@ -1353,7 +1272,7 @@ class MainActivity : AppCompatActivity(),
                 val which = data.getIntExtra("which", 0)
                 val intent = Intent(application, EditCameraActivity::class.java)
                 intent.putExtra("type", which)
-                startActivityForResult(intent, REQCODE_ADD_CAMERA)
+                addCameraLauncher.launch(intent)
             }
             RETCODE_SORT -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val which = data.getIntExtra("which", 0)
@@ -1411,7 +1330,7 @@ class MainActivity : AppCompatActivity(),
                 if (tags!!.size > 0) {
                     val intent = Intent(application, SearchActivity::class.java)
                     intent.putExtra("tags", tags)
-                    startActivityForResult(intent, REQCODE_SEARCH)
+                    searchLauncher.launch(intent)
                 }
             }
         }
