@@ -1,6 +1,5 @@
 package net.tnose.app.trisquel
 
-import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
@@ -12,7 +11,9 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.BundleCompat
 import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.databinding.ActivityEditFilmRollBinding
 import org.json.JSONArray
@@ -22,7 +23,6 @@ import java.util.regex.Pattern
 
 class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_ASK_CREATE_CAMERA = 103
-    internal val REQCODE_ADD_CAMERA = 104
     private var id: Int = 0
     private var created: String? = null
     private var cameralist: ArrayList<CameraSpec>? = null
@@ -30,6 +30,23 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     private var isResumed: Boolean = false
     private var isDirty: Boolean = false
     private lateinit var binding: ActivityEditFilmRollBinding
+
+    private val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            if (data != null) {
+                val bundle = data.extras
+                val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
+                val dao = TrisquelDao(this)
+                dao.connection()
+                c.id = dao.addCamera(c).toInt()
+                updateCameraList(dao)
+                dao.close()
+                binding.spinnerCamera.clearFocus()
+                invalidateOptionsMenu()
+            }
+        }
+    }
 
     val data: Intent
         get() {
@@ -417,34 +434,14 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                 finish()
             }
             REQCODE_ASK_CREATE_CAMERA -> if(resultCode == DialogInterface.BUTTON_POSITIVE){
-                intent = Intent(application, EditCameraActivity::class.java)
-                startActivityForResult(intent, REQCODE_ADD_CAMERA)
+                val nextIntent = Intent(application, EditCameraActivity::class.java)
+                addCameraLauncher.launch(nextIntent)
             }
         }
     }
 
     override fun onDialogCancelled(requestCode: Int) {
         // onDialogResult(requestCode, DialogInterface.BUTTON_NEUTRAL, null);
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        when (requestCode) {
-            REQCODE_ADD_CAMERA -> if (resultCode == RESULT_OK) {
-                if(data != null) {
-                    val bundle = data.extras
-                    val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
-                    val dao = TrisquelDao(this)
-                    dao.connection()
-                    c.id = dao.addCamera(c).toInt()
-                    updateCameraList(dao)
-                    dao.close()
-                    binding.spinnerCamera.clearFocus()
-                    invalidateOptionsMenu()
-                }
-            }
-        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
