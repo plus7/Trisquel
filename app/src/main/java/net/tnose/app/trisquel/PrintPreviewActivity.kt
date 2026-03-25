@@ -8,6 +8,7 @@ import android.print.PrintManager
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.print.PrintHelper
 import net.tnose.app.trisquel.databinding.ActivityPrintPreviewBinding
@@ -101,6 +102,15 @@ class PrintPreviewActivity : AppCompatActivity() {
 
         binding.includeContentPrintPreview.webview.loadDataWithBaseURL(null, sb.toString(), "text/html", "UTF8", null)
 
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val data = Intent()
+                setResult(RESULT_OK, data)
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
+            }
+        })
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -111,7 +121,7 @@ class PrintPreviewActivity : AppCompatActivity() {
     private fun printHtml(fileName: String) {
         if (PrintHelper.systemSupportsPrint()) {
             val adapter = binding.includeContentPrintPreview.webview.createPrintDocumentAdapter(name)
-            val printManager: PrintManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
+            val printManager: PrintManager = getSystemService(PRINT_SERVICE) as PrintManager
             printManager.print(fileName, adapter, null)
         } else {
             Toast.makeText(this, getString(R.string.msg_no_printer_support), Toast.LENGTH_SHORT).show()
@@ -119,11 +129,9 @@ class PrintPreviewActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val data: Intent
         when (item.itemId) {
             android.R.id.home -> {
-                data = Intent()
-                finish()
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
             R.id.menu_print -> {
@@ -132,11 +140,5 @@ class PrintPreviewActivity : AppCompatActivity() {
             }
         }
         return false
-    }
-
-    override fun onBackPressed() {
-        val data = Intent()
-        setResult(Activity.RESULT_OK, data)
-        super.onBackPressed()
     }
 }

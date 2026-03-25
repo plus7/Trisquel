@@ -11,6 +11,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.databinding.ActivityEditAccessoryBinding
@@ -305,6 +306,19 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         dao.close()
 
         setEventListeners()
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!isDirty) {
+                    setResult(RESULT_CANCELED, Intent())
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                } else {
+                    askSave()
+                }
+            }
+        })
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -337,7 +351,7 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         when (requestCode) {
             101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val resultData = getData()
-                setResult(Activity.RESULT_OK, resultData)
+                setResult(RESULT_OK, resultData)
                 when(getCurrentType()) {
                     Accessory.ACCESSORY_EXT_TUBE,
                     Accessory.ACCESSORY_WIDE_CONVERTER,
@@ -346,13 +360,13 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
                 }
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, Intent())
+                setResult(RESULT_CANCELED, Intent())
                 finish()
             }
             102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 /* do nothing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, Intent())
+                setResult(RESULT_CANCELED, Intent())
                 finish()
             }
         }
@@ -383,18 +397,12 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         val data: Intent
         when (item.itemId) {
             android.R.id.home -> {
-                data = Intent()
-                if (!isDirty) {
-                    setResult(Activity.RESULT_CANCELED, data)
-                    finish()
-                } else {
-                    askSave()
-                }
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
             R.id.menu_save -> {
                 data = getData()
-                setResult(Activity.RESULT_OK, data)
+                setResult(RESULT_OK, data)
                 when(getCurrentType()) {
                     Accessory.ACCESSORY_EXT_TUBE,
                     Accessory.ACCESSORY_WIDE_CONVERTER,
@@ -406,14 +414,5 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun onBackPressed() {
-        if (!isDirty) {
-            setResult(Activity.RESULT_CANCELED, Intent())
-            super.onBackPressed()
-        } else {
-            askSave()
-        }
     }
 }

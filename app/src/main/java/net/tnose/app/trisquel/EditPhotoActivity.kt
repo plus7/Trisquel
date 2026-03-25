@@ -1,10 +1,8 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -26,6 +24,7 @@ import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
@@ -810,6 +809,33 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         } else {
             isDirty = false
         }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!isDirty) {
+                    setResult(RESULT_CANCELED, Intent())
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                } else {
+                    if (canSave()) {
+                        val fragment = YesNoDialogFragment.Builder()
+                                .build(101)
+                        fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
+                        fragment.arguments?.putString("positive", getString(R.string.save))
+                        fragment.arguments?.putString("negative", getString(R.string.discard))
+                        fragment.showOn(this@EditPhotoActivity, "dialog")
+                    } else {
+                        val fragment = YesNoDialogFragment.Builder()
+                                .build(102)
+                        fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
+                        fragment.arguments?.putString("positive", getString(R.string.continue_editing))
+                        fragment.arguments?.putString("negative", getString(R.string.discard))
+                        fragment.showOn(this@EditPhotoActivity, "dialog")
+                    }
+                }
+            }
+        })
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -948,26 +974,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                if (!isDirty) {
-                    setResult(RESULT_CANCELED, Intent())
-                    finish()
-                } else {
-                    if (canSave()) {
-                        val fragment = YesNoDialogFragment.Builder()
-                                .build(101)
-                        fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
-                        fragment.arguments?.putString("positive", getString(R.string.save))
-                        fragment.arguments?.putString("negative", getString(R.string.discard))
-                        fragment.showOn(this, "dialog")
-                    } else {
-                        val fragment = YesNoDialogFragment.Builder()
-                                .build(102)
-                        fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                        fragment.arguments?.putString("positive", getString(R.string.continue_editing))
-                        fragment.arguments?.putString("negative", getString(R.string.discard))
-                        fragment.showOn(this, "dialog")
-                    }
-                }
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
             R.id.menu_save -> {
@@ -987,29 +994,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun onBackPressed() {
-        if (!isDirty) {
-            setResult(RESULT_CANCELED, Intent())
-            super.onBackPressed()
-        } else {
-            if (canSave()) {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(101)
-                fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
-                fragment.arguments?.putString("positive", getString(R.string.save))
-                fragment.arguments?.putString("negative", getString(R.string.discard))
-                fragment.showOn(this, "dialog")
-            } else {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(102)
-                fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                fragment.arguments?.putString("positive", getString(R.string.continue_editing))
-                fragment.arguments?.putString("negative", getString(R.string.discard))
-                fragment.showOn(this, "dialog")
-            }
-        }
     }
 
     private fun setLatLng(newlatitude: Double, newlongitude: Double) {

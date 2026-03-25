@@ -1,10 +1,8 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -14,6 +12,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
@@ -144,6 +143,17 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             startActivityForResult(intent, REQCODE_ADD_PHOTO)
         }
         mFilmRollViewModel = ViewModelProvider(this).get(FilmRollViewModel::class.java)
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val data = Intent()
+                data.putExtra("filmroll", mFilmRoll!!.id)
+                setResult(RESULT_OK, data)
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
+            }
+        })
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -158,13 +168,9 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val data: Intent
         when (item.itemId) {
             android.R.id.home -> {
-                data = Intent()
-                data.putExtra("filmroll", this.mFilmRoll!!.id)
-                setResult(RESULT_OK, data)
-                finish()
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
             R.id.menu_edit_film -> {
@@ -180,20 +186,13 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 return true
             }
             R.id.menu_export_pdf -> {
-                intent = Intent(application, PrintPreviewActivity::class.java)
+                val intent = Intent(application, PrintPreviewActivity::class.java)
                 intent.putExtra("filmroll", mFilmRoll!!.id)
                 startActivity(intent)
                 return true
             }
         }
         return false
-    }
-
-    override fun onBackPressed() {
-        val data = Intent()
-        data.putExtra("filmroll", this.mFilmRoll!!.id)
-        setResult(RESULT_OK, data)
-        super.onBackPressed()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

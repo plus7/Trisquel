@@ -1,7 +1,6 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
-import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -10,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.zhihu.matisse.Matisse
@@ -66,6 +66,17 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
         fragment = f
         transaction.replace(R.id.container, f)
         transaction.commit()
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val data = Intent()
+                data.putExtra("dirtyFilmRolls", dirtyFilmRolls)
+                setResult(RESULT_OK, data)
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
+            }
+        })
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -253,12 +264,5 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun onBackPressed() {
-        val data = Intent()
-        data.putExtra("dirtyFilmRolls", dirtyFilmRolls)
-        setResult(RESULT_OK, data)
-        super.onBackPressed()
     }
 }

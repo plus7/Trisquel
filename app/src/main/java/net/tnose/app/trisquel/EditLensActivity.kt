@@ -11,6 +11,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.databinding.ActivityEditLensBinding
@@ -227,6 +228,33 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         } else {
             isDirty = false
         }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!isDirty) {
+                    setResult(RESULT_CANCELED, Intent())
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                } else {
+                    if (canSave()) {
+                        val fragment = YesNoDialogFragment.Builder()
+                                .build(101)
+                        fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
+                        fragment.arguments?.putString("positive", getString(R.string.save))
+                        fragment.arguments?.putString("negative", getString(R.string.discard))
+                        fragment.showOn(this@EditLensActivity, "dialog")
+                    } else {
+                        val fragment = YesNoDialogFragment.Builder()
+                                .build(102)
+                        fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
+                        fragment.arguments?.putString("positive", getString(R.string.continue_editing))
+                        fragment.arguments?.putString("negative", getString(R.string.discard))
+                        fragment.showOn(this@EditLensActivity, "dialog")
+                    }
+                }
+            }
+        })
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -294,20 +322,20 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         when (requestCode) {
             101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val resultData = this.data
-                setResult(Activity.RESULT_OK, resultData)
+                setResult(RESULT_OK, resultData)
                 saveSuggestListPref("lens_manufacturer",
                         R.array.lens_manufacturer, binding.editManufacturer.text.toString())
                 saveSuggestListPref("camera_mounts",
                         R.array.camera_mounts, binding.editMount.text.toString())
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, Intent())
+                setResult(RESULT_CANCELED, Intent())
                 finish()
             }
             102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 /* do nothing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, Intent())
+                setResult(RESULT_CANCELED, Intent())
                 finish()
             }
         }
@@ -320,30 +348,11 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                if (!isDirty) {
-                    setResult(Activity.RESULT_CANCELED, Intent())
-                    finish()
-                } else {
-                    if (canSave()) {
-                        val fragment = YesNoDialogFragment.Builder()
-                                .build(101)
-                        fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
-                        fragment.arguments?.putString("positive", getString(R.string.save))
-                        fragment.arguments?.putString("negative", getString(R.string.discard))
-                        fragment.showOn(this, "dialog")
-                    } else {
-                        val fragment = YesNoDialogFragment.Builder()
-                                .build(102)
-                        fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                        fragment.arguments?.putString("positive", getString(R.string.continue_editing))
-                        fragment.arguments?.putString("negative", getString(R.string.discard))
-                        fragment.showOn(this, "dialog")
-                    }
-                }
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
             R.id.menu_save -> {
-                setResult(Activity.RESULT_OK, data)
+                setResult(RESULT_OK, data)
                 saveSuggestListPref("lens_manufacturer",
                         R.array.lens_manufacturer, binding.editManufacturer.text.toString())
                 saveSuggestListPref("camera_mounts",
@@ -359,28 +368,5 @@ class EditLensActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         menuInflater.inflate(R.menu.save, menu)
         menu.findItem(R.id.menu_save).isEnabled = canSave()
         return true
-    }
-
-    override fun onBackPressed() {
-        if (!isDirty) {
-            setResult(Activity.RESULT_CANCELED, Intent())
-            super.onBackPressed()
-        } else {
-            if (canSave()) {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(101)
-                fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
-                fragment.arguments?.putString("positive", getString(R.string.save))
-                fragment.arguments?.putString("negative", getString(R.string.discard))
-                fragment.showOn(this, "dialog")
-            } else {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(102)
-                fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                fragment.arguments?.putString("positive", getString(R.string.continue_editing))
-                fragment.arguments?.putString("negative", getString(R.string.discard))
-                fragment.showOn(this, "dialog")
-            }
-        }
     }
 }

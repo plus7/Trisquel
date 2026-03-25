@@ -11,6 +11,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.databinding.ActivityEditFilmRollBinding
@@ -229,6 +230,33 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         } else {
             isDirty = false
         }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (!isDirty) {
+                    setResult(RESULT_CANCELED, Intent())
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                } else {
+                    if (canSave()) {
+                        val fragment = YesNoDialogFragment.Builder()
+                                .build(101)
+                        fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
+                        fragment.arguments?.putString("positive", getString(R.string.save))
+                        fragment.arguments?.putString("negative", getString(R.string.discard))
+                        fragment.showOn(this@EditFilmRollActivity, "dialog")
+                    } else {
+                        val fragment = YesNoDialogFragment.Builder()
+                                .build(102)
+                        fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
+                        fragment.arguments?.putString("positive", getString(R.string.continue_editing))
+                        fragment.arguments?.putString("negative", getString(R.string.discard))
+                        fragment.showOn(this@EditFilmRollActivity, "dialog")
+                    }
+                }
+            }
+        })
     }
 
     protected fun updateCameraList(dao: TrisquelDao) {
@@ -376,16 +404,16 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                 saveSuggestListSubPref("film_brand",
                         binding.editManufacturer.text.toString(),
                         binding.editBrand.text.toString())
-                setResult(Activity.RESULT_OK, resultData)
+                setResult(RESULT_OK, resultData)
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, Intent())
+                setResult(RESULT_CANCELED, Intent())
                 finish()
             }
             102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 /* do nothing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, Intent())
+                setResult(RESULT_CANCELED, Intent())
                 finish()
             }
             REQCODE_ASK_CREATE_CAMERA -> if(resultCode == DialogInterface.BUTTON_POSITIVE){
@@ -403,7 +431,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         super.onActivityResult(requestCode, resultCode, data)
 
         when (requestCode) {
-            REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_ADD_CAMERA -> if (resultCode == RESULT_OK) {
                 if(data != null) {
                     val bundle = data.extras
                     val c = bundle!!.getParcelable<CameraSpec>("cameraspec")!!
@@ -422,26 +450,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                if (!isDirty) {
-                    setResult(Activity.RESULT_CANCELED, Intent())
-                    finish()
-                } else {
-                    if (canSave()) {
-                        val fragment = YesNoDialogFragment.Builder()
-                                .build(101)
-                        fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
-                        fragment.arguments?.putString("positive", getString(R.string.save))
-                        fragment.arguments?.putString("negative", getString(R.string.discard))
-                        fragment.showOn(this, "dialog")
-                    } else {
-                        val fragment = YesNoDialogFragment.Builder()
-                                .build(102)
-                        fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                        fragment.arguments?.putString("positive", getString(R.string.continue_editing))
-                        fragment.arguments?.putString("negative", getString(R.string.discard))
-                        fragment.showOn(this, "dialog")
-                    }
-                }
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
             R.id.menu_save -> {
@@ -450,34 +459,11 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                 saveSuggestListSubPref("film_brand",
                         binding.editManufacturer.text.toString(),
                         binding.editBrand.text.toString())
-                setResult(Activity.RESULT_OK, data)
+                setResult(RESULT_OK, data)
                 finish()
                 return true
             }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    override fun onBackPressed() {
-        if (!isDirty) {
-            setResult(Activity.RESULT_CANCELED, Intent())
-            super.onBackPressed()
-        } else {
-            if (canSave()) {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(101)
-                fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
-                fragment.arguments?.putString("positive", getString(R.string.save))
-                fragment.arguments?.putString("negative", getString(R.string.discard))
-                fragment.showOn(this, "dialog")
-            } else {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(102)
-                fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                fragment.arguments?.putString("positive", getString(R.string.continue_editing))
-                fragment.arguments?.putString("negative", getString(R.string.discard))
-                fragment.showOn(this, "dialog")
-            }
-        }
     }
 }
