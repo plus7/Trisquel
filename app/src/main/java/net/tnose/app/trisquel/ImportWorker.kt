@@ -14,11 +14,9 @@ import android.content.pm.ServiceInfo
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -32,7 +30,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -233,21 +230,6 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         }
     }
 
-    private fun getSafeFileNameP(relPath: String, displayName: String): String {
-        var currentCandidate = displayName
-        var suffixNumber = 1
-        while(true) {
-            val filePath = Environment.getExternalStorageDirectory().absolutePath + "/" + relPath + "/" + currentCandidate
-            val f = File(filePath)
-            if(!f.exists()) break
-            currentCandidate = appendSuffix(displayName, suffixNumber)
-            suffixNumber++
-        }
-
-        return currentCandidate
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
     fun getSafeFileNameQ(relPath: String, displayName: String): String{
         var currentCandidate = displayName
         var suffixNumber = 1
@@ -279,33 +261,6 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         return currentCandidate
     }
 
-    private fun writeInMediaStoreP(relPath: String, displayName: String, ist: InputStream): String{
-        val dirPath = Environment.getExternalStorageDirectory().absolutePath + "/" + relPath
-        val dir = File(dirPath)
-        if(!dir.exists()){
-            dir.mkdirs()
-        }
-        val filePath = dirPath + "/" + displayName
-        val ost = FileOutputStream(filePath)
-        val bost = BufferedOutputStream(ost)
-        val data = ByteArray(8*1024)
-        while (true) {
-            val count = ist.read(data, 0, 8*1024)
-            if (count < 0) break
-            bost.write(data, 0, count)
-        }
-        bost.flush()
-        bost.close()
-
-        val values= ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
-            put(MediaStore.Images.Media.DATA, filePath)
-        }
-        val item = applicationContext.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
-        return item.toString()
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
     fun writeInMediaStoreQ(relPath: String, displayName: String, ist: InputStream): String{
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.RELATIVE_PATH, relPath)
@@ -344,7 +299,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         if(photo.getString("suppimgs").isEmpty()) return Pair(result, "")
 
         val filmRollOldId = photo.getInt("filmroll")
-        val filmRollNewId = filmrollIdOld2NewMap[filmRollOldId]!! // TODO: 手抜きなのであとでなおす
+        filmrollIdOld2NewMap[filmRollOldId]!! // TODO: 手抜きなのであとでなおす
         // もともとこうだったが、トランザクションを導入した結果、DBに格納された途中経過は
         // 使えなくなったので、自前でフィルムのIDと名前のペアを持つことにする
         // val folderName = dao.getFilmRoll(filmRollNewId)!!.name.replace('/', '_')
@@ -357,11 +312,8 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             if(fileName.isEmpty()) continue // こういうケースが本当にあってよいものか… 要確認な気がする
             val md5sum = md5sums.getString(i)
             val relPath = "Pictures/Trisquel/" + folderName
-            val safeFileName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+            val safeFileName =
                 getSafeFileNameQ(relPath, fileName)
-            }else{
-                getSafeFileNameP(relPath, fileName)
-            }
 
             /*val ze = zf.getEntry("imgs/" + md5sum)
             if(ze == null){
@@ -377,11 +329,8 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 is WrappedZipFile.ApacheCCZipFile -> wzf.zf.getInputStream(wzf.zf.getEntry(entryName))
             }
 
-            val newpath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+            val newpath =
                 writeInMediaStoreQ(relPath, safeFileName, istream)
-            }else{
-                writeInMediaStoreP(relPath, safeFileName, istream)
-            }
 
             result.add(newpath)
             istream.close()

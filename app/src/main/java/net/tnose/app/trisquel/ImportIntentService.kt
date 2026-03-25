@@ -15,14 +15,12 @@ import android.content.Context
 import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.json.JSONArray
@@ -36,7 +34,6 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import kotlin.collections.set
 
 /*
 class VersionUnmatchException : Exception()
@@ -148,12 +145,11 @@ class ImportIntentService : IntentService {
         return currentCandidate
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     fun getSafeFileNameQ(relPath: String, displayName: String): String{
         var currentCandidate = displayName
         var suffixNumber = 1
         while(true) {
-            val values = ContentValues().apply {
+            ContentValues().apply {
                 put(MediaStore.Images.Media.RELATIVE_PATH, relPath)
                 put(MediaStore.Images.Media.DISPLAY_NAME, currentCandidate)
             }
@@ -204,7 +200,6 @@ class ImportIntentService : IntentService {
         return item.toString()
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     fun writeInMediaStoreQ(relPath: String, displayName: String, ist: InputStream): String{
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.RELATIVE_PATH, relPath)
@@ -237,7 +232,7 @@ class ImportIntentService : IntentService {
 
     fun newPathsFullRestore(wzf: WrappedZipFile, photo: JSONObject, dao: TrisquelDao, filmrollIdOld2NewMap: HashMap<Int, Int>): Pair<ArrayList<String>, String>{
         val result = ArrayList<String>()
-        val importErrors = ArrayList<String>()
+        ArrayList<String>()
 
         if(photo.getString("suppimgs").isEmpty()) return Pair(result, "")
 
@@ -253,11 +248,8 @@ class ImportIntentService : IntentService {
             if(fileName.isEmpty()) continue // こういうケースが本当にあってよいものか… 要確認な気がする
             val md5sum = md5sums.getString(i)
             val relPath = "Pictures/Trisquel/" + folderName
-            val safeFileName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+            val safeFileName =
                 getSafeFileNameQ(relPath, fileName)
-            }else{
-                getSafeFileNameP(relPath, fileName)
-            }
 
             /*val ze = zf.getEntry("imgs/" + md5sum)
             if(ze == null){
@@ -273,11 +265,8 @@ class ImportIntentService : IntentService {
                 is WrappedZipFile.ApacheCCZipFile -> wzf.zf.getInputStream(wzf.zf.getEntry(entryName))
             }
 
-            val newpath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+            val newpath =
                 writeInMediaStoreQ(relPath, safeFileName, istream)
-            }else{
-                writeInMediaStoreP(relPath, safeFileName, istream)
-            }
 
             result.add(newpath)
             istream.close()
@@ -332,7 +321,7 @@ class ImportIntentService : IntentService {
         val paths = ArrayList<String>()
         while (cursor?.moveToNext() == true) {
             val idColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-            val displayNameColumn = cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+            cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
 
             val id = cursor.getLong(idColumn)
             val contentUri = Uri.withAppendedPath(
@@ -525,7 +514,7 @@ class ImportIntentService : IntentService {
         if (intent == null) return
         when(intent.action){
             ACTION_START_IMPORT -> {
-                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                 // グループ生成
                 val g = NotificationChannelGroup("trisquel_ch_grp", "trisquel_ch_grp")
                 nm.createNotificationChannelGroups(arrayListOf(g))

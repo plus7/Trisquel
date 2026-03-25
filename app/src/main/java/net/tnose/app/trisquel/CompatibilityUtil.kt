@@ -2,7 +2,6 @@ package net.tnose.app.trisquel
 
 import android.content.ContentResolver
 import android.net.Uri
-import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import java.io.File
@@ -16,7 +15,7 @@ class CompatibilityUtil {
                 return File(path).inputStream()
             } else {
                 val photoUri =
-                        if (reqOrig && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        if (reqOrig) {
                             MediaStore.setRequireOriginal(Uri.parse(path))
                         }else {
                             Uri.parse(path)

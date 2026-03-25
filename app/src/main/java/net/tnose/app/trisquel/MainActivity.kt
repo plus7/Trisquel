@@ -20,7 +20,6 @@ import android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM
 import android.view.MenuItem.SHOW_AS_ACTION_NEVER
 import android.view.View
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
@@ -124,13 +123,10 @@ class MainActivity : AppCompatActivity(),
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.ACCESS_MEDIA_LOCATION)
-        } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+        } else {
             arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.ACCESS_MEDIA_LOCATION)
-        } else {
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
     fun selectFragment(currentFragmentId: Int, filtertype: Int, filtervalue: ArrayList<String>){
@@ -355,21 +351,8 @@ class MainActivity : AppCompatActivity(),
         dao.close()
 
         if(!dbConvForAndroid11Done && isIntentServiceWorking == 0) {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-                val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/")
-                startActivity(Intent(Intent.ACTION_VIEW, uri))
-                return
-            }
-
-            fixOrientation() // 画面回転時のDialogの挙動が怪しいので一時的にこうする
-            isIntentServiceWorking = 1
-
-            val fragment = ProgressDialog.Builder()
-                    .build(RETCODE_DBCONV_PROGRESS)
-            fragment.arguments?.putString("title", "Updating DB")
-            fragment.arguments?.putBoolean("cancellable", false)
-            fragment.showOn(this, "dialog")
-            mDbConvViewModel?.doDbConv()
+            val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/")
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
             return
         }
 
@@ -787,7 +770,7 @@ class MainActivity : AppCompatActivity(),
         if(data == null) return
         val frag : androidx.fragment.app.Fragment = currentFragment
         when (requestCode) {
-            REQCODE_ADD_CAMERA -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_ADD_CAMERA -> if (resultCode == RESULT_OK) {
                 val bundle = data.extras
                 val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
                 if (frag is CameraFragment) frag.insertCamera(c)
@@ -801,7 +784,7 @@ class MainActivity : AppCompatActivity(),
                 }
             }/* else if (resultCode == Activity.RESULT_CANCELED) {
             }*/
-            REQCODE_EDIT_CAMERA -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_EDIT_CAMERA -> if (resultCode == RESULT_OK) {
                 val bundle = data.extras
                 val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
                 if (frag is CameraFragment) frag.updateCamera(c)
@@ -816,15 +799,15 @@ class MainActivity : AppCompatActivity(),
                 }
             }/* else if (resultCode == Activity.RESULT_CANCELED) {
             }*/
-            REQCODE_ADD_LENS -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_ADD_LENS -> if (resultCode == RESULT_OK) {
                 val l = BundleCompat.getParcelable(data.extras!!, "lensspec", LensSpec::class.java)
                 if (frag is LensFragment && l != null) frag.insertLens(l)
             }
-            REQCODE_EDIT_LENS -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_EDIT_LENS -> if (resultCode == RESULT_OK) {
                 val l = BundleCompat.getParcelable(data.extras!!, "lensspec", LensSpec::class.java)
                 if (frag is LensFragment && l != null) frag.updateLens(l)
             }
-            REQCODE_ADD_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_ADD_FILMROLL -> if (resultCode == RESULT_OK) {
                 val bundle = data.extras
                 val dao = TrisquelDao(this.applicationContext)
                 dao.connection()
@@ -842,7 +825,7 @@ class MainActivity : AppCompatActivity(),
                 if (frag is FilmRollFragment) frag.insertFilmRoll(f)
             }/* else if (resultCode == Activity.RESULT_CANCELED) {
             }*/
-            REQCODE_EDIT_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_EDIT_FILMROLL -> if (resultCode == RESULT_OK) {
                 val bundle = data.extras
                 val dao = TrisquelDao(this.applicationContext)
                 dao.connection()
@@ -868,7 +851,7 @@ class MainActivity : AppCompatActivity(),
                 // if (frag is FilmRollFragment) frag.refreshFilmRoll(bundle!!.getInt("filmroll"))
             }*//* else if (resultCode == Activity.RESULT_CANCELED) {
             }*/
-            REQCODE_ADD_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_ADD_ACCESSORY -> if (resultCode == RESULT_OK) {
                 val bundle = data.extras
                 // Room化したときは、新規作成時のidは0でよい
                 val a = Accessory(0, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()),
@@ -877,7 +860,7 @@ class MainActivity : AppCompatActivity(),
                 if (frag is AccessoryFragment) frag.insertAccessory(a)
             }/* else if (resultCode == Activity.RESULT_CANCELED) {
             }*/
-            REQCODE_EDIT_ACCESSORY -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_EDIT_ACCESSORY -> if (resultCode == RESULT_OK) {
                 val bundle = data.extras
                 val a = Accessory(bundle!!.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()),
                         bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"),
@@ -886,7 +869,7 @@ class MainActivity : AppCompatActivity(),
             }/* else if (resultCode == Activity.RESULT_CANCELED) {
             }*/
             REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX,
-            REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX -> if (resultCode == RESULT_OK) {
                 if (data.data != null) {
                     val uri: Uri = data.data!!
                     val mode = if (requestCode == REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX) 0 else 1
@@ -900,7 +883,7 @@ class MainActivity : AppCompatActivity(),
                 }
             }
             REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP,
-            REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP -> if (resultCode == RESULT_OK) {
                 val uri: Uri? = data.data
                 if (uri != null) {
                     Log.d("ZipFile", uri.toString())
@@ -918,7 +901,7 @@ class MainActivity : AppCompatActivity(),
                     mImportViewModel?.doImport(uri.toString(), mode)
                 }
             }
-            REQCODE_DBFILE_CHOSEN_FOR_REPLDB -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_DBFILE_CHOSEN_FOR_REPLDB -> if (resultCode == RESULT_OK) {
                 val uri: Uri? = data.data
                 Log.d("DBFile", uri.toString())
                 val dbpath = this.getDatabasePath("trisquel.db")
@@ -962,7 +945,6 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         // Handle navigation view item clicks here.
         val id = item.itemId
@@ -1213,12 +1195,9 @@ class MainActivity : AppCompatActivity(),
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
-            } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
             } else {
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
+                    PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
             }
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
@@ -1244,9 +1223,7 @@ class MainActivity : AppCompatActivity(),
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val mediaLocDenied =
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
-                false
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
         val notificationDenied =
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
                 false
@@ -1273,11 +1250,7 @@ class MainActivity : AppCompatActivity(),
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val mediaLocDenied =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
-                }else{
-                    false
-                }
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
         val notificationDenied =
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
                 false
