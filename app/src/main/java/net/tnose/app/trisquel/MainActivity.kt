@@ -218,7 +218,7 @@ class MainActivity : AppCompatActivity(),
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mExportViewModel = ViewModelProvider(this).get(ExportProgressViewModel::class.java)
+        mExportViewModel = ViewModelProvider(this)[ExportProgressViewModel::class.java]
         mExportViewModel!!.workInfos.observe(this,
             Observer { listOfWorkInfo ->
                 if (listOfWorkInfo.isNullOrEmpty()) {
@@ -246,7 +246,7 @@ class MainActivity : AppCompatActivity(),
                 }
             }
         )
-        mImportViewModel = ViewModelProvider(this).get(ImportProgressViewModel::class.java)
+        mImportViewModel = ViewModelProvider(this)[ImportProgressViewModel::class.java]
         mImportViewModel!!.workInfos.observe(this,
             Observer { listOfWorkInfo ->
                 if (listOfWorkInfo.isNullOrEmpty()) {
@@ -274,7 +274,7 @@ class MainActivity : AppCompatActivity(),
                 }
             }
         )
-        mDbConvViewModel = ViewModelProvider(this).get(DbConvProgressViewModel::class.java)
+        mDbConvViewModel = ViewModelProvider(this)[DbConvProgressViewModel::class.java]
         mDbConvViewModel!!.workInfos.observe(this,
             Observer { listOfWorkInfo ->
                 if (listOfWorkInfo.isNullOrEmpty()) {
