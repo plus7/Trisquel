@@ -64,12 +64,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
                 Manifest.permission.CAMERA)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.CAMERA)
         } else {
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.CAMERA)
         }
 
@@ -662,7 +658,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val prefstr = pref.getString(parentkey, "{}")
         var obj: JSONObject? = null
         try {
-            val array: JSONArray
             obj = JSONObject(prefstr)
         } catch (e: JSONException) {
             obj = JSONObject()
@@ -698,15 +693,10 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
             } else {
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
             }
-
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
             when(requestCode){
                 RETCODE_SDCARD_PERM_LOADIMG -> {
@@ -736,15 +726,12 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }
 
     fun checkPermAndOpenImagePicker() {
-        val writeDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val readDenied =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val cameraDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-        if (writeDenied || readDenied || cameraDenied) {
+        if (readDenied || cameraDenied) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
             return
         }
@@ -754,15 +741,12 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     fun checkPermAndAppendSupplementalImages(paths: ArrayList<String>?) {
         if(paths == null) return
         if(paths.size == 0) return
-        val writeDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val readDenied =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
 
-        if (writeDenied || readDenied) {
+        if (readDenied) {
             supplementalImagesToLoad = paths
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_LOADIMG)
             return
@@ -906,16 +890,16 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 binding.editDate.setText(sdf.format(c.time))
             }
             DIALOG_SAVE_OR_DISCARD -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                setResult(Activity.RESULT_OK, resultData)
+                setResult(RESULT_OK, resultData)
                 finish()
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, Intent())
+                setResult(RESULT_CANCELED, Intent())
                 finish()
             }
             DIALOG_CONTINUE_OR_DISCARD -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 /* do nothing and continue editing */
             } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(Activity.RESULT_CANCELED, Intent())
+                setResult(RESULT_CANCELED, Intent())
                 finish()
             }
             DIALOG_MOUNT_ADAPTERS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
@@ -965,7 +949,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         when (item.itemId) {
             android.R.id.home -> {
                 if (!isDirty) {
-                    setResult(Activity.RESULT_CANCELED, Intent())
+                    setResult(RESULT_CANCELED, Intent())
                     finish()
                 } else {
                     if (canSave()) {
@@ -987,7 +971,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 return true
             }
             R.id.menu_save -> {
-                setResult(Activity.RESULT_OK, resultData)
+                setResult(RESULT_OK, resultData)
                 finish()
                 return true
             }
@@ -996,7 +980,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 if (s.isEmpty()) {
                     return true
                 }
-                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                 cm.setPrimaryClip(ClipData.newPlainText("", s))
                 Toast.makeText(this, getString(R.string.notify_copied), Toast.LENGTH_SHORT).show()
                 return true
@@ -1007,7 +991,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     override fun onBackPressed() {
         if (!isDirty) {
-            setResult(Activity.RESULT_CANCELED, Intent())
+            setResult(RESULT_CANCELED, Intent())
             super.onBackPressed()
         } else {
             if (canSave()) {
@@ -1029,7 +1013,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }
 
     private fun setLatLng(newlatitude: Double, newlongitude: Double) {
-        val sb = StringBuilder()
+        StringBuilder()
         if (newlatitude == 999.0 || newlongitude == 999.0) {
             latitude = 999.0
             longitude = 999.0
@@ -1061,7 +1045,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val options = BitmapFactory.Options()
 
         options.inJustDecodeBounds = true
-        var bmp = if(path.startsWith("/")) {
+        if(path.startsWith("/")) {
             BitmapFactory.decodeFile(path, options)
         } else {
             val input = CompatibilityUtil.pathToInputStream(contentResolver, path, false)
@@ -1111,7 +1095,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         binding.imageContainer.addView(imageView, binding.imageContainer.childCount - 1, lp)
         imageView.path = path
         imageView.setOnCloseClickListener(object: View.OnClickListener{
-            override fun onClick(view: View?): Unit {
+            override fun onClick(view: View?) {
                 if(view is CustomImageView) {
                     this@EditPhotoActivity.supplementalImages.remove(view.path)
                     val vg = view.parent as ViewGroup
@@ -1121,7 +1105,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
         })
         imageView.setOnClickListener(object: View.OnClickListener{
-            override fun onClick(view: View?): Unit {
+            override fun onClick(view: View?) {
                 if(view is CustomImageView){
                     Log.v("debug", "clicked" + view.path)
                     val intent = Intent()
@@ -1146,7 +1130,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         super.onActivityResult(requestCode, resultCode, data)
 
         when (requestCode) {
-            REQCODE_GET_LOCATION -> if (resultCode == Activity.RESULT_OK && data != null) {
+            REQCODE_GET_LOCATION -> if (resultCode == RESULT_OK && data != null) {
                 val bundle = data.extras
                 val newlat: Double
                 val newlog: Double
@@ -1170,7 +1154,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 }
                 if(isResumed) isDirty = true
             }
-            REQCODE_ADD_LENS -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_ADD_LENS -> if (resultCode == RESULT_OK) {
                 if(data != null) {
                     val bundle = data.extras
                     val l = bundle!!.getParcelable<LensSpec>("lensspec")!!

@@ -30,15 +30,10 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
                 Manifest.permission.CAMERA)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        } else {
             arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.CAMERA)
-        } else {
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.CAMERA)
         }
-
     private var thumbnailEditingPhoto: Photo? = null
     var fragment: SearchFragment? = null
     var isDirty: Boolean = false
@@ -109,12 +104,8 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
             } else {
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
             }
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
@@ -143,15 +134,12 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
     }
 
     fun checkPermAndEditThumbPhoto(){
-        val writeDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val readDenied =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val cameraDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-        if (writeDenied || readDenied || cameraDenied) {
+        if (readDenied || cameraDenied) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
             return
         }
@@ -233,7 +221,7 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
 
         val bundle = data.extras
         when (requestCode) {
-            REQCODE_EDIT_PHOTO -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_EDIT_PHOTO -> if (resultCode == RESULT_OK) {
                 val p: Photo? = bundle!!.getParcelable("photo")
                 val tags: ArrayList<String>? = bundle.getStringArrayList("tags")
                 if(p != null){
@@ -260,7 +248,7 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
             android.R.id.home -> {
                 val data = Intent()
                 data.putExtra("dirtyFilmRolls", dirtyFilmRolls)
-                setResult(Activity.RESULT_OK, data)
+                setResult(RESULT_OK, data)
                 finish()
             }
         }
@@ -270,7 +258,7 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
     override fun onBackPressed() {
         val data = Intent()
         data.putExtra("dirtyFilmRolls", dirtyFilmRolls)
-        setResult(Activity.RESULT_OK, data)
+        setResult(RESULT_OK, data)
         super.onBackPressed()
     }
 }

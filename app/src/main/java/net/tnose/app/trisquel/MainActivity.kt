@@ -2,7 +2,6 @@ package net.tnose.app.trisquel
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -120,12 +119,8 @@ class MainActivity : AppCompatActivity(),
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
                 Manifest.permission.ACCESS_MEDIA_LOCATION,
                 Manifest.permission.POST_NOTIFICATIONS)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.ACCESS_MEDIA_LOCATION)
         } else {
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.ACCESS_MEDIA_LOCATION)
         }
 
@@ -1192,12 +1187,8 @@ class MainActivity : AppCompatActivity(),
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
             } else {
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
             }
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
@@ -1214,10 +1205,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun checkPermAndExportDB(mode: Int) { // 0: Slim 1: Whole
-        val writeDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
-            else
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val readDenied =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
@@ -1229,7 +1216,7 @@ class MainActivity : AppCompatActivity(),
                 false
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
-        if (writeDenied || readDenied || mediaLocDenied || notificationDenied){
+        if (readDenied || mediaLocDenied || notificationDenied){
             val retcode =
                     if(mode == 0) RETCODE_SDCARD_PERM_FOR_SLIMEX
                     else RETCODE_SDCARD_PERM_FOR_FULLEX
@@ -1241,10 +1228,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     fun checkPermAndImportDB(mode: Int) { // 0: merge, 1: replace, 2: replace by .db
-        val writeDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
-            else
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val readDenied =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
@@ -1256,7 +1239,7 @@ class MainActivity : AppCompatActivity(),
                 false
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
-        if (writeDenied || readDenied || mediaLocDenied || notificationDenied){
+        if (readDenied || mediaLocDenied || notificationDenied){
             val retcode =
                     when(mode){
                         0 -> RETCODE_SDCARD_PERM_FOR_MERGEIP

@@ -39,12 +39,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
                 Manifest.permission.CAMERA)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.CAMERA)
         } else {
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.CAMERA)
         }
 
@@ -167,7 +163,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             android.R.id.home -> {
                 data = Intent()
                 data.putExtra("filmroll", this.mFilmRoll!!.id)
-                setResult(Activity.RESULT_OK, data)
+                setResult(RESULT_OK, data)
                 finish()
                 return true
             }
@@ -178,7 +174,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 return true
             }
             R.id.menu_copy -> {
-                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                 cm.setPrimaryClip(ClipData.newPlainText("", filmRollText))
                 Toast.makeText(this, getString(R.string.notify_copied), Toast.LENGTH_SHORT).show()
                 return true
@@ -196,7 +192,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     override fun onBackPressed() {
         val data = Intent()
         data.putExtra("filmroll", this.mFilmRoll!!.id)
-        setResult(Activity.RESULT_OK, data)
+        setResult(RESULT_OK, data)
         super.onBackPressed()
     }
 
@@ -210,15 +206,15 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         val bundle = data.extras
         val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
         when (requestCode) {
-            REQCODE_ADD_PHOTO -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_ADD_PHOTO -> if (resultCode == RESULT_OK) {
                 val p: Photo? = bundle!!.getParcelable("photo")
                 if(p != null) photo_fragment!!.insertPhoto(p, tags)
             }
-            REQCODE_EDIT_PHOTO -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_EDIT_PHOTO -> if (resultCode == RESULT_OK) {
                 val p: Photo? = bundle!!.getParcelable("photo")
                 if(p != null) photo_fragment!!.updatePhoto(p, tags)
             }
-            REQCODE_EDIT_FILMROLL -> if (resultCode == Activity.RESULT_OK) {
+            REQCODE_EDIT_FILMROLL -> if (resultCode == RESULT_OK) {
                 val dao = TrisquelDao(this.applicationContext)
                 dao.connection()
                 val c = dao.getCamera(bundle!!.getInt("camera"))
@@ -238,7 +234,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 setTitles(f)
 
                 mFilmRollViewModel!!.update(f.toEntity())
-            } else if (resultCode == Activity.RESULT_CANCELED) {
+            } else if (resultCode == RESULT_CANCELED) {
             }
             REQCODE_SELECT_THUMBNAIL -> if (resultCode == RESULT_OK) {
                 //val paths = Matisse.obtainPathResult(data)
@@ -283,12 +279,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
             } else {
                 intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED,
                     PackageManager.PERMISSION_GRANTED)
             }
         if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
@@ -317,15 +309,12 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     }
 
     fun checkPermAndEditThumbPhoto(){
-        val writeDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) false
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val readDenied =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                  ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val cameraDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-        if (writeDenied || readDenied || cameraDenied) {
+        if (readDenied || cameraDenied) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
             return
         }
