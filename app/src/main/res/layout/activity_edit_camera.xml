@@ -29,22 +29,27 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
-
-                <net.tnose.app.trisquel.ImmediateAutoCompleteTextView
+                <net.tnose.app.trisquel.MaterialImmediateAutoCompleteTextView
                     android:id="@+id/edit_mount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="@string/label_mount"
-                    app:met_floatingLabel="normal" />
+                    android:paddingBottom="8dp"
+                    android:text=""
+                    android:textSize="18sp"
+                    app:boxStrokeColor="?attr/colorPrimary" />
 
-                <net.tnose.app.trisquel.ImmediateAutoCompleteTextView
+                <net.tnose.app.trisquel.MaterialImmediateAutoCompleteTextView
                     android:id="@+id/edit_manufacturer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="@string/label_manufacturer"
-                    app:met_floatingLabel="normal" />
+                    android:paddingBottom="8dp"
+                    android:text=""
+                    android:textSize="18sp"
+                    app:boxStrokeColor="?attr/colorPrimary" />
 
                 <com.rengwuxian.materialedittext.MaterialEditText
                     android:id="@+id/edit_model"

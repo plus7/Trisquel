@@ -3,14 +3,13 @@ package net.tnose.app.trisquel
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
-
-import com.rengwuxian.materialedittext.MaterialAutoCompleteTextView
+import androidx.appcompat.widget.AppCompatAutoCompleteTextView
 
 /**
  * Created by user on 2018/02/04.
  */
 
-class ImmediateAutoCompleteTextView : MaterialAutoCompleteTextView {
+class ImmediateAutoCompleteTextView : AppCompatAutoCompleteTextView {
     constructor(context: Context, attrs: AttributeSet, defStyle: Int) : super(context, attrs, defStyle) {
         this.threshold = 0
     }

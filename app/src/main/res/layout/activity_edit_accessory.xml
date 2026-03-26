@@ -41,7 +41,7 @@
             android:hint="@string/label_name"
             app:met_floatingLabel="normal" />
 
-            <net.tnose.app.trisquel.ImmediateAutoCompleteTextView
+            <net.tnose.app.trisquel.MaterialImmediateAutoCompleteTextView
                 android:id="@+id/spinner_mount"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
