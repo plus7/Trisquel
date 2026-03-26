@@ -14,10 +14,9 @@ class GalleryActivity : AppCompatActivity(), GalleryImageFragment.OnFragmentInte
         super.onCreate(savedInstanceState)
         binding = ActivityGalleryBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        val manager = supportFragmentManager
         val photo = IntentCompat.getParcelableExtra(intent, "photo", Photo::class.java)
         val favList = IntentCompat.getParcelableArrayListExtra(intent, "favList", Photo::class.java)
-        val adapter = GalleryFragmentPagerAdapter(manager, photo!!, favList!!)
+        val adapter = GalleryFragmentPagerAdapter(this, photo!!, favList!!)
         binding.pager.adapter = adapter
 
         var currentPos = 0

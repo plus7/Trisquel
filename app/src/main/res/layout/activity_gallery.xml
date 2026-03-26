@@ -6,11 +6,9 @@
     android:orientation="vertical"
     tools:context=".GalleryActivity">
 
-    <net.tnose.app.trisquel.CustomViewPager
+    <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/pager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-    </net.tnose.app.trisquel.CustomViewPager>
+        android:layout_height="match_parent" />
 
 </LinearLayout>
