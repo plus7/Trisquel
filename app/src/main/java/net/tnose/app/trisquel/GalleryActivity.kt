@@ -3,6 +3,7 @@ package net.tnose.app.trisquel
 import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.IntentCompat
 import net.tnose.app.trisquel.databinding.ActivityGalleryBinding
 
 class GalleryActivity : AppCompatActivity(), GalleryImageFragment.OnFragmentInteractionListener {
@@ -14,8 +15,8 @@ class GalleryActivity : AppCompatActivity(), GalleryImageFragment.OnFragmentInte
         binding = ActivityGalleryBinding.inflate(layoutInflater)
         setContentView(binding.root)
         val manager = supportFragmentManager
-        val photo = intent.getParcelableExtra<Photo>("photo")
-        val favList = intent.getParcelableArrayListExtra<Photo>("favList")
+        val photo = IntentCompat.getParcelableExtra(intent, "photo", Photo::class.java)
+        val favList = IntentCompat.getParcelableArrayListExtra(intent, "favList", Photo::class.java)
         val adapter = GalleryFragmentPagerAdapter(manager, photo!!, favList!!)
         binding.pager.adapter = adapter
 

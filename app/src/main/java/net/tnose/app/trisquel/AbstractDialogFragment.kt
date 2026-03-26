@@ -11,8 +11,6 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
-import net.tnose.app.trisquel.AbstractDialogFragment.Builder
-import net.tnose.app.trisquel.AbstractDialogFragment.Callback
 
 /**
  * コールバックによる通知機能を備えたダイアログを実装するための抽象ダイアログ・フラグメント.
@@ -33,7 +31,7 @@ import net.tnose.app.trisquel.AbstractDialogFragment.Callback
  * [DialogFragment.show]
  * を使用することは推奨しません.
  */
-abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
+abstract class AbstractDialogFragment : DialogFragment() {
 
     private var requestCode: Int = 0
     private var callbackHostSpec: HostType? = null
@@ -79,7 +77,7 @@ abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
 
         val args = arguments
         requestCode = args?.getInt(ARG_REQUEST_CODE) ?: 0
-        callbackHostSpec = args?.getSerializable(ARG_CALLBACK_HOST) as HostType
+        callbackHostSpec = args?.let { androidx.core.os.BundleCompat.getSerializable(it, ARG_CALLBACK_HOST, HostType::class.java) }
     }
 
 
@@ -288,7 +286,7 @@ abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
      * @param host ダイアログの結果を通知するホスト
      * @param tag  ダイアログを識別するタグ
      */
-    fun showOn(host: androidx.fragment.app.Fragment, tag: String) {
+    fun showOn(host: Fragment, tag: String) {
         checkArguments(arguments)
 
         arguments?.putSerializable(ARG_CALLBACK_HOST, HostType.TARGET_FRAGMENT)
@@ -310,7 +308,7 @@ abstract class AbstractDialogFragment : androidx.fragment.app.DialogFragment() {
      * @param host ダイアログの結果を通知するホスト
      * @param tag  ダイアログを識別するタグ
      */
-    fun showChildOn(host: androidx.fragment.app.Fragment, tag: String) {
+    fun showChildOn(host: Fragment, tag: String) {
         checkArguments(arguments)
 
         arguments?.putSerializable(ARG_CALLBACK_HOST, HostType.PARENT_FRAGMENT)

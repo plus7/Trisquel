@@ -20,7 +20,6 @@ class GeneralPreferenceFragment : PreferenceFragmentCompat(), AbstractDialogFrag
     protected var mListener: OnFragmentInteractionListener? = null
     override fun onCreatePreferences(bundle: Bundle?, s: String?) {
         addPreferencesFromResource(R.xml.pref_general)
-        setHasOptionsMenu(false)
         val pref = findPreference<Preference>("reset_autocomplete")
         pref?.onPreferenceClickListener = Preference.OnPreferenceClickListener {
             val fragment = YesNoDialogFragment.Builder()
