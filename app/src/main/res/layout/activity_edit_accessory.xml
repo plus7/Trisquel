@@ -34,12 +34,14 @@
                 app:met_floatingLabel="normal"
                 android:focusableInTouchMode="false"/>
 
-        <com.rengwuxian.materialedittext.MaterialEditText
+        <net.tnose.app.trisquel.MaterialEditTextWrapper
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/edit_name"
             android:hint="@string/label_name"
-            app:met_floatingLabel="normal" />
+            android:paddingBottom="8dp"
+            android:text=""
+            android:textSize="18sp" />
 
             <net.tnose.app.trisquel.MaterialImmediateAutoCompleteTextView
                 android:id="@+id/spinner_mount"
@@ -47,14 +49,18 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:hint="@string/label_mount"
-                app:met_floatingLabel="normal"/>
+                android:paddingBottom="8dp"
+                android:text=""
+                android:textSize="18sp" />
 
-            <com.rengwuxian.materialedittext.MaterialEditText
+            <net.tnose.app.trisquel.MaterialEditTextWrapper
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/edit_fl_factor"
                 android:hint="@string/label_fl_factor"
-                app:met_floatingLabel="normal" />
+                android:paddingBottom="8dp"
+                android:text=""
+                android:textSize="18sp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

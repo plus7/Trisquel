@@ -26,7 +26,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <com.rengwuxian.materialedittext.MaterialEditText
+            <net.tnose.app.trisquel.MaterialEditTextWrapper
                 android:id="@+id/edit_date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -35,7 +35,8 @@
                 android:hint="@string/label_date"
                 android:inputType="none"
                 android:longClickable="false"
-                app:met_floatingLabel="normal" />
+                android:paddingBottom="8dp"
+                android:textSize="18sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -196,7 +197,7 @@
 
             </TableLayout>
 
-            <com.rengwuxian.materialedittext.MaterialEditText
+            <net.tnose.app.trisquel.MaterialEditTextWrapper
                 android:id="@+id/edit_accessories"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -205,14 +206,15 @@
                 android:hint="@string/label_accessories"
                 android:inputType="none"
                 android:longClickable="false"
-                app:met_floatingLabel="normal" />
+                android:paddingBottom="8dp"
+                android:textSize="18sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="horizontal">
 
-                <com.rengwuxian.materialedittext.MaterialEditText
+                <net.tnose.app.trisquel.MaterialEditTextWrapper
                     android:id="@+id/edit_location"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -220,7 +222,8 @@
                     android:ems="10"
                     android:hint="@string/label_location"
                     android:singleLine="true"
-                    app:met_floatingLabel="normal" />
+                    android:paddingBottom="8dp"
+                    android:textSize="18sp" />
 
                 <ImageView
                     android:id="@+id/btn_get_location"
@@ -231,7 +234,7 @@
 
             </LinearLayout>
 
-            <com.rengwuxian.materialedittext.MaterialEditText
+            <net.tnose.app.trisquel.MaterialEditTextWrapper
                 android:id="@+id/edit_memo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -239,7 +242,8 @@
                 android:ems="10"
                 android:hint="@string/label_memo"
                 android:inputType="textMultiLine"
-                app:met_floatingLabel="normal" />
+                android:paddingBottom="8dp"
+                android:textSize="18sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"

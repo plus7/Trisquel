@@ -51,14 +51,16 @@
                     android:textSize="18sp"
                     app:boxStrokeColor="?attr/colorPrimary" />
 
-                <com.rengwuxian.materialedittext.MaterialEditText
+                <net.tnose.app.trisquel.MaterialEditTextWrapper
                     android:id="@+id/edit_model"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:ems="10"
                     android:hint="@string/label_model"
-                    app:met_floatingLabel="normal" />
+                    android:paddingBottom="8dp"
+                    android:text=""
+                    android:textSize="18sp" />
 
                 <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
                     android:id="@+id/spinner_format"
@@ -228,21 +230,25 @@
                 android:id="@+id/layout_flc"
                 android:visibility="gone">
 
-                <com.rengwuxian.materialedittext.MaterialEditText
+                <net.tnose.app.trisquel.MaterialEditTextWrapper
                     android:id="@+id/edit_lens_name_flc"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="@string/label_lens_name"
-                    app:met_floatingLabel="normal" />
+                    android:paddingBottom="8dp"
+                    android:text=""
+                    android:textSize="18sp" />
 
-                <com.rengwuxian.materialedittext.MaterialEditText
+                <net.tnose.app.trisquel.MaterialEditTextWrapper
                     android:id="@+id/edit_focal_length_flc"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="@string/label_focal_length"
-                    app:met_floatingLabel="normal" />
+                    android:paddingBottom="8dp"
+                    android:text=""
+                    android:textSize="18sp" />
 
                 <TextView
                     android:id="@+id/textView24"
