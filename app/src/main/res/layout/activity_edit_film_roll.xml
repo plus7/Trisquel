@@ -35,12 +35,13 @@
             android:textSize="18sp"
             android:singleLine="true" />
 
-        <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+        <net.tnose.app.trisquel.Material3SpinnerWrapper
             android:id="@+id/spinner_camera"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/label_camera"
-            app:met_floatingLabel="normal" />
+            android:paddingBottom="8dp"
+            android:textSize="18sp" />
 
         <net.tnose.app.trisquel.MaterialImmediateAutoCompleteTextView
             android:id="@+id/edit_manufacturer"

@@ -62,13 +62,14 @@
                     android:text=""
                     android:textSize="18sp" />
 
-                <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+                <net.tnose.app.trisquel.Material3SpinnerWrapper
                     android:id="@+id/spinner_format"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="@string/label_format"
-                    app:met_floatingLabel="normal" />
+                    android:paddingBottom="8dp"
+                    android:textSize="18sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -139,12 +140,14 @@
                     android:layout_height="match_parent"
                     android:orientation="horizontal">
 
-                    <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+                    <net.tnose.app.trisquel.Material3SpinnerWrapper
                         android:id="@+id/spinner_slowest_ss"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:hint="@string/label_shutter_speed_slowest" />
+                        android:hint="@string/label_shutter_speed_slowest"
+                        android:paddingBottom="8dp"
+                        android:textSize="18sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -152,12 +155,14 @@
                         android:layout_weight="0"
                         android:text="@string/label_to" />
 
-                    <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+                    <net.tnose.app.trisquel.Material3SpinnerWrapper
                         android:id="@+id/spinner_fastest_ss"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:hint="@string/label_shutter_speed_fastest" />
+                        android:hint="@string/label_shutter_speed_fastest"
+                        android:paddingBottom="8dp"
+                        android:textSize="18sp" />
                 </LinearLayout>
 
             </LinearLayout>

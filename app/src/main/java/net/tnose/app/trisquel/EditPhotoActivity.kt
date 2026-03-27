@@ -152,9 +152,9 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             if (binding.spinnerLens.position >= 0) {
                 val l = lenslist[binding.spinnerLens.position]
                 sb.append(getString(R.string.label_lens_name) + ": " + l.manufacturer + " " + l.modelName + "\n")
-                if (binding.spinnerAperture.text.isNotEmpty())
+                if (binding.spinnerAperture.text?.isNotEmpty() == true)
                     sb.append(getString(R.string.label_aperture) + ": " + binding.spinnerAperture.text + "\n")
-                if (binding.spinnerSs.text.isNotEmpty())
+                if (binding.spinnerSs.text?.isNotEmpty() == true)
                     sb.append(getString(R.string.label_shutter_speed) + ": " + binding.spinnerSs.text.toString() + "\n")
                 if (expCompensation != 0.0)
                     sb.append(getString(R.string.label_exposure_compensation) + ": " + expCompensation + "\n")
@@ -257,7 +257,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
         ssAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, ssArray)
         ssAdapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerSs.setAdapter<ArrayAdapter<String>>(ssAdapter)
+        binding.spinnerSs.setAdapter(ssAdapter)
         // 写ルンですを考慮
         if (ssAdapter!!.count == 1) {
             binding.spinnerSs.position = 0
@@ -391,7 +391,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     protected fun setEventListeners() {
 
         binding.spinnerLens.setOnClickListener {
-            if(binding.spinnerLens.adapter.count == 0){
+            if(binding.spinnerLens.adapter?.count == 0){
                 val fragment = YesNoDialogFragment.Builder()
                         .build(DIALOG_ASK_CREATE_LENS)
                 fragment.arguments?.putString("message", getString(R.string.msg_ask_create_lens))
@@ -411,7 +411,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                 invalidateOptionsMenu()
                 if(isResumed) isDirty = true
             }
-            oldListener.onItemClick(adapterView, view, i, l)
+            oldListener?.onItemClick(adapterView, view, i, l)
         }
 
         binding.editDate.setOnClickListener { showDateDialogOnActivity() }
@@ -425,7 +425,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 if(isResumed) isDirty = true
             }
         })
@@ -441,7 +441,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 if(isResumed) isDirty = true
             }
         })
@@ -455,7 +455,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 if(isResumed) isDirty = true
 
             }
@@ -469,7 +469,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 if(isResumed) isDirty = true
 
             }
@@ -526,7 +526,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 if(isResumed) isDirty = true
 
             }
@@ -540,7 +540,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 if(isResumed) isDirty = true
 
             }
@@ -597,7 +597,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         binding.editTagtext.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 binding.buttonAdd.isEnabled = !allTags.contains(binding.editTagtext.text.toString()) && binding.editTagtext.text.isNotEmpty()
             }
         })
@@ -1001,15 +1001,14 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         if (newlatitude == 999.0 || newlongitude == 999.0) {
             latitude = 999.0
             longitude = 999.0
-            binding.editLocation.setHelperText(null)
+            binding.editLocation.helperText = null
             binding.editLocation.isHelperTextAlwaysShown = false
             binding.btnGetLocation.setImageResource(R.drawable.ic_place_gray_24dp)
         } else {
             latitude = newlatitude
             longitude = newlongitude
-            binding.editLocation.setHelperText(
-                    getString(R.string.label_coordinate) +
-                            ": " + java.lang.Double.toString(newlatitude) + ", " + java.lang.Double.toString(newlongitude))
+            binding.editLocation.helperText = getString(R.string.label_coordinate) +
+                    ": " + java.lang.Double.toString(newlatitude) + ", " + java.lang.Double.toString(newlongitude)
             binding.editLocation.isHelperTextAlwaysShown = true
             binding.btnGetLocation.setImageResource(R.drawable.ic_place_black_24dp)
         }

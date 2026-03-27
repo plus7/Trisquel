@@ -43,13 +43,14 @@
                 android:layout_height="match_parent"
                 android:orientation="horizontal">
 
-                <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+                <net.tnose.app.trisquel.Material3SpinnerWrapper
                     android:id="@+id/spinner_lens"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="@string/label_lens"
-                    app:met_floatingLabel="normal" />
+                    android:paddingBottom="8dp"
+                    android:textSize="18sp" />
 
                 <ImageView
                     android:id="@+id/btn_mount_adapters"
@@ -60,19 +61,21 @@
 
             </LinearLayout>
 
-            <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+            <net.tnose.app.trisquel.Material3SpinnerWrapper
                 android:id="@+id/spinner_aperture"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/label_aperture"
-                app:met_floatingLabel="normal" />
+                android:paddingBottom="8dp"
+                android:textSize="18sp" />
 
-            <com.weiwangcn.betterspinner.library.material.MaterialBetterSpinner
+            <net.tnose.app.trisquel.Material3SpinnerWrapper
                 android:id="@+id/spinner_ss"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/label_shutter_speed"
-                app:met_floatingLabel="normal" />
+                android:paddingBottom="8dp"
+                android:textSize="18sp" />
 
             <TableLayout
                 android:layout_width="match_parent"

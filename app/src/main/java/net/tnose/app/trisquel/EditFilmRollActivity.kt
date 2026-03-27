@@ -117,7 +117,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 invalidateOptionsMenu()
                 if(isResumed) isDirty = true
             }
@@ -126,11 +126,11 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         binding.spinnerCamera.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             invalidateOptionsMenu()
             if(isResumed) isDirty = true
-            oldListener.onItemClick(parent, view, position, id)
+            oldListener?.onItemClick(parent, view, position, id)
         }
 
         binding.spinnerCamera.setOnClickListener {
-            if(binding.spinnerCamera.adapter.count == 0){
+            if(binding.spinnerCamera.adapter?.count == 0){
                 val fragment = YesNoDialogFragment.Builder()
                         .build(REQCODE_ASK_CREATE_CAMERA)
                 fragment.arguments?.putString("message", getString(R.string.msg_ask_create_camera))
@@ -149,7 +149,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 invalidateOptionsMenu()
                 if(isResumed) isDirty = true
                 val brand_adapter = getSuggestListSubPref("film_brand",
@@ -168,7 +168,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 invalidateOptionsMenu()
                 if(isResumed) isDirty = true
             }
@@ -183,7 +183,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
 
             }
 
-            override fun afterTextChanged(s: Editable) {
+            override fun afterTextChanged(s: Editable?) {
                 invalidateOptionsMenu()
                 if(isResumed) isDirty = true
             }
@@ -280,7 +280,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         cameralist = dao.allCameras
         cadapter = CameraAdapter(this, android.R.layout.simple_spinner_item, cameralist!!)
         cadapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerCamera.setAdapter<CameraAdapter>(cadapter)
+        binding.spinnerCamera.setAdapter(cadapter!!)
         if(cameralist!!.size == 0){
             binding.spinnerCamera.error = getString(R.string.error_nocamera)
         }else{
