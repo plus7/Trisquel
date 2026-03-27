@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
-import java.util.*
 
 /**
  * A fragment representing a list of Items.
@@ -43,11 +42,11 @@ class FilmRollFragment : androidx.fragment.app.Fragment() {
 
         //ここでいいのか？
         val pref = PreferenceManager.getDefaultSharedPreferences(this.requireContext())
-        val key = pref.getInt("filmroll_sortkey", 0)
+        pref.getInt("filmroll_sortkey", 0)
 
         // Set the adapter
         if (view is RecyclerViewEmptySupport) {
-            val context = view.getContext()
+            val context = view.context
             mRecyclerView = view
             mRecyclerView!!.setEmptyMessage(getString(R.string.warning_filmroll_not_registered))
             mRecyclerView!!.setEmptyView(container!!.findViewById(R.id.empty_view))
@@ -67,12 +66,6 @@ class FilmRollFragment : androidx.fragment.app.Fragment() {
         }
         return view
     }
-
-    //これ消さないと落ちる
-    /*override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        mRecyclerView!!.adapter = filmrollRecyclerViewAdapter
-    }*/
 
     override fun onAttach(context: Context) {
         super.onAttach(context)

@@ -65,7 +65,7 @@ class TagEditFragment : Fragment() {
     }
 
     fun createNewChip(label: String): Chip {
-        val newchip = Chip(activity!!)
+        val newchip = Chip(requireActivity())
         newchip.text = label
         val chipLayoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -84,8 +84,8 @@ class TagEditFragment : Fragment() {
         return newchip
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         binding.buttonAdd.isEnabled = false
         binding.buttonAdd.setOnClickListener {
@@ -114,7 +114,7 @@ class TagEditFragment : Fragment() {
 
         if(savedInstanceState == null){
             isDirty = false
-            val dao = TrisquelDao(activity!!.applicationContext)
+            val dao = TrisquelDao(requireActivity().applicationContext)
             dao.connection()
             val tags = dao.getTagsByPhoto(mId)
             val alltags = dao.allTags.sortedBy { it.label }
