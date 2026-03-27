@@ -38,6 +38,7 @@
         <activity
             android:name=".EditLensActivity"
             android:label="@string/title_activity_reg_lens"
+            android:theme="@style/AppTheme.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".EditPhotoActivity"
