@@ -98,17 +98,7 @@ dependencies {
     ksp "androidx.room:room-compiler:$room_version"
     androidTestImplementation "androidx.room:room-testing:$room_version"
 
-    //compile ('com.weiwangcn.betterspinner:library-material:1.1.0') {
-    //    exclude group: 'com.android.support', module: 'appcompat-v7'
-    //    exclude group: 'com.rengwuxian.materialedittext', module: 'library'
-    //}
-    implementation project(':library1')
-    implementation project(':library1-material')
     implementation project(':imagepicker')
-    //compile('com.github.plus7:BetterSpinner:1.1.99') {
-    //    exclude group: 'com.android.support', module: 'appcompat-v7'
-    //    exclude group: 'com.rengwuxian.materialedittext', module: 'library'
-    //}
     implementation('com.github.ganfra:material-spinner:2.0.0') {
         exclude group: 'com.android.support', module: 'appcompat-v7'
     }

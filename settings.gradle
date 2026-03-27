@@ -1,7 +1,3 @@
-include ':app', ':library1', ':library1-material', ':imagepicker'
-
-project(':library1').projectDir = new File(settingsDir, '../BetterSpinner/library')
-
-project(':library1-material').projectDir = new File(settingsDir, '../BetterSpinner/library-material')
+include ':app', ':imagepicker'
 
 project(':imagepicker').projectDir = new File(settingsDir, '../Matisse/matisse')
