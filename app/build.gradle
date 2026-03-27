@@ -49,35 +49,35 @@ android {
 }
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'androidx.core:core-ktx:1.13.1'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.core:core-ktx:1.18.0'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.viewpager2:viewpager2:1.1.0'
-    implementation 'androidx.vectordrawable:vectordrawable:1.1.0'
+    implementation 'androidx.vectordrawable:vectordrawable:1.2.0'
     implementation 'androidx.preference:preference-ktx:1.2.1'
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.exifinterface:exifinterface:1.3.7'
+    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'androidx.exifinterface:exifinterface:1.4.2'
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
-    implementation 'androidx.activity:activity:1.9.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.2'
-    implementation 'androidx.activity:activity-compose:1.10.1'
-    implementation platform('androidx.compose:compose-bom:2024.09.00')
+    implementation 'androidx.activity:activity:1.13.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.10.0'
+    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation platform('androidx.compose:compose-bom:2026.03.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.compose.material3:material3'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test:runner:1.5.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    androidTestImplementation platform('androidx.compose:compose-bom:2024.09.00')
+    androidTestImplementation 'androidx.test:runner:1.7.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
+    androidTestImplementation platform('androidx.compose:compose-bom:2026.03.01')
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
-    annotationProcessor 'com.google.auto.value:auto-value:1.7.4'
-    implementation 'com.google.code.gson:gson:2.10'
+    annotationProcessor 'com.google.auto.value:auto-value:1.11.1'
+    implementation 'com.google.code.gson:gson:2.13.2'
     implementation 'com.rengwuxian.materialedittext:library:2.1.4'
-    implementation "androidx.work:work-runtime-ktx:2.9.0"
+    implementation "androidx.work:work-runtime-ktx:2.11.2"
 
     implementation 'it.sephiroth.android.library.imagezoom:library:1.0.4'
     implementation 'com.github.bumptech.glide:glide:4.12.0'
@@ -90,7 +90,7 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
     def room_version = "2.6.1"
 
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0"
     implementation "androidx.room:room-runtime:$room_version"
     implementation "androidx.room:room-ktx:$room_version"
     //annotationProcessor "androidx.room:room-compiler:$room_version"
