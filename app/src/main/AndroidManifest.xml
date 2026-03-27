@@ -34,6 +34,7 @@
         <activity
             android:name=".EditCameraActivity"
             android:label="@string/title_activity_reg_cam"
+            android:theme="@style/AppTheme.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".EditLensActivity"
