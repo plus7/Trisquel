@@ -10,37 +10,36 @@ plugins {
 
 
 android {
-    namespace "net.tnose.app.trisquel"
-    compileSdk 36
+    namespace = "net.tnose.app.trisquel"
+    compileSdk = 36
     defaultConfig {
-        applicationId "net.tnose.app.trisquel"
-        minSdkVersion 30
-        targetSdkVersion 36
-        versionCode 29
-        versionName "Release 24"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        applicationId = "net.tnose.app.trisquel"
+        minSdk = 30
+        targetSdk = 36
+        versionCode = 29
+        versionName = "Release 24"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
     kotlinOptions {
         jvmTarget = '11'
     }
     buildFeatures {
-        viewBinding true
-        compose true
+        viewBinding = true
+        compose = true
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
         }
     }
     productFlavors {
     }
-    namespace 'net.tnose.app.trisquel'
     lint {
-        checkReleaseBuilds false
+        checkReleaseBuilds = false
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
