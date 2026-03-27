@@ -1,213 +1,187 @@
 package net.tnose.app.trisquel
 
-import android.app.Activity
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
-import android.view.Menu
-import android.view.MenuItem
-import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
-import net.tnose.app.trisquel.databinding.ActivityEditAccessoryBinding
+import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 import org.json.JSONArray
 import org.json.JSONException
 
-class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callback  {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ClassicTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    readOnly: Boolean = false,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    isError: Boolean = false,
+    supportingText: @Composable (() -> Unit)? = null
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val colors = TextFieldDefaults.colors(
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
+        disabledContainerColor = Color.Transparent,
+        errorContainerColor = Color.Transparent
+    )
+
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.defaultMinSize(minHeight = 48.dp),
+        readOnly = readOnly,
+        keyboardOptions = keyboardOptions,
+        interactionSource = interactionSource,
+        textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
+        decorationBox = @Composable { innerTextField ->
+            TextFieldDefaults.DecorationBox(
+                value = value,
+                visualTransformation = VisualTransformation.None,
+                innerTextField = innerTextField,
+                placeholder = null,
+                label = { Text(label) },
+                leadingIcon = null,
+                trailingIcon = trailingIcon,
+                supportingText = supportingText,
+                shape = TextFieldDefaults.shape,
+                singleLine = true,
+                enabled = true,
+                isError = isError,
+                interactionSource = interactionSource,
+                colors = colors,
+                contentPadding = PaddingValues(start = 0.dp, top = 8.dp, end = 0.dp, bottom = 8.dp)
+            )
+        }
+    )
+}
+
+class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var id: Int = -1
     private var created: String = ""
-    private var name: String = ""
-    private var mount: String = ""
-    private var isResumed: Boolean = false
-    private var isDirty: Boolean = false
-    private lateinit var binding: ActivityEditAccessoryBinding
 
-    fun setAdapters(){
-        val typeArray = ArrayList<String>()
-        typeArray.add(getString(R.string.label_accessory_filter))
-        typeArray.add(getString(R.string.label_accessory_tc))
-        typeArray.add(getString(R.string.label_accessory_wc))
-        typeArray.add(getString(R.string.label_accessory_ext_tube))
-        typeArray.add(getString(R.string.label_accessory_unknown))
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        val dao = TrisquelDao(applicationContext)
+        dao.connection()
+        val data = intent
+        id = data.getIntExtra("id", -1)
+        
+        var initType = Accessory.ACCESSORY_FILTER
+        var initName = ""
+        var initMount = ""
+        var initFlFactor = ""
 
-        val adapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, typeArray)
-        binding.spinnerAccessoryType.setAdapter(adapter)
-
-        binding.spinnerMount.setAdapter(getSuggestListPref("camera_mounts", R.array.camera_mounts, android.R.layout.simple_spinner_item))
-    }
-
-    fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?){
-        val id = data.getIntExtra("id", 0)
-        this.id = id
-        // savedInstanceStateに関係ない部分
-        if(id < 0)
-            setTitle(R.string.title_activity_add_accessory)
-        else
-            setTitle(R.string.title_activity_edit_accessory)
-
-        if(id > 0 && savedInstanceState == null) { //既存データを開きたて
+        if (id > 0 && savedInstanceState == null) {
             val a = dao.getAccessory(id)
-            this.created = Util.dateToStringUTC(a!!.created)
-
-            binding.editName.setText(a.name)
-            when(a.type){
-                Accessory.ACCESSORY_TELE_CONVERTER,
-                Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                    binding.spinnerMount.setText(a.mount)
-                    binding.editFlFactor.setText(a.focal_length_factor.toString())
-                }
-                Accessory.ACCESSORY_EXT_TUBE -> {
-                    binding.spinnerMount.setText(a.mount)
-                }
-            }
-            binding.spinnerAccessoryType.position = (a.type + 4) % 5
-            refreshUIforType(a.type)
-        }else if(savedInstanceState != null){ //復帰データあり
-            this.created = savedInstanceState.getString("created") ?: ""
-
-            binding.editName.setText(savedInstanceState.getString("name"))
-
-            val type = savedInstanceState.getInt("type")
-            binding.spinnerAccessoryType.position = (type + 4) % 5
-
-            when(type){
-                Accessory.ACCESSORY_TELE_CONVERTER,
-                Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                    binding.spinnerMount.setText(savedInstanceState.getString("mount"))
-                    binding.editFlFactor.setText(savedInstanceState.getDouble("focal_length_factor").toString())
-                }
-                Accessory.ACCESSORY_EXT_TUBE -> {
-                    binding.spinnerMount.setText(savedInstanceState.getString("mount"))
-                }
-            }
-            refreshUIforType(type)
-        }else{  //新規開きたて
-            refreshUIforType(Accessory.ACCESSORY_UNKNOWN)
-        }
-    }
-
-    fun refreshUIforType(type: Int){
-        when(type){
-            Accessory.ACCESSORY_FILTER, Accessory.ACCESSORY_UNKNOWN, -1 -> {
-                binding.spinnerMount.visibility = View.GONE
-                binding.editFlFactor.visibility = View.GONE
-            }
-            Accessory.ACCESSORY_TELE_CONVERTER,
-            Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                binding.spinnerMount.visibility = View.VISIBLE
-                binding.editFlFactor.visibility = View.VISIBLE
-            }
-            Accessory.ACCESSORY_EXT_TUBE -> {
-                binding.spinnerMount.visibility = View.VISIBLE
-                binding.editFlFactor.visibility = View.GONE
-            }
-        }
-        invalidateFocalLengthFactor()
-    }
-
-    fun invalidateFocalLengthFactor(){
-        val factor = Util.safeStr2Dobule(binding.editFlFactor.text.toString())
-        when(getCurrentType()){
-            Accessory.ACCESSORY_TELE_CONVERTER -> {
-                if(factor <= 1.0){
-                    binding.editFlFactor.error = getString(R.string.error_flfactor_toosmall)
-                }else{
-                    binding.editFlFactor.error = null
-                }
-            }
-            Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                if(factor >= 1.0 || factor == 0.0){
-                    binding.editFlFactor.error = getString(R.string.error_flfactor_toobig)
-                }else{
-                    binding.editFlFactor.error = null
-                }
-            }
-        }
-    }
-
-    fun setEventListeners(){
-        val oldListenerAT = binding.spinnerAccessoryType.onItemClickListener
-        binding.spinnerAccessoryType.onItemClickListener = object : AdapterView.OnItemClickListener{
-            override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long){
-                oldListenerAT?.onItemClick(parent, view, position, id)
-                if(isResumed) isDirty = true
-                refreshUIforType((position+1) % 5)
-                invalidateOptionsMenu()
-            }
-        }
-
-        binding.editName.addTextChangedListener(object : TextWatcher{
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-
-            }
-
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-
-            }
-
-            override fun afterTextChanged(s: Editable) {
-                if(isResumed) isDirty = true
-                invalidateOptionsMenu()
-            }
-        })
-
-        val oldListenerM = binding.spinnerMount.onItemClickListener
-        binding.spinnerMount.onItemClickListener = object : AdapterView.OnItemClickListener{
-            override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long){
-                oldListenerM?.onItemClick(parent, view, position, id)
-                if(isResumed) isDirty = true
-                invalidateOptionsMenu()
-            }
-        }
-
-        binding.spinnerMount.addTextChangedListener(object : TextWatcher{
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-
-            }
-
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-
-            }
-
-            override fun afterTextChanged(s: Editable) {
-                if(isResumed) isDirty = true
-                invalidateOptionsMenu()
-            }
-        })
-
-        binding.editFlFactor.addTextChangedListener(object : TextWatcher{
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-
-            }
-
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-
-            }
-
-            override fun afterTextChanged(s: Editable) {
-                if(isResumed) isDirty = true
-                when(getCurrentType()){
+            if (a != null) {
+                created = Util.dateToStringUTC(a.created)
+                initName = a.name
+                initType = a.type
+                when (a.type) {
                     Accessory.ACCESSORY_TELE_CONVERTER,
-                    Accessory.ACCESSORY_WIDE_CONVERTER -> invalidateFocalLengthFactor()
+                    Accessory.ACCESSORY_WIDE_CONVERTER -> {
+                        initMount = a.mount
+                        initFlFactor = a.focal_length_factor.toString()
+                    }
+                    Accessory.ACCESSORY_EXT_TUBE -> {
+                        initMount = a.mount
+                    }
                 }
-                invalidateOptionsMenu()
             }
-        })
+        } else if (savedInstanceState != null) {
+            created = savedInstanceState.getString("created") ?: ""
+            initName = savedInstanceState.getString("name") ?: ""
+            initType = savedInstanceState.getInt("type")
+            when (initType) {
+                Accessory.ACCESSORY_TELE_CONVERTER,
+                Accessory.ACCESSORY_WIDE_CONVERTER -> {
+                    initMount = savedInstanceState.getString("mount") ?: ""
+                    initFlFactor = savedInstanceState.getDouble("focal_length_factor").toString()
+                }
+                Accessory.ACCESSORY_EXT_TUBE -> {
+                    initMount = savedInstanceState.getString("mount") ?: ""
+                }
+            }
+        }
+        dao.close()
+
+        val titleRes = if (id < 0) R.string.title_activity_add_accessory else R.string.title_activity_edit_accessory
+        
+        setContent {
+            TrisquelTheme {
+                EditAccessoryScreen(
+                    title = stringResource(id = titleRes),
+                    initType = initType,
+                    initName = initName,
+                    initMount = initMount,
+                    initFlFactor = initFlFactor,
+                    suggestedMounts = getSuggestListPref("camera_mounts", R.array.camera_mounts),
+                    onSave = { type, name, mount, flFactor ->
+                        saveAndFinish(type, name, mount, flFactor)
+                    },
+                    onCancel = {
+                        setResult(RESULT_CANCELED, Intent())
+                        finish()
+                    }
+                )
+            }
+        }
     }
 
-    fun getCurrentType(): Int{
-        return (binding.spinnerAccessoryType.position+1) % 5
-    }
-
-    protected fun getSuggestListPref(prefkey: String, defRscId: Int, resource: Int): ArrayAdapter<String> {
+    private fun getSuggestListPref(prefkey: String, defRscId: Int): List<String> {
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val prefstr = pref.getString(prefkey, "[]")
-        val strArray = java.util.ArrayList<String>()
+        val strArray = ArrayList<String>()
         val defRsc = resources.getStringArray(defRscId)
         try {
             val array = JSONArray(prefstr)
@@ -217,13 +191,13 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         } catch (e: JSONException) {
         }
         strArray.addAll(defRsc)
-        return ArrayAdapter<String>(this, resource, strArray.distinct())
+        return strArray.distinct()
     }
 
-    protected fun saveSuggestListPref(prefkey: String, defRscId: Int, newValues: Array<String>) {
+    private fun saveSuggestListPref(prefkey: String, defRscId: Int, newValues: Array<String>) {
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val prefstr = pref.getString(prefkey, "[]")
-        val strArray = java.util.ArrayList<String>()
+        val strArray = ArrayList<String>()
         val defRsc = resources.getStringArray(defRscId)
         try {
             val array = JSONArray(prefstr)
@@ -233,14 +207,13 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         } catch (e: JSONException) {
         }
 
-        for(item in newValues){
-            if(item.isEmpty()) continue
+        for (item in newValues) {
+            if (item.isEmpty()) continue
             if (strArray.indexOf(item) >= 0) {
                 strArray.removeAt(strArray.indexOf(item))
                 strArray.add(0, item)
             }
         }
-
         strArray.addAll(defRsc)
 
         val result = JSONArray(strArray.distinct())
@@ -249,170 +222,262 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         e.apply()
     }
 
-    private fun canSave(): Boolean{
-        val baseCond = (binding.spinnerAccessoryType.position >= 0) and (binding.editName.text?.isNotEmpty() ?: false)
-        val flFactor = Util.safeStr2Dobule(binding.editFlFactor.text.toString())
-        val mountIsNotEmpty = binding.spinnerMount.text?.isNotEmpty() ?: false
-        val additionalCond = when (binding.spinnerAccessoryType.position){
-            0 -> true
-            1 -> mountIsNotEmpty and (flFactor > 1.0)
-            2 -> mountIsNotEmpty and (flFactor < 1.0) and (flFactor > 0.0)
-            3 -> mountIsNotEmpty
-            4 -> true
+    private fun saveAndFinish(type: Int, name: String, mount: String, flFactor: Double) {
+        val data = Intent()
+        data.putExtra("id", id)
+        data.putExtra("type", type)
+        data.putExtra("created", created)
+        data.putExtra("name", name)
+        
+        when (type) {
+            Accessory.ACCESSORY_TELE_CONVERTER,
+            Accessory.ACCESSORY_WIDE_CONVERTER -> {
+                data.putExtra("mount", mount)
+                data.putExtra("focal_length_factor", flFactor)
+                saveSuggestListPref("camera_mounts", R.array.camera_mounts, arrayOf(mount))
+            }
+            Accessory.ACCESSORY_EXT_TUBE -> {
+                data.putExtra("mount", mount)
+                saveSuggestListPref("camera_mounts", R.array.camera_mounts, arrayOf(mount))
+            }
+        }
+        setResult(RESULT_OK, data)
+        finish()
+    }
+
+    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {}
+    override fun onDialogCancelled(requestCode: Int) {}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditAccessoryScreen(
+    title: String,
+    initType: Int,
+    initName: String,
+    initMount: String,
+    initFlFactor: String,
+    suggestedMounts: List<String>,
+    onSave: (type: Int, name: String, mount: String, flFactor: Double) -> Unit,
+    onCancel: () -> Unit
+) {
+    var type by remember { mutableIntStateOf(initType) }
+    var name by remember { mutableStateOf(initName) }
+    var mount by remember { mutableStateOf(initMount) }
+    var flFactorStr by remember { mutableStateOf(initFlFactor) }
+    var isDirty by remember { mutableStateOf(false) }
+
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val flFactor = Util.safeStr2Dobule(flFactorStr)
+
+    val typeOptions = listOf(
+        stringResource(id = R.string.label_accessory_filter) to Accessory.ACCESSORY_FILTER,
+        stringResource(id = R.string.label_accessory_tc) to Accessory.ACCESSORY_TELE_CONVERTER,
+        stringResource(id = R.string.label_accessory_wc) to Accessory.ACCESSORY_WIDE_CONVERTER,
+        stringResource(id = R.string.label_accessory_ext_tube) to Accessory.ACCESSORY_EXT_TUBE,
+        stringResource(id = R.string.label_accessory_unknown) to Accessory.ACCESSORY_UNKNOWN
+    )
+    val selectedTypeIndex = typeOptions.indexOfFirst { it.second == type }.takeIf { it >= 0 } ?: 4
+    
+    val canSave = remember(type, name, mount, flFactorStr) {
+        val baseCond = name.isNotEmpty()
+        val mountIsNotEmpty = mount.isNotEmpty()
+        val additionalCond = when (type) {
+            Accessory.ACCESSORY_FILTER, Accessory.ACCESSORY_UNKNOWN -> true
+            Accessory.ACCESSORY_TELE_CONVERTER -> mountIsNotEmpty && flFactor > 1.0
+            Accessory.ACCESSORY_WIDE_CONVERTER -> mountIsNotEmpty && flFactor < 1.0 && flFactor > 0.0
+            Accessory.ACCESSORY_EXT_TUBE -> mountIsNotEmpty
             else -> false
         }
-        return baseCond and additionalCond
+        baseCond && additionalCond
     }
 
-    private fun getData(): Intent{
-        var data: Intent = Intent()
-
-        data.putExtra("id", this.id)
-        data.putExtra("type", getCurrentType())
-        data.putExtra("created", this.created)
-        data.putExtra("name", binding.editName.text.toString())
-
-        when(getCurrentType()){
-            Accessory.ACCESSORY_TELE_CONVERTER,
-            Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                data.putExtra("mount", binding.spinnerMount.text.toString())
-                data.putExtra("focal_length_factor", Util.safeStr2Dobule(binding.editFlFactor.text.toString()))
-            }
-            Accessory.ACCESSORY_EXT_TUBE -> {
-                data.putExtra("mount", binding.spinnerMount.text.toString())
-            }
-        }
-
-        return data
-    }
-
-    override fun onResume() {
-        super.onResume()
-        isResumed = true
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityEditAccessoryBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
-        setAdapters()
-
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        val data = intent
-        loadData(data, dao, savedInstanceState)
-        dao.close()
-
-        setEventListeners()
-
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (!isDirty) {
-                    setResult(RESULT_CANCELED, Intent())
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                    isEnabled = true
-                } else {
-                    askSave()
-                }
-            }
-        })
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean("isDirty", isDirty)
-        outState.putInt("type", getCurrentType())
-        outState.putString("created", this.created)
-        outState.putString("name", binding.editName.text.toString())
-
-        when(getCurrentType()) {
-            Accessory.ACCESSORY_TELE_CONVERTER,
-            Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                outState.putString("mount", binding.spinnerMount.text.toString())
-                outState.putDouble("focal_length_factor", Util.safeStr2Dobule(binding.editFlFactor.text.toString()))
-            }
-            Accessory.ACCESSORY_EXT_TUBE -> {
-                outState.putString("mount", binding.spinnerMount.text.toString())
-            }
-        }
-
-        super.onSaveInstanceState(outState)
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.save, menu)
-        menu.findItem(R.id.menu_save).isEnabled = canSave()
-        return true
-    }
-
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
-        when (requestCode) {
-            101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val resultData = getData()
-                setResult(RESULT_OK, resultData)
-                when(getCurrentType()) {
-                    Accessory.ACCESSORY_EXT_TUBE,
-                    Accessory.ACCESSORY_WIDE_CONVERTER,
-                    Accessory.ACCESSORY_TELE_CONVERTER -> saveSuggestListPref("camera_mounts", R.array.camera_mounts,
-                            arrayOf(binding.spinnerMount.text.toString()))
-                }
-                finish()
-            } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(RESULT_CANCELED, Intent())
-                finish()
-            }
-            102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                /* do nothing */
-            } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(RESULT_CANCELED, Intent())
-                finish()
-            }
+    val flFactorError = remember(type, flFactorStr) {
+        if (flFactorStr.isEmpty()) return@remember null
+        val f = Util.safeStr2Dobule(flFactorStr)
+        when (type) {
+            Accessory.ACCESSORY_TELE_CONVERTER -> if (f <= 1.0) R.string.error_flfactor_toosmall else null
+            Accessory.ACCESSORY_WIDE_CONVERTER -> if (f >= 1.0 || f == 0.0) R.string.error_flfactor_toobig else null
+            else -> null
         }
     }
 
-    override fun onDialogCancelled(requestCode: Int) {
-    }
-
-    private fun askSave(){
-        if (canSave()) {
-            val fragment = YesNoDialogFragment.Builder()
-                    .build(101)
-            fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
-            fragment.arguments?.putString("positive", getString(R.string.save))
-            fragment.arguments?.putString("negative", getString(R.string.discard))
-            fragment.showOn(this, "dialog")
+    val onBackPressed = {
+        if (!isDirty) {
+            onCancel()
         } else {
-            val fragment = YesNoDialogFragment.Builder()
-                    .build(102)
-            fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-            fragment.arguments?.putString("positive", getString(R.string.continue_editing))
-            fragment.arguments?.putString("negative", getString(R.string.discard))
-            fragment.showOn(this, "dialog")
+            if (canSave) showSaveDialog = true else showDiscardDialog = true
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val data: Intent
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressedDispatcher.onBackPressed()
-                return true
-            }
-            R.id.menu_save -> {
-                data = getData()
-                setResult(RESULT_OK, data)
-                when(getCurrentType()) {
-                    Accessory.ACCESSORY_EXT_TUBE,
-                    Accessory.ACCESSORY_WIDE_CONVERTER,
-                    Accessory.ACCESSORY_TELE_CONVERTER -> saveSuggestListPref("camera_mounts", R.array.camera_mounts,
-                            arrayOf(binding.spinnerMount.text.toString()))
+    BackHandler(onBack = onBackPressed)
+
+    if (showSaveDialog) {
+        AlertDialog(
+            // ダイアログの角をシャープにして昔の見た目に近づける
+            shape = RoundedCornerShape(4.dp),
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSaveDialog = false
+                    onSave(type, name, mount, flFactor)
+                }) {
+                    Text(stringResource(R.string.save))
                 }
-                finish()
-                return true
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showSaveDialog = false
+                    onCancel()
+                }) {
+                    Text(stringResource(R.string.discard))
+                }
+            }
+        )
+    }
+
+    if (showDiscardDialog) {
+        AlertDialog(
+            shape = RoundedCornerShape(4.dp),
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
+            confirmButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text(stringResource(R.string.continue_editing))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDiscardDialog = false
+                    onCancel()
+                }) {
+                    Text(stringResource(R.string.discard))
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onBackPressed) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { onSave(type, name, mount, flFactor) },
+                        enabled = canSave
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = "Save")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            var expandedType by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expandedType,
+                onExpandedChange = { expandedType = it }
+            ) {
+                ClassicTextField(
+                    value = typeOptions[selectedTypeIndex].first,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = stringResource(R.string.label_accessory_type),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedType,
+                    onDismissRequest = { expandedType = false }
+                ) {
+                    typeOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.first) },
+                            onClick = {
+                                type = option.second
+                                isDirty = true
+                                expandedType = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            ClassicTextField(
+                value = name,
+                onValueChange = { name = it; isDirty = true },
+                label = stringResource(R.string.label_name),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (type == Accessory.ACCESSORY_TELE_CONVERTER || type == Accessory.ACCESSORY_WIDE_CONVERTER || type == Accessory.ACCESSORY_EXT_TUBE) {
+                var expandedMount by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = expandedMount,
+                    onExpandedChange = { expandedMount = it }
+                ) {
+                    ClassicTextField(
+                        value = mount,
+                        onValueChange = { mount = it; isDirty = true; expandedMount = true },
+                        label = stringResource(R.string.label_mount),
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMount) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    val filteredMounts = suggestedMounts.filter { it.contains(mount, ignoreCase = true) }
+                    if (filteredMounts.isNotEmpty()) {
+                        ExposedDropdownMenu(
+                            expanded = expandedMount,
+                            onDismissRequest = { expandedMount = false }
+                        ) {
+                            filteredMounts.forEach { suggestion ->
+                                DropdownMenuItem(
+                                    text = { Text(suggestion) },
+                                    onClick = {
+                                        mount = suggestion
+                                        isDirty = true
+                                        expandedMount = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (type == Accessory.ACCESSORY_TELE_CONVERTER || type == Accessory.ACCESSORY_WIDE_CONVERTER) {
+                ClassicTextField(
+                    value = flFactorStr,
+                    onValueChange = { flFactorStr = it; isDirty = true },
+                    label = stringResource(R.string.label_fl_factor),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = flFactorError != null,
+                    supportingText = flFactorError?.let {
+                        { Text(stringResource(it)) }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
-        return super.onOptionsItemSelected(item)
     }
 }
