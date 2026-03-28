@@ -93,7 +93,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.TimeZone
 
-class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
+class EditPhotoActivity : AppCompatActivity() {
     internal val REQCODE_GET_LOCATION = 100
     internal val REQCODE_ADD_LENS = 110
     internal val REQCODE_IMAGES = 106
@@ -481,10 +481,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         outState.putBooleanArray("checkstate", checkState.toBooleanArray())
         super.onSaveInstanceState(outState)
     }
-
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {}
-
-    override fun onDialogCancelled(requestCode: Int) {}
 
     fun setLatLng(newlatitude: Double, newlongitude: Double) {
         if (newlatitude == 999.0 || newlongitude == 999.0) {

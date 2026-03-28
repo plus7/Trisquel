@@ -104,7 +104,7 @@ fun ClassicTextField(
     )
 }
 
-class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
+class EditAccessoryActivity : AppCompatActivity() {
     private var id: Int = -1
     private var created: String = ""
 
@@ -244,9 +244,6 @@ class EditAccessoryActivity : AppCompatActivity(), AbstractDialogFragment.Callba
         setResult(RESULT_OK, data)
         finish()
     }
-
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {}
-    override fun onDialogCancelled(requestCode: Int) {}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

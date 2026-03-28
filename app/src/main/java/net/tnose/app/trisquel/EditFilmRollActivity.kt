@@ -53,7 +53,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.util.regex.Pattern
 
-class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
+class EditFilmRollActivity : AppCompatActivity() {
     private var id: Int = 0
     private var created: String? = null
     
@@ -261,10 +261,6 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         setResult(RESULT_OK, data)
         finish()
     }
-
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {}
-
-    override fun onDialogCancelled(requestCode: Int) {}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -67,7 +67,7 @@ import java.util.regex.Pattern
 
 private val mFArray = listOf(0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.2, 2.4, 2.5, 2.8, 3.2, 3.5, 4.0, 4.5, 4.8, 5.0, 5.6, 6.3, 6.7, 7.1, 8.0, 9.0, 9.5, 10.0, 11.0, 13.0, 14.0, 16.0, 18.0, 19.0, 20.0, 22.0)
 
-class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
+class EditCameraActivity : AppCompatActivity() {
     private var id: Int = -1
     private var type: Int = 0
     private var created: String = ""
@@ -289,10 +289,6 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         setResult(RESULT_OK, data)
         finish()
     }
-
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {}
-
-    override fun onDialogCancelled(requestCode: Int) {}
 }
 
 @Composable
