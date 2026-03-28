@@ -48,6 +48,7 @@
         <activity
             android:name=".EditFilmRollActivity"
             android:label="@string/title_activity_reg_filmroll"
+            android:theme="@style/AppTheme.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".MainActivity"

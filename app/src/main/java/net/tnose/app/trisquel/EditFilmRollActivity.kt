@@ -3,19 +3,52 @@ package net.tnose.app.trisquel
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
-import android.view.Menu
-import android.view.MenuItem
-import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.core.os.BundleCompat
 import androidx.preference.PreferenceManager
-import net.tnose.app.trisquel.databinding.ActivityEditFilmRollBinding
+import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -25,11 +58,10 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     internal val REQCODE_ASK_CREATE_CAMERA = 103
     private var id: Int = 0
     private var created: String? = null
-    private var cameralist: ArrayList<CameraSpec>? = null
-    private var cadapter: CameraAdapter? = null
-    private var isResumed: Boolean = false
-    private var isDirty: Boolean = false
-    private lateinit var binding: ActivityEditFilmRollBinding
+    
+    // UI state
+    var cameralist by mutableStateOf<List<CameraSpec>>(emptyList())
+    var isDirty by mutableStateOf(false)
 
     private val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -42,274 +74,94 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                 c.id = dao.addCamera(c).toInt()
                 updateCameraList(dao)
                 dao.close()
-                binding.spinnerCamera.clearFocus()
-                invalidateOptionsMenu()
             }
         }
-    }
-
-    val data: Intent
-        get() {
-            val data = Intent()
-            data.putExtra("id", id)
-            data.putExtra("name", binding.editName.text.toString())
-            data.putExtra("created", created)
-            data.putExtra("camera", cameralist!![binding.spinnerCamera.position].id)
-            data.putExtra("manufacturer", binding.editManufacturer.text.toString())
-            data.putExtra("brand", binding.editBrand.text.toString())
-            var iso: Int
-            try {
-                iso = Integer.parseInt(binding.editIso.text.toString())
-            } catch (e: NumberFormatException) {
-                iso = 0
-            }
-            data.putExtra("iso", iso)
-            return data
-        }
-
-    protected fun loadData(data: Intent, dao: TrisquelDao, savedInstanceState: Bundle?) {
-        val id = data.getIntExtra("id", 0)
-        this.id = id
-        if(id <= 0)
-            setTitle(R.string.title_activity_reg_filmroll)
-        else
-            setTitle(R.string.title_activity_edit_filmroll)
-
-        if(id > 0 && savedInstanceState == null) { //既存データを開きたて
-            val f = dao.getFilmRoll(id)
-            this.created = Util.dateToStringUTC(f!!.created)
-            binding.editName.setText(f.name)
-            if (f.camera.id > 0)
-                binding.spinnerCamera.position = cadapter!!.getPosition(f.camera.id)
-            binding.editManufacturer.setText(f.manufacturer)
-            binding.editBrand.setText(f.brand)
-            if (f.iso > 0)
-                binding.editIso.setText(Integer.toString(f.iso))
-        }else if(savedInstanceState != null){ //復帰データあり
-            this.created = savedInstanceState.getString("created")
-            binding.editName.setText(savedInstanceState.getString("name"))
-            binding.spinnerCamera.position = savedInstanceState.getInt("camera_position")
-            binding.editManufacturer.setText(savedInstanceState.getString("manufacturer"))
-            binding.editBrand.setText(savedInstanceState.getString("brand"))
-            binding.editIso.setText(savedInstanceState.getString("iso"))
-        }else{ //新規データ開きたて
-            val cameraid = data.getIntExtra("default_camera", -1)
-            if (cameraid != -1)
-                binding.spinnerCamera.position = cadapter!!.getPosition(cameraid)
-
-            val film_manufacturer = data.getStringExtra("default_manufacturer") ?: ""
-            if (film_manufacturer.isNotEmpty())
-                binding.editManufacturer.setText(film_manufacturer)
-
-            val film_brand = data.getStringExtra("default_brand") ?: ""
-            if (film_brand.isNotEmpty())
-                binding.editBrand.setText(film_brand)
-        }
-    }
-
-    protected fun setEventListeners() {
-        binding.editName.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-
-            }
-
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-
-            }
-
-            override fun afterTextChanged(s: Editable?) {
-                invalidateOptionsMenu()
-                if(isResumed) isDirty = true
-            }
-        })
-        val oldListener = binding.spinnerCamera.onItemClickListener// これやらないとgetPositionがおかしくなる
-        binding.spinnerCamera.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
-            invalidateOptionsMenu()
-            if(isResumed) isDirty = true
-            oldListener?.onItemClick(parent, view, position, id)
-        }
-
-        binding.spinnerCamera.setOnClickListener {
-            if(binding.spinnerCamera.adapter?.count == 0){
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(REQCODE_ASK_CREATE_CAMERA)
-                fragment.arguments?.putString("message", getString(R.string.msg_ask_create_camera))
-                fragment.arguments?.putString("positive", getString(android.R.string.yes))
-                fragment.arguments?.putString("negative", getString(android.R.string.no))
-                fragment.showOn(this, "dialog")
-            }
-        }
-
-        binding.editManufacturer.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-
-            }
-
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-
-            }
-
-            override fun afterTextChanged(s: Editable?) {
-                invalidateOptionsMenu()
-                if(isResumed) isDirty = true
-                val brand_adapter = getSuggestListSubPref("film_brand",
-                        binding.editManufacturer.text.toString(),
-                        android.R.layout.simple_dropdown_item_1line)
-                binding.editBrand.setAdapter(brand_adapter)
-            }
-        })
-
-        binding.editBrand.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-
-            }
-
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-
-            }
-
-            override fun afterTextChanged(s: Editable?) {
-                invalidateOptionsMenu()
-                if(isResumed) isDirty = true
-            }
-        })
-
-        binding.editIso.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
-
-            }
-
-            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-
-            }
-
-            override fun afterTextChanged(s: Editable?) {
-                invalidateOptionsMenu()
-                if(isResumed) isDirty = true
-            }
-        })
-    }
-
-    protected fun canSave(): Boolean {
-        return binding.editName.text.toString().length > 0 && binding.spinnerCamera.position >= 0
-    }
-
-    override fun onResume() {
-        super.onResume()
-        isResumed = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityEditFilmRollBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        val actionBar = supportActionBar
-        actionBar!!.setDisplayHomeAsUpEnabled(true)
 
         val dao = TrisquelDao(applicationContext)
         dao.connection()
-
         updateCameraList(dao)
-
-        val manufacturer_adapter = getSuggestListPref("film_manufacturer",
-                R.array.film_manufacturer,
-                android.R.layout.simple_dropdown_item_1line)
-        binding.editManufacturer.setAdapter(manufacturer_adapter)
-
-        val iso_adapter = ArrayAdapter.createFromResource(this, R.array.film_iso, android.R.layout.simple_dropdown_item_1line)
-
-        binding.editIso.setAdapter(iso_adapter)
-        binding.editIso.onFocusChangeListener = View.OnFocusChangeListener { view, b ->
-            if (b && binding.editIso.text.toString().isEmpty()) {
-                val zoom = Pattern.compile(".*?(\\d++).*")
-                val m = zoom.matcher(binding.editBrand.text.toString())
-                if (m.find()) {
-                    val suggestedISO = m.group(1)
-                    binding.editIso.setText(suggestedISO)
-                }
-            }
-        }
-
         val data = intent
-        loadData(data, dao, savedInstanceState)
-        dao.close()
+        id = data.getIntExtra("id", 0)
 
-        val brand_adapter = getSuggestListSubPref("film_brand",
-                binding.editManufacturer.text.toString(),
-                android.R.layout.simple_dropdown_item_1line)
-        binding.editBrand.setAdapter(brand_adapter)
+        var initName = ""
+        var initCameraId = -1
+        var initManufacturer = ""
+        var initBrand = ""
+        var initIso = ""
 
-        setEventListeners()
-
-        if (savedInstanceState != null) {
+        if (id > 0 && savedInstanceState == null) {
+            val f = dao.getFilmRoll(id)
+            if (f != null) {
+                created = Util.dateToStringUTC(f.created)
+                initName = f.name
+                initCameraId = f.camera.id
+                initManufacturer = f.manufacturer
+                initBrand = f.brand
+                if (f.iso > 0) initIso = f.iso.toString()
+            }
+        } else if (savedInstanceState != null) {
+            created = savedInstanceState.getString("created")
+            initName = savedInstanceState.getString("name") ?: ""
+            val cameraPosition = savedInstanceState.getInt("camera_position", -1)
+            if (cameraPosition >= 0 && cameraPosition < cameralist.size) {
+                initCameraId = cameralist[cameraPosition].id
+            }
+            initManufacturer = savedInstanceState.getString("manufacturer") ?: ""
+            initBrand = savedInstanceState.getString("brand") ?: ""
+            initIso = savedInstanceState.getString("iso") ?: ""
             isDirty = savedInstanceState.getBoolean("isDirty")
         } else {
-            isDirty = false
+            val defaultCameraId = data.getIntExtra("default_camera", -1)
+            initCameraId = defaultCameraId
+            initManufacturer = data.getStringExtra("default_manufacturer") ?: ""
+            initBrand = data.getStringExtra("default_brand") ?: ""
         }
+        dao.close()
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (!isDirty) {
-                    setResult(RESULT_CANCELED, Intent())
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                    isEnabled = true
-                } else {
-                    if (canSave()) {
-                        val fragment = YesNoDialogFragment.Builder()
-                                .build(101)
-                        fragment.arguments?.putString("message", getString(R.string.msg_save_or_discard_data))
-                        fragment.arguments?.putString("positive", getString(R.string.save))
-                        fragment.arguments?.putString("negative", getString(R.string.discard))
-                        fragment.showOn(this@EditFilmRollActivity, "dialog")
-                    } else {
-                        val fragment = YesNoDialogFragment.Builder()
-                                .build(102)
-                        fragment.arguments?.putString("message", getString(R.string.msg_continue_editing_or_discard_data))
-                        fragment.arguments?.putString("positive", getString(R.string.continue_editing))
-                        fragment.arguments?.putString("negative", getString(R.string.discard))
-                        fragment.showOn(this@EditFilmRollActivity, "dialog")
+        val titleRes = if (id <= 0) R.string.title_activity_reg_filmroll else R.string.title_activity_edit_filmroll
+
+        setContent {
+            TrisquelTheme {
+                EditFilmRollScreen(
+                    title = stringResource(id = titleRes),
+                    initName = initName,
+                    initCameraId = initCameraId,
+                    initManufacturer = initManufacturer,
+                    initBrand = initBrand,
+                    initIso = initIso,
+                    cameras = cameralist,
+                    suggestedManufacturers = getSuggestListPref("film_manufacturer", R.array.film_manufacturer),
+                    onBrandSuggestionsRequested = { manufacturer ->
+                        getSuggestListSubPref("film_brand", manufacturer)
+                    },
+                    onSave = { name, cameraId, manufacturer, brand, isoStr ->
+                        saveAndFinish(name, cameraId, manufacturer, brand, isoStr)
+                    },
+                    onCancel = {
+                        setResult(RESULT_CANCELED, Intent())
+                        finish()
+                    },
+                    onRequestCreateCamera = {
+                        val fragment = YesNoDialogFragment.Builder().build(REQCODE_ASK_CREATE_CAMERA)
+                        fragment.arguments?.putString("message", getString(R.string.msg_ask_create_camera))
+                        fragment.arguments?.putString("positive", getString(android.R.string.yes))
+                        fragment.arguments?.putString("negative", getString(android.R.string.no))
+                        fragment.showOn(this, "dialog")
                     }
-                }
-            }
-        })
-    }
-
-    protected fun updateCameraList(dao: TrisquelDao) {
-        cameralist = dao.allCameras
-        cadapter = CameraAdapter(this, android.R.layout.simple_spinner_item, cameralist!!)
-        cadapter!!.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerCamera.setAdapter(cadapter!!)
-        if(cameralist!!.size == 0){
-            binding.spinnerCamera.error = getString(R.string.error_nocamera)
-        }else{
-            binding.spinnerCamera.error = null
-            if(cameralist!!.size == 1){
-                binding.spinnerCamera.position = 0
+                )
             }
         }
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean("isDirty", isDirty)
-        outState.putInt("camera_position", binding.spinnerCamera.position)
-        outState.putString("created", this.created)
-        outState.putString("name", binding.editName.text.toString())
-        outState.putString("manufacturer", binding.editManufacturer.text.toString())
-        outState.putString("brand", binding.editBrand.text.toString())
-        outState.putString("iso", binding.editIso.text.toString())
-        super.onSaveInstanceState(outState)
+    private fun updateCameraList(dao: TrisquelDao) {
+        cameralist = dao.allCameras
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.save, menu)
-        menu.findItem(R.id.menu_save).isEnabled = canSave()
-        return true
-    }
-
-    //dead copy from EditCameraActivity
-    protected fun getSuggestListPref(prefkey: String, defRscId: Int, resource: Int): ArrayAdapter<String> {
+    private fun getSuggestListPref(prefkey: String, defRscId: Int): List<String> {
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val prefstr = pref.getString(prefkey, "[]")
         val strArray = ArrayList<String>()
@@ -321,17 +173,12 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             }
         } catch (e: JSONException) {
         }
-
-        for (i in defRsc.indices) {
-            if (strArray.contains(defRsc[i])) continue
-            strArray.add(defRsc[i])
-        }
-
-        return ArrayAdapter<String>(this, resource, strArray)
+        strArray.addAll(defRsc)
+        return strArray.distinct()
     }
 
-    protected fun saveSuggestListPref(prefkey: String, defRscId: Int, newValue: String) {
-        if(newValue.isEmpty()) return
+    private fun saveSuggestListPref(prefkey: String, defRscId: Int, newValue: String) {
+        if (newValue.isEmpty()) return
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val prefstr = pref.getString(prefkey, "[]")
         val strArray = ArrayList<String>()
@@ -348,49 +195,44 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             strArray.removeAt(strArray.indexOf(newValue))
         }
         strArray.add(0, newValue)
-        for (i in defRsc.indices) {
-            if (strArray.contains(defRsc[i])) continue
-            strArray.add(defRsc[i])
-        }
-        val result = JSONArray(strArray)
+        strArray.addAll(defRsc)
+        
+        val result = JSONArray(strArray.distinct())
         val e = pref.edit()
         e.putString(prefkey, result.toString())
         e.apply()
     }
 
-
-    //dead copy from EditCameraActivity
-    protected fun getSuggestListSubPref(parentkey: String, subkey: String, resource: Int): ArrayAdapter<String> {
+    private fun getSuggestListSubPref(parentkey: String, subkey: String): List<String> {
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val prefstr = pref.getString(parentkey, "{}")
         val strArray = ArrayList<String>()
         try {
             val obj = JSONObject(prefstr)
-            val array = obj.getJSONArray(subkey) ?: return ArrayAdapter(this, resource, strArray)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
+            if (!obj.isNull(subkey)) {
+                val array = obj.getJSONArray(subkey)
+                for (i in 0 until array.length()) {
+                    strArray.add(array.getString(i))
+                }
             }
         } catch (e: JSONException) {
         }
-
-        return ArrayAdapter(this, resource, strArray)
+        return strArray
     }
 
-    protected fun saveSuggestListSubPref(parentkey: String, subkey: String, newValue: String) {
+    private fun saveSuggestListSubPref(parentkey: String, subkey: String, newValue: String) {
+        if (newValue.isEmpty() || subkey.isEmpty()) return
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val prefstr = pref.getString(parentkey, "{}")
         val strArray = ArrayList<String>()
         var obj: JSONObject? = null
         try {
-            val array: JSONArray
             obj = JSONObject(prefstr)
-            if (obj.isNull(subkey)) {
-                array = JSONArray()
-            } else {
-                array = obj.getJSONArray(subkey)
-            }
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
+            if (!obj.isNull(subkey)) {
+                val array = obj.getJSONArray(subkey)
+                for (i in 0 until array.length()) {
+                    strArray.add(array.getString(i))
+                }
             }
         } catch (e: JSONException) {
             obj = JSONObject()
@@ -400,6 +242,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             strArray.removeAt(strArray.indexOf(newValue))
         }
         strArray.add(0, newValue)
+        
         val result = JSONArray(strArray)
         val e = pref.edit()
         try {
@@ -407,60 +250,315 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
             e.putString(parentkey, obj.toString())
             e.apply()
         } catch (e1: JSONException) {
-
         }
+    }
 
+    private fun saveAndFinish(name: String, cameraId: Int, manufacturer: String, brand: String, isoStr: String) {
+        val data = Intent()
+        data.putExtra("id", id)
+        data.putExtra("name", name)
+        data.putExtra("created", created)
+        data.putExtra("camera", cameraId)
+        data.putExtra("manufacturer", manufacturer)
+        data.putExtra("brand", brand)
+        val iso = isoStr.toIntOrNull() ?: 0
+        data.putExtra("iso", iso)
+
+        saveSuggestListPref("film_manufacturer", R.array.film_manufacturer, manufacturer)
+        saveSuggestListSubPref("film_brand", manufacturer, brand)
+
+        setResult(RESULT_OK, data)
+        finish()
     }
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
-            101 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val resultData = this.data
-                saveSuggestListPref("film_manufacturer",
-                        R.array.film_manufacturer, binding.editManufacturer.text.toString())
-                saveSuggestListSubPref("film_brand",
-                        binding.editManufacturer.text.toString(),
-                        binding.editBrand.text.toString())
-                setResult(RESULT_OK, resultData)
-                finish()
-            } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(RESULT_CANCELED, Intent())
-                finish()
-            }
-            102 -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                /* do nothing */
-            } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                setResult(RESULT_CANCELED, Intent())
-                finish()
-            }
-            REQCODE_ASK_CREATE_CAMERA -> if(resultCode == DialogInterface.BUTTON_POSITIVE){
+            REQCODE_ASK_CREATE_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val nextIntent = Intent(application, EditCameraActivity::class.java)
                 addCameraLauncher.launch(nextIntent)
             }
         }
     }
 
-    override fun onDialogCancelled(requestCode: Int) {
-        // onDialogResult(requestCode, DialogInterface.BUTTON_NEUTRAL, null);
+    override fun onDialogCancelled(requestCode: Int) {}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditFilmRollScreen(
+    title: String,
+    initName: String,
+    initCameraId: Int,
+    initManufacturer: String,
+    initBrand: String,
+    initIso: String,
+    cameras: List<CameraSpec>,
+    suggestedManufacturers: List<String>,
+    onBrandSuggestionsRequested: (String) -> List<String>,
+    onSave: (String, Int, String, String, String) -> Unit,
+    onCancel: () -> Unit,
+    onRequestCreateCamera: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current as EditFilmRollActivity
+
+    var name by remember { mutableStateOf(initName) }
+    var cameraId by remember { mutableIntStateOf(initCameraId) }
+    var manufacturer by remember { mutableStateOf(initManufacturer) }
+    var brand by remember { mutableStateOf(initBrand) }
+    var iso by remember { mutableStateOf(initIso) }
+
+    // If there is exactly one camera, select it by default.
+    // Ensure this only happens once, or when list changes and cameraId is still invalid
+    LaunchedEffect(cameras.size) {
+        if (cameras.size == 1 && cameraId <= 0) {
+            cameraId = cameras[0].id
+        }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressedDispatcher.onBackPressed()
-                return true
-            }
-            R.id.menu_save -> {
-                saveSuggestListPref("film_manufacturer",
-                        R.array.film_manufacturer, binding.editManufacturer.text.toString())
-                saveSuggestListSubPref("film_brand",
-                        binding.editManufacturer.text.toString(),
-                        binding.editBrand.text.toString())
-                setResult(RESULT_OK, data)
-                finish()
-                return true
-            }
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val canSave = name.isNotEmpty() && cameraId > 0
+
+    val onBackPressed = {
+        if (!context.isDirty) {
+            onCancel()
+        } else {
+            if (canSave) showSaveDialog = true else showDiscardDialog = true
         }
-        return super.onOptionsItemSelected(item)
+    }
+
+    BackHandler(onBack = onBackPressed)
+
+    if (showSaveDialog) {
+        AlertDialog(
+            shape = RoundedCornerShape(4.dp),
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSaveDialog = false
+                    onSave(name, cameraId, manufacturer, brand, iso)
+                }) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showSaveDialog = false
+                    onCancel()
+                }) {
+                    Text(stringResource(R.string.discard))
+                }
+            }
+        )
+    }
+
+    if (showDiscardDialog) {
+        AlertDialog(
+            shape = RoundedCornerShape(4.dp),
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
+            confirmButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text(stringResource(R.string.continue_editing))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDiscardDialog = false
+                    onCancel()
+                }) {
+                    Text(stringResource(R.string.discard))
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onBackPressed) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { onSave(name, cameraId, manufacturer, brand, iso) },
+                        enabled = canSave
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = "Save")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Name
+            ClassicTextField(
+                value = name,
+                onValueChange = { name = it; context.isDirty = true },
+                label = stringResource(R.string.label_name),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Camera
+            var expandedCamera by remember { mutableStateOf(false) }
+            val selectedCameraName = cameras.find { it.id == cameraId }?.let { "${it.manufacturer} ${it.modelName}" } ?: ""
+            
+            ExposedDropdownMenuBox(
+                expanded = expandedCamera,
+                onExpandedChange = { 
+                    if (cameras.isEmpty()) {
+                        onRequestCreateCamera()
+                    } else {
+                        expandedCamera = it
+                    }
+                }
+            ) {
+                ClassicTextField(
+                    value = selectedCameraName,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = stringResource(R.string.label_camera),
+                    isError = cameras.isEmpty(),
+                    supportingText = if (cameras.isEmpty()) { { Text(stringResource(R.string.error_nocamera)) } } else null,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCamera) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                if (cameras.isNotEmpty()) {
+                    ExposedDropdownMenu(
+                        expanded = expandedCamera,
+                        onDismissRequest = { expandedCamera = false }
+                    ) {
+                        cameras.forEach { camera ->
+                            DropdownMenuItem(
+                                text = { Text("${camera.manufacturer} ${camera.modelName}") },
+                                onClick = {
+                                    cameraId = camera.id
+                                    context.isDirty = true
+                                    expandedCamera = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Manufacturer
+            var expandedManufacturer by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expandedManufacturer,
+                onExpandedChange = { expandedManufacturer = it }
+            ) {
+                ClassicTextField(
+                    value = manufacturer,
+                    onValueChange = { manufacturer = it; context.isDirty = true; expandedManufacturer = true },
+                    label = stringResource(R.string.label_manufacturer),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedManufacturer) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                val filteredManufacturers = suggestedManufacturers.filter { it.contains(manufacturer, ignoreCase = true) }
+                if (filteredManufacturers.isNotEmpty()) {
+                    ExposedDropdownMenu(
+                        expanded = expandedManufacturer,
+                        onDismissRequest = { expandedManufacturer = false }
+                    ) {
+                        filteredManufacturers.forEach { suggestion ->
+                            DropdownMenuItem(
+                                text = { Text(suggestion) },
+                                onClick = {
+                                    manufacturer = suggestion
+                                    context.isDirty = true
+                                    expandedManufacturer = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Brand
+            var expandedBrand by remember { mutableStateOf(false) }
+            val suggestedBrands = remember(manufacturer) { onBrandSuggestionsRequested(manufacturer) }
+            ExposedDropdownMenuBox(
+                expanded = expandedBrand,
+                onExpandedChange = { expandedBrand = it }
+            ) {
+                ClassicTextField(
+                    value = brand,
+                    onValueChange = {
+                        brand = it
+                        context.isDirty = true
+                        expandedBrand = true
+                    },
+                    label = stringResource(R.string.label_brand),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBrand) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            if (!focusState.isFocused) {
+                                // Extract ISO from brand when losing focus
+                                val zoom = Pattern.compile(".*?(\\d++).*")
+                                val m = zoom.matcher(brand)
+                                if (m.find() && iso.isEmpty()) {
+                                    iso = m.group(1) ?: ""
+                                }
+                            }
+                        }
+                )
+                val filteredBrands = suggestedBrands.filter { it.contains(brand, ignoreCase = true) }
+                if (filteredBrands.isNotEmpty()) {
+                    ExposedDropdownMenu(
+                        expanded = expandedBrand,
+                        onDismissRequest = { expandedBrand = false }
+                    ) {
+                        filteredBrands.forEach { suggestion ->
+                            DropdownMenuItem(
+                                text = { Text(suggestion) },
+                                onClick = {
+                                    brand = suggestion
+                                    context.isDirty = true
+                                    expandedBrand = false
+                                    
+                                    val zoom = Pattern.compile(".*?(\\d++).*")
+                                    val m = zoom.matcher(suggestion)
+                                    if (m.find() && iso.isEmpty()) {
+                                        iso = m.group(1) ?: ""
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ISO
+            ClassicTextField(
+                value = iso,
+                onValueChange = { iso = it; context.isDirty = true },
+                label = stringResource(R.string.label_iso),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
