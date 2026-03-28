@@ -61,21 +61,6 @@ class MainActivity : AppCompatActivity(),
         const val ID_LENS = 2
         const val ID_ACCESSORY = 3
         const val ID_FAVORITES = 4
-        const val REQCODE_EDIT_CAMERA = 1
-        const val REQCODE_ADD_CAMERA = 2
-        const val REQCODE_EDIT_LENS = 3
-        const val REQCODE_ADD_LENS = 4
-        const val REQCODE_EDIT_FILMROLL = 5
-        const val REQCODE_ADD_FILMROLL = 6
-        const val REQCODE_EDIT_PHOTO_LIST = 7
-        const val REQCODE_EDIT_ACCESSORY = 8
-        const val REQCODE_ADD_ACCESSORY = 9
-        const val REQCODE_BACKUP_DIR_CHOSEN_FOR_SLIMEX = 10
-        const val REQCODE_BACKUP_DIR_CHOSEN_FOR_FULLEX = 11
-        const val REQCODE_SEARCH = 12
-        const val REQCODE_ZIPFILE_CHOSEN_FOR_MERGEIP = 13
-        const val REQCODE_ZIPFILE_CHOSEN_FOR_REPLIP = 14
-        const val REQCODE_DBFILE_CHOSEN_FOR_REPLDB = 15
 
         const val RETCODE_ALERT = 200
         const val RETCODE_CAMERA_TYPE = 300
