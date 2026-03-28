@@ -1,6 +1,5 @@
 package net.tnose.app.trisquel
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +34,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -48,8 +49,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
@@ -61,7 +68,6 @@ import java.util.regex.Pattern
 private val mFArray = listOf(0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.2, 2.4, 2.5, 2.8, 3.2, 3.5, 4.0, 4.5, 4.8, 5.0, 5.6, 6.3, 6.7, 7.1, 8.0, 9.0, 9.5, 10.0, 11.0, 13.0, 14.0, 16.0, 18.0, 19.0, 20.0, 22.0)
 
 class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
-    private val DIALOG_CUSTOM_SHUTTER_SPEEDS = 100
     private var id: Int = -1
     private var type: Int = 0
     private var created: String = ""
@@ -248,6 +254,9 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         fSteps: Set<Double>
     ) {
         val fStepsString = mFArray.filter { fSteps.contains(it) }.joinToString(", ")
+        val fastestSsDouble = Util.stringToDoubleShutterSpeed(fastestSs)
+        val slowestSsDouble = Util.stringToDoubleShutterSpeed(slowestSs)
+        
         val data = Intent()
         val c = CameraSpec(id, type,
             if (created.isNotEmpty()) created else Util.dateToStringUTC(Date()),
@@ -257,8 +266,8 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
             model,
             format,
             ssGrainSize,
-            Util.stringToDoubleShutterSpeed(fastestSs),
-            Util.stringToDoubleShutterSpeed(slowestSs),
+            if (fastestSsDouble != 0.0) fastestSsDouble else null,
+            if (slowestSsDouble != 0.0) slowestSsDouble else null,
             bulbAvailable,
             ssCustomSteps.map { Util.stringToDoubleShutterSpeed(it).toString() }.joinToString(","),
             evGrainSize,
@@ -281,40 +290,77 @@ class EditCameraActivity : AppCompatActivity(), AbstractDialogFragment.Callback 
         finish()
     }
 
-    fun showCustomSsDialog() {
-        val fragment = ShutterSpeedCustomizeDialogFragment.Builder().build(DIALOG_CUSTOM_SHUTTER_SPEEDS)
-        fragment.arguments?.putString("title", getString(R.string.title_dialog_custom_ss))
-        fragment.arguments?.putString("message", getString(R.string.msg_dialog_custom_ss))
-        val defaultValue = if (ssCustomSteps.isEmpty()) {
-            resources.getStringArray(R.array.shutter_speeds_one).joinToString("\n")
-        } else {
-            ssCustomSteps.joinToString("\n")
-        }
-        fragment.arguments?.putString("default_value", defaultValue)
-        fragment.showOn(this, "dialog")
-    }
+    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {}
 
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
-        when (requestCode) {
-            DIALOG_CUSTOM_SHUTTER_SPEEDS -> {
-                if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                    val valueStr = data.getStringExtra("value") ?: ""
-                    val list = valueStr.split("\n").filter { it.isNotEmpty() }.sortedBy { Util.stringToDoubleShutterSpeed(it) }
-                    ssCustomSteps = list
-                    previousCheckedSsSteps = 0
-                    isDirty = true
-                } else if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                    ssGrainSize = previousCheckedSsSteps
+    override fun onDialogCancelled(requestCode: Int) {}
+}
+
+@Composable
+fun ShutterSpeedCustomizeDialog(
+    title: String,
+    message: String,
+    defaultValue: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(defaultValue) }
+    
+    val regex = Regex("(1/\\d+|\\d+\\.\\d+|\\d+)")
+    val lines = text.split("\n")
+    val isValid = text.isNotEmpty() && lines.all { it.matches(regex) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title) },
+        text = {
+            Column {
+                if (message.isNotEmpty()) {
+                    Text(text = message, modifier = Modifier.padding(bottom = 12.dp))
                 }
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp, max = 300.dp),
+                    isError = !isValid && text.isNotEmpty(),
+                    visualTransformation = { annotatedString ->
+                        val builder = AnnotatedString.Builder()
+                        val textStr = annotatedString.text
+                        val linesSplit = textStr.split("\n")
+                        var startIndex = 0
+                        for (i in linesSplit.indices) {
+                            val line = linesSplit[i]
+                            val match = line.matches(regex)
+                            if (!match) {
+                                builder.withStyle(SpanStyle(color = Color.Red)) {
+                                    append(line)
+                                }
+                            } else {
+                                builder.append(line)
+                            }
+                            if (i < linesSplit.size - 1) {
+                                builder.append("\n")
+                            }
+                            startIndex += line.length + 1
+                        }
+                        TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(text) },
+                enabled = isValid
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
             }
         }
-    }
-
-    override fun onDialogCancelled(requestCode: Int) {
-        when (requestCode) {
-            DIALOG_CUSTOM_SHUTTER_SPEEDS -> ssGrainSize = previousCheckedSsSteps
-        }
-    }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -356,6 +402,7 @@ fun EditCameraScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showCustomSsDialog by remember { mutableStateOf(false) }
 
     val formatList = stringArrayResource(id = R.array.film_formats).toList()
     val evGrainSizeList = stringArrayResource(id = R.array.ev_grain_size_list).toList()
@@ -446,6 +493,31 @@ fun EditCameraScreen(
                 }) {
                     Text(stringResource(R.string.discard))
                 }
+            }
+        )
+    }
+
+    if (showCustomSsDialog) {
+        val defaultValue = if (context.ssCustomSteps.isEmpty()) {
+            context.resources.getStringArray(R.array.shutter_speeds_one).joinToString("\n")
+        } else {
+            context.ssCustomSteps.joinToString("\n")
+        }
+        
+        ShutterSpeedCustomizeDialog(
+            title = stringResource(R.string.title_dialog_custom_ss),
+            message = stringResource(R.string.msg_dialog_custom_ss),
+            defaultValue = defaultValue,
+            onConfirm = { valueStr ->
+                val list = valueStr.split("\n").filter { it.isNotEmpty() }.sortedBy { Util.stringToDoubleShutterSpeed(it) }
+                context.ssCustomSteps = list
+                context.previousCheckedSsSteps = 0
+                context.isDirty = true
+                showCustomSsDialog = false
+            },
+            onDismiss = {
+                context.ssGrainSize = context.previousCheckedSsSteps
+                showCustomSsDialog = false
             }
         )
     }
@@ -620,7 +692,7 @@ fun EditCameraScreen(
                                 .clickable {
                                     if (value == 0) {
                                         if (context.previousCheckedSsSteps != 0) {
-                                            context.showCustomSsDialog()
+                                            showCustomSsDialog = true
                                         }
                                         context.ssGrainSize = value
                                     } else {
