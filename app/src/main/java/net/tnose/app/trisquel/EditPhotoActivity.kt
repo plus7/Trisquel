@@ -3,7 +3,6 @@ package net.tnose.app.trisquel
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -96,7 +95,6 @@ import java.util.TimeZone
 
 class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_GET_LOCATION = 100
-    internal val DIALOG_ASK_CREATE_LENS = 109
     internal val REQCODE_ADD_LENS = 110
     internal val REQCODE_IMAGES = 106
 
@@ -484,14 +482,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         super.onSaveInstanceState(outState)
     }
 
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
-        when (requestCode) {
-            DIALOG_ASK_CREATE_LENS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val intent = Intent(application, EditLensActivity::class.java)
-                startActivityForResult(intent, REQCODE_ADD_LENS)
-            }
-        }
-    }
+    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {}
 
     override fun onDialogCancelled(requestCode: Int) {}
 
@@ -700,6 +691,7 @@ fun EditPhotoScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showAskCreateLensDialog by remember { mutableStateOf(false) }
 
     val onBackPressed = {
         if (!context.isDirty) {
@@ -742,6 +734,28 @@ fun EditPhotoScreen(
             dismissButton = {
                 TextButton(onClick = { showDiscardDialog = false; onCancel() }) {
                     Text(stringResource(R.string.discard))
+                }
+            }
+        )
+    }
+
+    if (showAskCreateLensDialog) {
+        AlertDialog(
+            onDismissRequest = { showAskCreateLensDialog = false },
+            title = null,
+            text = { Text(stringResource(R.string.msg_ask_create_lens)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showAskCreateLensDialog = false
+                    val intent = Intent(context, EditLensActivity::class.java)
+                    context.startActivityForResult(intent, context.REQCODE_ADD_LENS)
+                }) {
+                    Text(stringResource(android.R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAskCreateLensDialog = false }) {
+                    Text(stringResource(android.R.string.no))
                 }
             }
         )
@@ -927,11 +941,7 @@ fun EditPhotoScreen(
                     expanded = expandedLens,
                     onExpandedChange = { 
                         if (context.lenslist.isEmpty()) {
-                            val fragment = YesNoDialogFragment.Builder().build(context.DIALOG_ASK_CREATE_LENS)
-                            fragment.arguments?.putString("message", context.getString(R.string.msg_ask_create_lens))
-                            fragment.arguments?.putString("positive", context.getString(android.R.string.yes))
-                            fragment.arguments?.putString("negative", context.getString(android.R.string.no))
-                            fragment.showOn(context, "dialog")
+                            showAskCreateLensDialog = true
                         } else {
                             expandedLens = it 
                         }

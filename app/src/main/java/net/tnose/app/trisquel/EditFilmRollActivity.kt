@@ -1,6 +1,5 @@
 package net.tnose.app.trisquel
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
@@ -55,7 +54,6 @@ import org.json.JSONObject
 import java.util.regex.Pattern
 
 class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
-    internal val REQCODE_ASK_CREATE_CAMERA = 103
     private var id: Int = 0
     private var created: String? = null
     
@@ -63,7 +61,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
     var cameralist by mutableStateOf<List<CameraSpec>>(emptyList())
     var isDirty by mutableStateOf(false)
 
-    private val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val data = result.data
             if (data != null) {
@@ -144,13 +142,6 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
                     onCancel = {
                         setResult(RESULT_CANCELED, Intent())
                         finish()
-                    },
-                    onRequestCreateCamera = {
-                        val fragment = YesNoDialogFragment.Builder().build(REQCODE_ASK_CREATE_CAMERA)
-                        fragment.arguments?.putString("message", getString(R.string.msg_ask_create_camera))
-                        fragment.arguments?.putString("positive", getString(android.R.string.yes))
-                        fragment.arguments?.putString("negative", getString(android.R.string.no))
-                        fragment.showOn(this, "dialog")
                     }
                 )
             }
@@ -271,14 +262,7 @@ class EditFilmRollActivity : AppCompatActivity(), AbstractDialogFragment.Callbac
         finish()
     }
 
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
-        when (requestCode) {
-            REQCODE_ASK_CREATE_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val nextIntent = Intent(application, EditCameraActivity::class.java)
-                addCameraLauncher.launch(nextIntent)
-            }
-        }
-    }
+    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {}
 
     override fun onDialogCancelled(requestCode: Int) {}
 }
@@ -296,8 +280,7 @@ fun EditFilmRollScreen(
     suggestedManufacturers: List<String>,
     onBrandSuggestionsRequested: (String) -> List<String>,
     onSave: (String, Int, String, String, String) -> Unit,
-    onCancel: () -> Unit,
-    onRequestCreateCamera: () -> Unit
+    onCancel: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current as EditFilmRollActivity
 
@@ -317,6 +300,7 @@ fun EditFilmRollScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showAskCreateCameraDialog by remember { mutableStateOf(false) }
 
     val canSave = name.isNotEmpty() && cameraId > 0
 
@@ -375,6 +359,28 @@ fun EditFilmRollScreen(
         )
     }
 
+    if (showAskCreateCameraDialog) {
+        AlertDialog(
+            onDismissRequest = { showAskCreateCameraDialog = false },
+            title = null,
+            text = { Text(stringResource(R.string.msg_ask_create_camera)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showAskCreateCameraDialog = false
+                    val nextIntent = Intent(context, EditCameraActivity::class.java)
+                    context.addCameraLauncher.launch(nextIntent)
+                }) {
+                    Text(stringResource(android.R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAskCreateCameraDialog = false }) {
+                    Text(stringResource(android.R.string.no))
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -425,7 +431,7 @@ fun EditFilmRollScreen(
                 expanded = expandedCamera,
                 onExpandedChange = { 
                     if (cameras.isEmpty()) {
-                        onRequestCreateCamera()
+                        showAskCreateCameraDialog = true
                     } else {
                         expandedCamera = it
                     }
