@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,7 +54,6 @@ import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
-import java.util.Arrays
 import java.util.Date
 
 class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentInteractionListener {
@@ -61,7 +61,6 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     internal val REQCODE_EDIT_PHOTO = 101
     internal val REQCODE_EDIT_FILMROLL = 102
     internal val REQCODE_SELECT_THUMBNAIL = 103
-    internal val RETCODE_SDCARD_PERM_IMGPICKER = 106
 
     private val PERMISSIONS =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
@@ -81,6 +80,16 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
     var showOpDialog by mutableStateOf<Photo?>(null)
     var showIndexDialog by mutableStateOf<Photo?>(null)
     var showShiftDialog by mutableStateOf<Photo?>(null)
+
+    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            editThumbPhoto()
+        } else {
+            thumbnailEditingPhoto = null
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+    }
 
     val filmRollText: String
         get() {
@@ -240,36 +249,6 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode){
-            RETCODE_SDCARD_PERM_IMGPICKER -> {
-                onRequestSDCardAccessPermissionsResult(permissions, grantResults, requestCode)
-            }
-        }
-    }
-
-    internal fun onRequestSDCardAccessPermissionsResult(permissions: Array<String>, grantResults: IntArray, requestCode: Int) {
-        val granted =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
-            } else {
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
-            }
-        if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
-            when(requestCode){
-                RETCODE_SDCARD_PERM_IMGPICKER -> {
-                    editThumbPhoto()
-                }
-            }
-        } else {
-            thumbnailEditingPhoto = null
-            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
-        }
-    }
-
     fun editThumbPhoto(){
         Matisse.from(this)
                 .choose(MimeType.ofImage())
@@ -290,7 +269,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val cameraDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
         if (readDenied || cameraDenied) {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
+            requestPermissionLauncher.launch(PERMISSIONS)
             return
         }
         editThumbPhoto()

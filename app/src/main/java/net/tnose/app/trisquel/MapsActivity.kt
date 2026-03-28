@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -27,10 +28,8 @@ import com.google.android.gms.maps.model.MarkerOptions
 import net.tnose.app.trisquel.databinding.ActivityMapsBinding
 import java.io.IOException
 import java.text.Normalizer
-import java.util.Arrays
 
 class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallback {
-    internal val RETCODE_LOC_PERM = 100
     internal val PERMISSIONS = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
     private var mMap: GoogleMap? = null
     private var mMarker: Marker? = null
@@ -40,6 +39,15 @@ class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallbac
     private val locationCallback: LocationCallback? = null
     private val locationRequest: LocationRequest? = null
     private lateinit var binding: ActivityMapsBinding
+
+    private val requestLocationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            setMyLocationEnabledAndGetLastLocation()
+        } else {
+            Toast.makeText(this, getString(R.string.error_permission_location), Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,12 +106,12 @@ class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallbac
                     }
                 }
             }
-            setResult(Activity.RESULT_OK, resultData)
+            setResult(RESULT_OK, resultData)
             finish()
         }
         val cb = findViewById<Button>(R.id.btnCancel)
         cb.setOnClickListener {
-            setResult(Activity.RESULT_CANCELED, Intent())
+            setResult(RESULT_CANCELED, Intent())
             finish()
         }
         val del = findViewById<Button>(R.id.btnDelete)
@@ -116,7 +124,7 @@ class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallbac
     private fun setMyLocationEnabledAndGetLastLocation() {
         if (mMap == null) return
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_LOC_PERM)
+            requestLocationPermissionLauncher.launch(PERMISSIONS)
             return
         }
         mMap!!.isMyLocationEnabled = true
@@ -163,22 +171,6 @@ class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallbac
             mMarker = mMap!!.addMarker(MarkerOptions().position(latLng))
         }
         //mMap.setOn
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == RETCODE_LOC_PERM) {
-            onRequestLocationPermissionsResult(permissions, grantResults)
-        }
-    }
-
-    internal fun onRequestLocationPermissionsResult(permissions: Array<String>, grantResults: IntArray) {
-        val granted2 = intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED)
-        if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted2)) {
-            setMyLocationEnabledAndGetLastLocation()
-        } else {
-            Toast.makeText(this, getString(R.string.error_permission_location), Toast.LENGTH_LONG).show()
-        }
     }
 
     companion object {

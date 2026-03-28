@@ -14,6 +14,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -86,7 +87,6 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
-import java.util.Arrays
 import java.util.Calendar
 
 class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
@@ -95,8 +95,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val DIALOG_DATE = 104
     internal val DIALOG_ACCESSORY = 105
     internal val REQCODE_IMAGES = 106
-    internal val RETCODE_SDCARD_PERM_LOADIMG = 107
-    internal val RETCODE_SDCARD_PERM_IMGPICKER = 108
     internal val DIALOG_ASK_CREATE_LENS = 109
     internal val REQCODE_ADD_LENS = 110
 
@@ -144,6 +142,26 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     
     var favorite by mutableStateOf(false)
     var isDirty by mutableStateOf(false)
+
+    private val requestPermissionPickerLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            openImagePicker()
+        } else {
+            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private val requestPermissionLoadLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
+        } else {
+            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+    }
 
     val expCompensation: Double
         get() {
@@ -621,29 +639,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         } catch (e1: JSONException) {}
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        val granted =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-                intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED)
-            } else {
-                intArrayOf(PackageManager.PERMISSION_GRANTED, PackageManager.PERMISSION_GRANTED)
-            }
-        if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
-            when(requestCode){
-                RETCODE_SDCARD_PERM_LOADIMG -> {
-                    supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
-                }
-                RETCODE_SDCARD_PERM_IMGPICKER -> {
-                    openImagePicker()
-                }
-            }
-        } else {
-            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
-            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
-        }
-    }
-
     fun openImagePicker() {
         Matisse.from(this)
             .choose(MimeType.ofImage())
@@ -664,7 +659,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val cameraDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
         if (readDenied || cameraDenied) {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_IMGPICKER)
+            requestPermissionPickerLauncher.launch(PERMISSIONS)
             return
         }
         openImagePicker()
@@ -679,7 +674,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
         if (readDenied) {
             supplementalImagesToLoad = paths
-            ActivityCompat.requestPermissions(this, PERMISSIONS, RETCODE_SDCARD_PERM_LOADIMG)
+            requestPermissionLoadLauncher.launch(PERMISSIONS)
             return
         }
         supplementalImages = (supplementalImages + paths).distinct()

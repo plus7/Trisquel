@@ -42,7 +42,6 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.Arrays
 import java.util.Calendar
 import java.util.Date
 
@@ -78,11 +77,6 @@ class MainActivity : AppCompatActivity(),
         const val RETCODE_BACKUP_PROGRESS = 406
         const val RETCODE_IMPORT_DB = 407
         const val RETCODE_DBCONV_PROGRESS = 408
-        const val RETCODE_SDCARD_PERM_FOR_SLIMEX = 409 /* 汚い実装だがこうするしかないか？ */
-        const val RETCODE_SDCARD_PERM_FOR_FULLEX = 410
-        const val RETCODE_SDCARD_PERM_FOR_MERGEIP = 411
-        const val RETCODE_SDCARD_PERM_FOR_REPLIP = 412
-        const val RETCODE_SDCARD_PERM_FOR_REPLDB = 413
         const val RETCODE_IMPORT_PROGRESS = 414
 
         const val ACTION_CLOSE_PROGRESS_DIALOG = "ACTION_CLOSE_PROGRESS_DIALOG"
@@ -262,6 +256,28 @@ class MainActivity : AppCompatActivity(),
     }
 
     private val searchLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
+
+    private var pendingExportMode: Int? = null
+    private val requestExportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            pendingExportMode?.let { exportDBDialog(it) }
+        } else {
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+        pendingExportMode = null
+    }
+
+    private var pendingImportMode: Int? = null
+    private val requestImportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            pendingImportMode?.let { importDBDialog(it) }
+        } else {
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+        pendingImportMode = null
+    }
 
     //private var localBroadcastManager: androidx.localbroadcastmanager.content.LocalBroadcastManager? = null
     //private var progressFilter: IntentFilter? = null
@@ -467,6 +483,8 @@ class MainActivity : AppCompatActivity(),
         } else {
             0
         }
+        pendingExportMode = if (savedInstanceState?.containsKey("pending_export_mode") == true) savedInstanceState.getInt("pending_export_mode") else null
+        pendingImportMode = if (savedInstanceState?.containsKey("pending_import_mode") == true) savedInstanceState.getInt("pending_import_mode") else null
 
         val filtertype = savedInstanceState?.getInt("filmroll_filtertype") ?: 0
         val filtervalue = savedInstanceState?.getStringArrayList("filmroll_filtervalue") ?: arrayListOf("")
@@ -559,6 +577,8 @@ class MainActivity : AppCompatActivity(),
             outState.putStringArrayList("filmroll_filtervalue", filtervalue)
         }
         outState.putInt("is_intent_service_working", isIntentServiceWorking)
+        pendingExportMode?.let { outState.putInt("pending_export_mode", it) }
+        pendingImportMode?.let { outState.putInt("pending_import_mode", it) }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -1081,42 +1101,6 @@ class MainActivity : AppCompatActivity(),
 
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when(requestCode){
-            RETCODE_SDCARD_PERM_FOR_SLIMEX,
-            RETCODE_SDCARD_PERM_FOR_FULLEX,
-            RETCODE_SDCARD_PERM_FOR_MERGEIP,
-            RETCODE_SDCARD_PERM_FOR_REPLIP,
-            RETCODE_SDCARD_PERM_FOR_REPLDB
-            -> onRequestSDCardAccessPermissionsResult(requestCode, permissions, grantResults)
-            else -> {}
-        }
-    }
-
-    private fun onRequestSDCardAccessPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        val granted =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
-            } else {
-                intArrayOf(PackageManager.PERMISSION_GRANTED,
-                    PackageManager.PERMISSION_GRANTED)
-            }
-        if (Arrays.equals(permissions, PERMISSIONS) && Arrays.equals(grantResults, granted)) {
-            when(requestCode){
-                RETCODE_SDCARD_PERM_FOR_SLIMEX -> exportDBDialog(0)
-                RETCODE_SDCARD_PERM_FOR_FULLEX -> exportDBDialog(1)
-                RETCODE_SDCARD_PERM_FOR_MERGEIP -> importDBDialog(0)
-                RETCODE_SDCARD_PERM_FOR_REPLIP -> importDBDialog(1)
-                RETCODE_SDCARD_PERM_FOR_REPLDB -> importDBDialog(2)
-            }
-        } else {
-            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
-        }
-    }
-
     private fun checkPermAndExportDB(mode: Int) { // 0: Slim 1: Whole
         val readDenied =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -1130,10 +1114,8 @@ class MainActivity : AppCompatActivity(),
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
         if (readDenied || mediaLocDenied || notificationDenied){
-            val retcode =
-                    if(mode == 0) RETCODE_SDCARD_PERM_FOR_SLIMEX
-                    else RETCODE_SDCARD_PERM_FOR_FULLEX
-            ActivityCompat.requestPermissions(this, PERMISSIONS, retcode)
+            pendingExportMode = mode
+            requestExportPermissionsLauncher.launch(PERMISSIONS)
             return
         }
 
@@ -1153,13 +1135,8 @@ class MainActivity : AppCompatActivity(),
             else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
         if (readDenied || mediaLocDenied || notificationDenied){
-            val retcode =
-                    when(mode){
-                        0 -> RETCODE_SDCARD_PERM_FOR_MERGEIP
-                        1 -> RETCODE_SDCARD_PERM_FOR_REPLIP
-                        else -> RETCODE_SDCARD_PERM_FOR_REPLIP
-                    }
-            ActivityCompat.requestPermissions(this, PERMISSIONS, retcode)
+            pendingImportMode = mode
+            requestImportPermissionsLauncher.launch(PERMISSIONS)
             return
         }
         importDBDialog(mode)
