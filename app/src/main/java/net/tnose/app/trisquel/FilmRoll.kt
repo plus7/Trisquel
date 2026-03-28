@@ -126,7 +126,7 @@ class FilmRoll {
             // iso: Int, exposures: Int) {
             //
             return FilmRoll(fEntity.id, fEntity.name, fEntity.created,
-                fEntity.lastModified, CameraSpec.fromEntity(cEntity),
+                fEntity.lastModified, CameraSpec.fromEntity(cEntity!!),
                 fEntity.manufacturer, fEntity.brand,
                 fEntity.iso.toInt(), 0, ArrayList())// pEntities)
         }

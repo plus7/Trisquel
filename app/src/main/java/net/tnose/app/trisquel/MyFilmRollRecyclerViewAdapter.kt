@@ -12,6 +12,9 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
+import kotlin.Boolean
+import kotlin.Int
+import kotlin.String
 
 class MyFilmRollRecyclerViewAdapter(
     diffCallback: DiffUtil.ItemCallback<FilmRollAndRels>,
@@ -71,12 +74,12 @@ class MyFilmRollRecyclerViewAdapter(
             holder.mNameView.text = holder.mItem!!.filmRoll.name
         }
         holder.mCameraAndBrandView.text =
-            holder.mItem!!.camera.manufacturer + " " + holder.mItem!!.camera.modelName + "   " +
+            holder.mItem!!.camera!!.manufacturer + " " + holder.mItem!!.camera!!.modelName + "   " +
                     holder.mItem!!.filmRoll.manufacturer + " " + holder.mItem!!.filmRoll.brand
 
         val exp = holder.mItem!!.photoDates.size
         val array = arrayListOf<String>()
-        val f = FilmRoll.fromEntity(holder.mItem!!)
+        FilmRoll.fromEntity(holder.mItem!!)
         val dateRange = getDateRange(holder.mItem!!.photoDates)
         if(dateRange.isNotEmpty())
             array.add(dateRange)
@@ -107,7 +110,7 @@ class MyFilmRollRecyclerViewAdapter(
         }
     }
 
-    inner class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
+    class ViewHolder(val mView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(mView) {
         //public final TextView mIdView;
         val mNameView: TextView
         val mCameraAndBrandView: TextView

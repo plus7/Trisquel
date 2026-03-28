@@ -52,11 +52,11 @@ class TrisquelRepo {
             2 -> {
                 if (filterByKind == 0) {
                     return mTrisquelDao.allFilmRollAndRelsFlow().map {
-                        it -> it.sortedBy { it.camera.manufacturer + " " + it.camera.modelName }
+                        it -> it.sortedBy { it.camera!!.manufacturer + " " + it.camera!!.modelName }
                     }.asLiveData()
                 } else {
                     return mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
-                            it -> it.sortedBy { it.camera.manufacturer + " " + it.camera.modelName }
+                            it -> it.sortedBy { it.camera!!.manufacturer + " " + it.camera!!.modelName }
                     }.asLiveData()
                 }
             }
@@ -101,7 +101,7 @@ class TrisquelRepo {
     // 直前のショットのDateとPairにするという変則的なデータとなっている。
     fun getPhotosByFilmRollId(filmRollId: Int): LiveData<List<Pair<String, PhotoAndTagIds>>> {
         return mTrisquelDao.photosByFilmRollId(filmRollId).map{
-            it -> it.runningFold(
+            it.runningFold(
             Pair("", PhotoAndTagIds(PhotoEntity(
                 0, 0, 0, "", 0, 0,
                 0.0, 0.0, 0.0, 0.0,
@@ -118,7 +118,7 @@ class TrisquelRepo {
         return mTrisquelDao.getPhotosByAndQuery(tags, tags.count()).map {
                 it -> it.sortedByDescending { it.filmRollDate } // 日付は新しいほう優先なのでソート
         }.map{
-            it -> it.runningFold(
+            it.runningFold(
             Pair(Pair("",0),
                 PhotoAndRels(PhotoEntity(
                             0, 0, 0, "", 0, 0,
@@ -144,10 +144,10 @@ class TrisquelRepo {
             deleteTagMap(tm.tagMap.id)
         }
         for(tm in tagmaps){
-            if(tm.tag.refcnt == 1){
-                deleteTag(tm.tag.id)
+            if(tm.tag!!.refcnt == 1){
+                deleteTag(tm.tag!!.id)
             }else{
-                upsertTag(TagEntity(tm.tag.id, tm.tag.label, tm.tag.refcnt!! - 1))
+                upsertTag(TagEntity(tm.tag!!.id, tm.tag!!.label, tm.tag!!.refcnt!! - 1))
             }
         }
         mTrisquelDao.deletePhoto(
@@ -188,7 +188,7 @@ class TrisquelRepo {
         val createList = ArrayList<String>()
         val removeList = currentTags.toMutableList()
         for(label in tags) {
-            val existingTag = currentTags.find { it.tag.label == label }
+            val existingTag = currentTags.find { it.tag!!.label == label }
             if (existingTag == null){
                 createList.add(label)
             }else{
@@ -209,10 +209,10 @@ class TrisquelRepo {
         //removeList内はrefcntをデクリメントもしくは削除の対象
         for(t in removeList){
             deleteTagMap(t.tagMap.tagId!!)
-            if(t.tag.refcnt == 1){ // 削除対象
-                deleteTag(t.tag.id)
+            if(t.tag!!.refcnt == 1){ // 削除対象
+                deleteTag(t.tag!!.id)
             }else{ // デクリメントだけ
-                upsertTag(TagEntity(t.tag.id, t.tag.label, t.tag.refcnt!! - 1))
+                upsertTag(TagEntity(t.tag!!.id, t.tag!!.label, t.tag!!.refcnt!! - 1))
             }
         }
     }

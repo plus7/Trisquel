@@ -152,7 +152,7 @@ data class FilmRollAndRels(
     val filmRoll: FilmRollEntity,
 
     @Relation(parentColumn = "camera", entityColumn = "_id")
-    val camera: CameraEntity,
+    val camera: CameraEntity?,
 
     //@Relation(parentColumn = "_id", entityColumn = "filmroll") //, projection = arrayOf("date"), entity = PhotoEntity.class)
     //val photos: List<PhotoEntity>
@@ -171,9 +171,9 @@ data class PhotoAndRels(
     @Embedded
     val photo: PhotoEntity,
     @Relation(parentColumn = "filmroll", entity = FilmRollEntity::class, entityColumn = "_id",  projection = arrayOf("name"))
-    val filmRoll: String,
+    val filmRoll: String?,
     @Relation(parentColumn = "filmroll", entity = FilmRollEntity::class, entityColumn = "_id",  projection = arrayOf("created"))
-    val filmRollDate: String,
+    val filmRollDate: String?,
     @Relation(parentColumn = "_id", entity = TagMapEntity::class, entityColumn = "photo_id",  projection = arrayOf("tag_id"))
     val tagIds: List<Int>
 )
@@ -182,7 +182,7 @@ data class TagMapAndTag(
     @Embedded
     val tagMap: TagMapEntity,
     @Relation(parentColumn = "tag_id", entityColumn = "_id")
-    val tag: TagEntity
+    val tag: TagEntity?
 )
 
 @Dao
@@ -483,4 +483,3 @@ open class DatabaseHelper(context: Context?){ //} : SQLiteOpenHelper(context, DA
         internal val DATABASE_VERSION = 18
     }
 }
-
