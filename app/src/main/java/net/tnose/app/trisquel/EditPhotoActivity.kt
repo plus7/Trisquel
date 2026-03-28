@@ -46,6 +46,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -60,6 +62,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
@@ -88,11 +91,11 @@ import org.json.JSONObject
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.TimeZone
 
 class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_GET_LOCATION = 100
     internal val DIALOG_MOUNT_ADAPTERS = 103
-    internal val DIALOG_DATE = 104
     internal val DIALOG_ACCESSORY = 105
     internal val REQCODE_IMAGES = 106
     internal val DIALOG_ASK_CREATE_LENS = 109
@@ -482,12 +485,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         super.onSaveInstanceState(outState)
     }
 
-    fun showDateDialogOnActivity() {
-        DatePickerFragment.Builder()
-            .build(DIALOG_DATE)
-            .showOn(this, "dialog")
-    }
-
     fun showAccessoryDialogOnActivity() {
         val fragment = CheckListDialogFragment.Builder().build(DIALOG_ACCESSORY)
         val dao = TrisquelDao(applicationContext)
@@ -543,18 +540,6 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
-            DIALOG_DATE -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val year = data.getIntExtra(DatePickerFragment.EXTRA_YEAR, 1970)
-                val month = data.getIntExtra(DatePickerFragment.EXTRA_MONTH, 0)
-                val day = data.getIntExtra(DatePickerFragment.EXTRA_DAY, 0)
-                val c = Calendar.getInstance()
-                c.set(Calendar.YEAR, year)
-                c.set(Calendar.MONTH, month)
-                c.set(Calendar.DAY_OF_MONTH, day)
-                val sdf = SimpleDateFormat("yyyy/MM/dd")
-                dateStr = sdf.format(c.time)
-                isDirty = true
-            }
             DIALOG_MOUNT_ADAPTERS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val bundle = data.extras
                 saveSuggestListSubPref("mount_adapters", filmroll!!.camera.mount, bundle!!.getStringArrayList("checked_items"))
@@ -772,6 +757,44 @@ fun EditPhotoScreen(
             }
         )
     }
+    
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        val sdf = SimpleDateFormat("yyyy/MM/dd")
+        val initialDateMillis = try {
+            val date = sdf.parse(context.dateStr)
+            date?.time ?: System.currentTimeMillis()
+        } catch (e: Exception) {
+            System.currentTimeMillis()
+        }
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialDateMillis + TimeZone.getDefault().getOffset(initialDateMillis)
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val c = Calendar.getInstance()
+                        c.timeInMillis = millis - TimeZone.getDefault().getOffset(millis)
+                        context.dateStr = sdf.format(c.time)
+                        context.isDirty = true
+                    }
+                    showDatePicker = false
+                }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -825,7 +848,7 @@ fun EditPhotoScreen(
                     label = stringResource(R.string.label_date),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.matchParentSize().clickable { context.showDateDialogOnActivity() })
+                Spacer(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
             }
 
             // Lens
