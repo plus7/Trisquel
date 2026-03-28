@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -95,11 +96,9 @@ import java.util.TimeZone
 
 class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal val REQCODE_GET_LOCATION = 100
-    internal val DIALOG_MOUNT_ADAPTERS = 103
-    internal val DIALOG_ACCESSORY = 105
-    internal val REQCODE_IMAGES = 106
     internal val DIALOG_ASK_CREATE_LENS = 109
     internal val REQCODE_ADD_LENS = 110
+    internal val REQCODE_IMAGES = 106
 
     private val PERMISSIONS =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
@@ -485,82 +484,8 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         super.onSaveInstanceState(outState)
     }
 
-    fun showAccessoryDialogOnActivity() {
-        val fragment = CheckListDialogFragment.Builder().build(DIALOG_ACCESSORY)
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        val accessories = dao.accessories
-        dao.close()
-
-        val a_str = ArrayList<String>()
-        val chkidx = ArrayList<Int>()
-        val tags = ArrayList<Int>()
-        for (i in accessories.indices) {
-            val a = accessories[i]
-            a_str.add(a.name)
-            if (selectedAccessories.contains(a.id)) chkidx.add(i)
-            tags.add(a.id)
-        }
-
-        fragment.arguments?.putStringArray("items", a_str.toTypedArray())
-        fragment.arguments?.putIntegerArrayList("tags", tags)
-        fragment.arguments?.putIntegerArrayList("checked_indices", chkidx)
-        fragment.arguments?.putString("title", getString(R.string.title_dialog_select_accessories))
-        fragment.arguments?.putString("positive", getString(android.R.string.yes))
-        fragment.arguments?.putString("negative", getString(android.R.string.no))
-        fragment.showOn(this@EditPhotoActivity, "dialog")
-    }
-
-    fun showMountAdaptersDialog() {
-        val fragment = CheckListDialogFragment.Builder().build(DIALOG_MOUNT_ADAPTERS)
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        val availableLensMounts = dao.availableMountList
-        dao.close()
-
-        val mount = filmroll?.camera?.mount ?: return
-        if (availableLensMounts.indexOf(mount) >= 0) {
-            availableLensMounts.remove(mount)
-        }
-        val checkedMounts = getSuggestListSubPref("mount_adapters", mount)
-        val checkedIndices = ArrayList<Int>()
-        for (i in checkedMounts.indices) {
-            if (availableLensMounts.indexOf(checkedMounts[i]) >= 0) {
-                checkedIndices.add(availableLensMounts.indexOf(checkedMounts[i]))
-            }
-        }
-
-        fragment.arguments?.putStringArray("items", availableLensMounts.toTypedArray())
-        fragment.arguments?.putIntegerArrayList("checked_indices", checkedIndices)
-        fragment.arguments?.putString("title", getString(R.string.msg_select_mount_adapters).replace("%s", mount))
-        fragment.arguments?.putString("positive", getString(android.R.string.yes))
-        fragment.arguments?.putString("negative", getString(android.R.string.no))
-        fragment.showOn(this@EditPhotoActivity, "dialog")
-    }
-
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
-            DIALOG_MOUNT_ADAPTERS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val bundle = data.extras
-                saveSuggestListSubPref("mount_adapters", filmroll!!.camera.mount, bundle!!.getStringArrayList("checked_items"))
-                val dao = TrisquelDao(applicationContext)
-                dao.connection()
-                val l = lenslist.find { it.id == lensid }
-                val dbLens = if (l != null) dao.getLens(l.id) else null
-                updateLensList(dbLens, dao)
-                dao.close()
-            }
-            DIALOG_ACCESSORY -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val bundle = data.extras
-                val tags = bundle!!.getIntegerArrayList("checked_tags")
-                if (tags != null && !sameArrayList(tags, ArrayList(selectedAccessories))) {
-                    val dao = TrisquelDao(applicationContext)
-                    dao.connection()
-                    setAccessories(dao, tags)
-                    isDirty = true
-                    dao.close()
-                }
-            }
             DIALOG_ASK_CREATE_LENS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val intent = Intent(application, EditLensActivity::class.java)
                 startActivityForResult(intent, REQCODE_ADD_LENS)
@@ -580,7 +505,7 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
     }
 
-    private fun sameArrayList(list1: ArrayList<Int>, list2: ArrayList<Int>): Boolean {
+    fun sameArrayList(list1: ArrayList<Int>, list2: ArrayList<Int>): Boolean {
         if (list1.size != list2.size) return false
         for (i in list1.indices) {
             if (list1[i] != list2[i]) return false
@@ -700,6 +625,70 @@ class EditPhotoActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     }
 }
 
+@Composable
+fun CheckListDialog(
+    title: String,
+    items: List<String>,
+    initialCheckedIndices: List<Int>,
+    onConfirm: (List<Int>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val checkedStates = remember { mutableStateOf(items.indices.map { initialCheckedIndices.contains(it) }) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title) },
+        text = {
+            LazyRow {
+                item {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        items.forEachIndexed { index, item ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val currentList = checkedStates.value.toMutableList()
+                                        currentList[index] = !currentList[index]
+                                        checkedStates.value = currentList
+                                    }
+                                    .padding(8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = checkedStates.value[index],
+                                    onCheckedChange = { isChecked ->
+                                        val currentList = checkedStates.value.toMutableList()
+                                        currentList[index] = isChecked
+                                        checkedStates.value = currentList
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = item)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val checkedIndices = checkedStates.value
+                        .mapIndexedNotNull { index, isChecked -> if (isChecked) index else null }
+                    onConfirm(checkedIndices)
+                }
+            ) {
+                Text(stringResource(android.R.string.yes))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.no))
+            }
+        }
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditPhotoScreen(
@@ -794,6 +783,83 @@ fun EditPhotoScreen(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    var showMountAdaptersDialog by remember { mutableStateOf(false) }
+    var showAccessoryDialog by remember { mutableStateOf(false) }
+
+    if (showMountAdaptersDialog) {
+        val dao = TrisquelDao(context)
+        dao.connection()
+        val availableLensMounts = dao.availableMountList
+        dao.close()
+        val mount = context.filmroll?.camera?.mount
+        if (mount != null && availableLensMounts.indexOf(mount) >= 0) {
+            availableLensMounts.remove(mount)
+        }
+        
+        val checkedMounts = if (mount != null) context.getSuggestListSubPref("mount_adapters", mount) else ArrayList()
+        val checkedIndices = ArrayList<Int>()
+        for (i in checkedMounts.indices) {
+            if (availableLensMounts.indexOf(checkedMounts[i]) >= 0) {
+                checkedIndices.add(availableLensMounts.indexOf(checkedMounts[i]))
+            }
+        }
+        
+        CheckListDialog(
+            title = mount?.let { stringResource(R.string.msg_select_mount_adapters).replace("%s", it) } ?: "",
+            items = availableLensMounts,
+            initialCheckedIndices = checkedIndices,
+            onConfirm = { checkedIndicesOutput ->
+                showMountAdaptersDialog = false
+                if (mount != null) {
+                    val checkedItems = checkedIndicesOutput.map { availableLensMounts[it] }.toCollection(ArrayList())
+                    context.saveSuggestListSubPref("mount_adapters", mount, checkedItems)
+                    val daoUpdate = TrisquelDao(context)
+                    daoUpdate.connection()
+                    val l = context.lenslist.find { it.id == context.lensid }
+                    val dbLens = if (l != null) daoUpdate.getLens(l.id) else null
+                    context.updateLensList(dbLens, daoUpdate)
+                    daoUpdate.close()
+                }
+            },
+            onDismiss = { showMountAdaptersDialog = false }
+        )
+    }
+
+    if (showAccessoryDialog) {
+        val dao = TrisquelDao(context)
+        dao.connection()
+        val accessories = dao.accessories
+        dao.close()
+
+        val a_str = ArrayList<String>()
+        val chkidx = ArrayList<Int>()
+        val tags = ArrayList<Int>()
+        for (i in accessories.indices) {
+            val a = accessories[i]
+            a_str.add(a.name)
+            if (context.selectedAccessories.contains(a.id)) chkidx.add(i)
+            tags.add(a.id)
+        }
+        
+        CheckListDialog(
+            title = stringResource(R.string.title_dialog_select_accessories),
+            items = a_str,
+            initialCheckedIndices = chkidx,
+            onConfirm = { checkedIndicesOutput ->
+                showAccessoryDialog = false
+                val checkedTags = checkedIndicesOutput.map { tags[it] }.toCollection(ArrayList())
+                if (!context.sameArrayList(checkedTags, ArrayList(context.selectedAccessories))) {
+                    val daoUpdate = TrisquelDao(context)
+                    daoUpdate.connection()
+                    context.setAccessories(daoUpdate, checkedTags)
+                    context.isDirty = true
+                    daoUpdate.close()
+                }
+            },
+            onDismiss = { showAccessoryDialog = false }
+        )
     }
 
     Scaffold(
@@ -902,7 +968,7 @@ fun EditPhotoScreen(
                 }
                 
                 IconButton(
-                    onClick = { context.showMountAdaptersDialog() },
+                    onClick = { showMountAdaptersDialog = true },
                     enabled = context.filmroll?.camera?.type != 1
                 ) {
                     Icon(
@@ -1014,7 +1080,7 @@ fun EditPhotoScreen(
                     label = stringResource(R.string.label_accessories),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.matchParentSize().clickable { context.showAccessoryDialogOnActivity() })
+                Spacer(modifier = Modifier.matchParentSize().clickable { showAccessoryDialog = true })
             }
 
             // Location
