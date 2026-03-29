@@ -4,43 +4,95 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AlertDialog
-
-/**
- * Created by user on 2018/06/24.
- */
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 
 class SingleChoiceDialogFragment : AbstractDialogFragment() {
-    //final String[] items = {"item_0", "item_1", "item_2"};
     var choice = 0
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val items = arguments?.getStringArray("items")
+        val items = arguments?.getStringArray("items") ?: emptyArray()
         val selected = arguments?.getInt("selected") ?: 0
-        choice = selected
-        return AlertDialog.Builder(context!!)
-                .setTitle(arguments?.getString("title",""))
-                .setSingleChoiceItems(items, selected) { dialog, which ->
-                    choice = which
+        val title = arguments?.getString("title") ?: ""
+        val positiveText = arguments?.getString("positive", getString(android.R.string.yes))
+        val id = arguments?.getInt("id") ?: -1
+
+        val dialog = Dialog(requireContext())
+        dialog.setContentView(ComposeView(requireContext()).apply {
+            setContent {
+                MaterialTheme {
+                    var currentSelection by remember { mutableStateOf(selected) }
+                    
+                    AlertDialog(
+                        onDismissRequest = {
+                            notifyDialogCancelled()
+                            dismiss()
+                        },
+                        title = if (title.isNotEmpty()) {
+                            { Text(text = title) }
+                        } else null,
+                        text = {
+                            LazyColumn {
+                                itemsIndexed(items) { index, item ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { currentSelection = index }
+                                            .padding(vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = (currentSelection == index),
+                                            onClick = { currentSelection = index }
+                                        )
+                                        Text(
+                                            text = item,
+                                            modifier = Modifier.padding(start = 8.dp),
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                choice = currentSelection
+                                val data = Intent().apply {
+                                    putExtra("id", id)
+                                    putExtra("which", choice)
+                                }
+                                notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
+                                dismiss()
+                            }) {
+                                Text(positiveText ?: stringResource(android.R.string.yes))
+                            }
+                        },
+                        dismissButton = {}
+                    )
                 }
-                .setPositiveButton(arguments?.getString("positive", getString(android.R.string.yes))
-                ) { dialog, which ->
-                    val data = Intent()
-                    data.putExtra("id", arguments?.getInt("id"))
-                    data.putExtra("which", choice)
-                    notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
-                }
-                .setCancelable(true)
-                .create()
-        /*
-        *
-                .setSingleChoiceItems(items, selected) { dialog, which ->
-                    val data = Intent()
-                    data.putExtra("id", arguments?.getInt("id") ?: -1)
-                    data.putExtra("which", which)
-                    notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
-                }
-        * */
+            }
+        })
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        isCancelable = true
+        return dialog
     }
 
     override fun onPause() {
@@ -49,7 +101,7 @@ class SingleChoiceDialogFragment : AbstractDialogFragment() {
     }
 
     class Builder : AbstractDialogFragment.Builder() {
-        override fun build(): AbstractDialogFragment {//build()から呼ぶとcheckArgumentsで死ぬと思う
+        override fun build(): AbstractDialogFragment {
             return SingleChoiceDialogFragment()
         }
     }

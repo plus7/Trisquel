@@ -8,15 +8,26 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ProgressBar
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 
 class ProgressDialog : AbstractDialogFragment() {
+    private var progressState by mutableStateOf(0.0)
+    private var statusState by mutableStateOf("")
+
     private val br = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val action = intent.action
@@ -26,9 +37,8 @@ class ProgressDialog : AbstractDialogFragment() {
                     notifyDialogResult(DialogInterface.BUTTON_NEUTRAL, data)
                     closeDialog()
                 }else if(action == MainActivity.ACTION_UPDATE_PROGRESS_DIALOG){
-                    val percentage = intent.getDoubleExtra("percentage", 0.0)
-                    val status = intent.getStringExtra("status")
-                    setPercentage(percentage, status!!)
+                    progressState = intent.getDoubleExtra("percentage", 0.0)
+                    statusState = intent.getStringExtra("status") ?: ""
                 }
             }
         }
@@ -38,48 +48,79 @@ class ProgressDialog : AbstractDialogFragment() {
         dismissAllowingStateLoss()
     }
 
-    private fun setPercentage(percentage: Double, status: String){
-        val pb = dialog?.findViewById<ProgressBar>(R.id.progressBar)
-        pb?.progress = (10.0*percentage).toInt()
-        val tv = dialog?.findViewById<TextView>(R.id.textView)
-        tv?.text = "%5.2f%%: %s".format(percentage, status)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val intentFilter = IntentFilter()
         intentFilter.addAction(MainActivity.ACTION_CLOSE_PROGRESS_DIALOG)
         intentFilter.addAction(MainActivity.ACTION_UPDATE_PROGRESS_DIALOG)
-        activity!!.registerReceiver(br, intentFilter, RECEIVER_EXPORTED)
+        requireActivity().registerReceiver(br, intentFilter, RECEIVER_EXPORTED)
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val frame = LayoutInflater.from(context).inflate(R.layout.dialog_progress, view as ViewGroup?, false)
-        val btnCancel = frame.findViewById<Button>(R.id.btnCancel)
         val isCancellableByBtn = arguments?.getBoolean("cancellable", true) ?: true
-        btnCancel.setOnClickListener {
-            val data = Intent()
-            notifyDialogResult(DialogInterface.BUTTON_NEGATIVE, data)
-            closeDialog()
-        }
-        btnCancel.isEnabled = isCancellableByBtn
-        btnCancel.visibility = if(isCancellableByBtn) View.VISIBLE else View.GONE
-        val dialog = AlertDialog.Builder(activity!!)
-                .setView(frame)
-                .setTitle(arguments?.getString("title", "") ?: "")
-                .create()
+        val title = arguments?.getString("title", "") ?: ""
+
+        val dialog = Dialog(requireContext())
+        dialog.setContentView(ComposeView(requireContext()).apply {
+            setContent {
+                MaterialTheme {
+                    AlertDialog(
+                        onDismissRequest = {
+                            if (isCancellableByBtn) {
+                                val data = Intent()
+                                notifyDialogResult(DialogInterface.BUTTON_NEGATIVE, data)
+                                closeDialog()
+                            }
+                        },
+                        title = if (title.isNotEmpty()) {
+                            { Text(text = title) }
+                        } else null,
+                        text = {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp)
+                            ) {
+                                Text(
+                                    text = "%5.2f%%: %s".format(progressState, statusState),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                                LinearProgressIndicator(
+                                    progress = { (progressState / 100.0).toFloat() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            if (isCancellableByBtn) {
+                                TextButton(onClick = {
+                                    val data = Intent()
+                                    notifyDialogResult(DialogInterface.BUTTON_NEGATIVE, data)
+                                    closeDialog()
+                                }) {
+                                    Text(stringResource(android.R.string.cancel))
+                                }
+                            }
+                        },
+                        dismissButton = {}
+                    )
+                }
+            }
+        })
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         isCancelable = false
         return dialog
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        activity!!.unregisterReceiver(br)
+        requireActivity().unregisterReceiver(br)
     }
 
     class Builder : AbstractDialogFragment.Builder() {
-        override fun build(): AbstractDialogFragment {//build()から呼ぶとcheckArgumentsで死ぬと思う
+        override fun build(): AbstractDialogFragment {
             return ProgressDialog()
         }
     }

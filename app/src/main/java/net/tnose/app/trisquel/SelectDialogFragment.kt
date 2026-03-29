@@ -4,30 +4,71 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AlertDialog
-
-/**
- * Created by user on 2018/06/24.
- */
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.dp
 
 class SelectDialogFragment : AbstractDialogFragment() {
-    //final String[] items = {"item_0", "item_1", "item_2"};
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val items = arguments?.getStringArray("items")
+        val items = arguments?.getStringArray("items") ?: emptyArray()
         val ids = arguments?.getIntegerArrayList("ids")
-        return AlertDialog.Builder(context!!)
-                //.setTitle(getArguments().getString("title",""))
-                .setItems(items) { dialog, which ->
-                    val data = Intent()
-                    data.putExtra("id", arguments?.getInt("id") ?: -1)
-                    data.putExtra("which", which)
-                    data.putExtra("which_id", ids?.get(which) ?: -1)
-                    data.putExtra("which_str", items?.get(which) ?: "")
-                    notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
+        val id = arguments?.getInt("id") ?: -1
+
+        val dialog = Dialog(requireContext())
+        dialog.setContentView(ComposeView(requireContext()).apply {
+            setContent {
+                MaterialTheme {
+                    AlertDialog(
+                        onDismissRequest = {
+                            notifyDialogCancelled()
+                            dismiss()
+                        },
+                        title = arguments?.getString("title")?.let {
+                            if (it.isNotEmpty()) {
+                                { Text(text = it) }
+                            } else null
+                        },
+                        text = {
+                            LazyColumn {
+                                itemsIndexed(items) { index, item ->
+                                    Text(
+                                        text = item,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                val data = Intent().apply {
+                                                    putExtra("id", id)
+                                                    putExtra("which", index)
+                                                    putExtra("which_id", ids?.get(index) ?: -1)
+                                                    putExtra("which_str", item)
+                                                }
+                                                notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
+                                                dismiss()
+                                            }
+                                            .padding(16.dp),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+                        },
+                        confirmButton = {},
+                        dismissButton = {}
+                    )
                 }
-                .setCancelable(true)
-                .create()
+            }
+        })
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        isCancelable = true
+        return dialog
     }
 
     override fun onPause() {
@@ -36,7 +77,7 @@ class SelectDialogFragment : AbstractDialogFragment() {
     }
 
     class Builder : AbstractDialogFragment.Builder() {
-        override fun build(): AbstractDialogFragment {//build()から呼ぶとcheckArgumentsで死ぬと思う
+        override fun build(): AbstractDialogFragment {
             return SelectDialogFragment()
         }
     }

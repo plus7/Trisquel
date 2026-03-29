@@ -4,65 +4,97 @@ import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
-import androidx.appcompat.app.AlertDialog
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 
 class SearchCondDialogFragment : AbstractDialogFragment() {
-    var labels: Array<String>? = null
-    var checkState: Array<Boolean>? = null
 
-    fun createNewChip(label: String, chipGroup: ChipGroup): Chip {
-        val newchip = Chip(activity)
-        newchip.text = label
-        val chipLayoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT)
-        newchip.layoutParams = chipLayoutParams
-        newchip.isCheckable = true
-        newchip.setOnCheckedChangeListener{
-            buttonView, isChecked ->
-            val i = labels?.indexOf(label) ?: -1
-            if(i >= 0) {
-                checkState!![i] = isChecked
-            }
-        }
-        chipGroup.addView(newchip)
-        return newchip
-    }
-
+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val frame = LayoutInflater.from(context).inflate(R.layout.dialog_search_cond, view as ViewGroup?, false)
-        val items = arguments?.getStringArray("labels") ?: arrayOf()
-        labels = items
-        if(items.size == 0){
-            val textview = frame.findViewById<TextView>(R.id.errorMsg)
-            textview.visibility = View.VISIBLE
-            textview.text = getString(R.string.msg_error_no_tagged_items)
-        }
-        checkState = Array<Boolean>(items.size, {i -> false})
-        val chip_group = frame.findViewById<ChipGroup>(R.id.chip_group)
-        for(label in items) createNewChip(label, chip_group)
-        return AlertDialog.Builder(context!!)
-                .setTitle(arguments?.getString("title","") ?: "")
-                .setView(frame)
-                .setPositiveButton(android.R.string.yes) { dialog, which ->
-                    val data = Intent()
-                    data.putExtra("which", which)
-                    val checkedLabels = ArrayList<String>()
-                    for((i,v) in checkState!!.withIndex()){
-                        if(v) checkedLabels.add(labels!![i])
+        val items = arguments?.getStringArray("labels") ?: emptyArray()
+        val title = arguments?.getString("title") ?: ""
+
+        val dialog = Dialog(requireContext())
+        dialog.setContentView(ComposeView(requireContext()).apply {
+            setContent {
+                MaterialTheme {
+                    val checkedStates = remember {
+                        mutableStateMapOf<String, Boolean>().apply {
+                            items.forEach { put(it, false) }
+                        }
                     }
-                    data.putExtra("checked_labels", checkedLabels)
-                    notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
+
+                    AlertDialog(
+                        onDismissRequest = {
+                            notifyDialogCancelled()
+                            dismiss()
+                        },
+                        title = if (title.isNotEmpty()) {
+                            { Text(text = title) }
+                        } else null,
+                        text = {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                if (items.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.msg_error_no_tagged_items),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else {
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        items.forEach { label ->
+                                            val isChecked = checkedStates[label] ?: false
+                                            FilterChip(
+                                                selected = isChecked,
+                                                onClick = {
+                                                    checkedStates[label] = !isChecked
+                                                },
+                                                label = { Text(label) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val data = Intent().apply {
+                                    val checkedLabels = items.filter { checkedStates[it] == true }
+                                    putStringArrayListExtra("checked_labels", ArrayList(checkedLabels))
+                                }
+                                notifyDialogResult(DialogInterface.BUTTON_POSITIVE, data)
+                                dismiss()
+                            }) {
+                                Text(stringResource(android.R.string.yes))
+                            }
+                        },
+                        dismissButton = {}
+                    )
                 }
-                .setCancelable(true)
-                .create()
+            }
+        })
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        isCancelable = true
+        return dialog
     }
 
     override fun onPause() {
@@ -71,7 +103,7 @@ class SearchCondDialogFragment : AbstractDialogFragment() {
     }
 
     class Builder : AbstractDialogFragment.Builder() {
-        override fun build(): AbstractDialogFragment {//build()から呼ぶとcheckArgumentsで死ぬと思う
+        override fun build(): AbstractDialogFragment {
             return SearchCondDialogFragment()
         }
     }
