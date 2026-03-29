@@ -159,24 +159,11 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
     }
 
     override fun onIndexClick(item: Photo) {
-        /*val fragment = SimpleInputDialogFragment.Builder()
-                .build(REQCODE_EDIT_PHOTOINDEX)
-        fragment.arguments?.putInt("id", item.id)
-        fragment.arguments?.putString("title", getString(R.string.title_dialog_edit_index))
-        fragment.arguments?.putString("default_value", (item.frameIndex + 1).toString())
-        fragment.showOn(this, "dialog")*/
+
     }
 
     override fun onIndexLongClick(item: Photo) {
-        /*val fragment = SimpleInputDialogFragment.Builder()
-                .build(REQCODE_INDEX_SHIFT)
-        fragment.arguments?.putInt("id", item.id)
-        fragment.arguments?.putString("title", getString(R.string.title_dialog_shift_index))
-        fragment.arguments?.putString("message", getString(R.string.msg_dialog_shift_index))
-        val downshiftLimit = photo_fragment?.possibleDownShiftLimit(item) ?: 0
-        fragment.arguments?.putString("hint", getString(R.string.hint_dialog_shift_index).format(downshiftLimit+1))
-        fragment.arguments?.putString("default_value", (item.frameIndex + 1).toString())
-        fragment.showOn(this, "dialog")*/
+
     }
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
