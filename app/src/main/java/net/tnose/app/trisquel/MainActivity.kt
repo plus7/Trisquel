@@ -12,30 +12,60 @@ import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.util.Log
-import android.view.Gravity
-import android.view.Menu
-import android.view.MenuItem
-import android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM
-import android.view.MenuItem.SHOW_AS_ACTION_NEVER
-import android.view.View
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.PopupMenu
-import androidx.appcompat.widget.Toolbar
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.os.BundleCompat
-import androidx.core.view.GravityCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import androidx.preference.PreferenceManager
 import androidx.work.WorkInfo
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.navigation.NavigationView
-import net.tnose.app.trisquel.dummy.DummyContent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.FileInputStream
@@ -45,21 +75,19 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 
-class MainActivity : AppCompatActivity(),
-        NavigationView.OnNavigationItemSelectedListener,
-        CameraFragment.OnListFragmentInteractionListener,
-        LensFragment.OnListFragmentInteractionListener,
-        FilmRollFragment.OnListFragmentInteractionListener,
-        EmptyFragment.OnFragmentInteractionListener,
-        AccessoryFragment.OnListFragmentInteractionListener,
-        FavoritePhotoFragment.OnListFragmentInteractionListener,
-        AbstractDialogFragment.Callback {
+class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     companion object {
         const val ID_FILMROLL = 0
         const val ID_CAMERA = 1
         const val ID_LENS = 2
         const val ID_ACCESSORY = 3
         const val ID_FAVORITES = 4
+        
+        const val ROUTE_FILMROLLS = "filmrolls"
+        const val ROUTE_CAMERAS = "cameras"
+        const val ROUTE_LENSES = "lenses"
+        const val ROUTE_ACCESSORIES = "accessories"
+        const val ROUTE_FAVORITES = "favorites"
 
         const val RETCODE_ALERT = 200
         const val RETCODE_CAMERA_TYPE = 300
@@ -84,18 +112,29 @@ class MainActivity : AppCompatActivity(),
         const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
     }
 
+    private lateinit var cameraViewModel: CameraViewModel
+    private lateinit var lensViewModel: LensViewModel
+    private lateinit var accessoryViewModel: AccessoryViewModel
+    private lateinit var filmRollViewModel: FilmRollViewModel
+
+    private var mExportViewModel: ExportProgressViewModel? = null
+    private var mImportViewModel: ImportProgressViewModel? = null
+    private var mDbConvViewModel: DbConvProgressViewModel? = null
+    private var isIntentServiceWorking: Int = 0 //0: None, 1: DB conversion
+
+    internal var currentRoute = ROUTE_FILMROLLS
+    internal var currentFilter = Pair(0, arrayListOf<String>())
+    internal var currentSubtitle = ""
+
     private val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val bundle = result.data?.extras ?: return@registerForActivityResult
             val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java)!!
-            (currentFragment as? CameraFragment)?.insertCamera(c)
+            cameraViewModel.insertCamera(c)
             if (c.type == 1) {
                 val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
                 l.body = c.id
-                val dao = TrisquelDao(this)
-                dao.connection()
-                dao.addLens(l)
-                dao.close()
+                lensViewModel.insertLens(l)
             }
         }
     }
@@ -104,15 +143,15 @@ class MainActivity : AppCompatActivity(),
         if (result.resultCode == RESULT_OK) {
             val bundle = result.data?.extras ?: return@registerForActivityResult
             val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java)!!
-            (currentFragment as? CameraFragment)?.updateCamera(c)
+            cameraViewModel.updateCamera(c)
             if (c.type == 1) {
                 val dao = TrisquelDao(this)
                 dao.connection()
                 val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
                 val lensid = dao.getFixedLensIdByBody(c.id)
                 l.id = lensid
-                dao.updateLens(l)
                 dao.close()
+                lensViewModel.updateLens(l)
             }
         }
     }
@@ -120,14 +159,14 @@ class MainActivity : AppCompatActivity(),
     private val addLensLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val l = BundleCompat.getParcelable(result.data?.extras ?: return@registerForActivityResult, "lensspec", LensSpec::class.java)
-            if (l != null) (currentFragment as? LensFragment)?.insertLens(l)
+            if (l != null) lensViewModel.insertLens(l)
         }
     }
 
     private val editLensLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val l = BundleCompat.getParcelable(result.data?.extras ?: return@registerForActivityResult, "lensspec", LensSpec::class.java)
-            if (l != null) (currentFragment as? LensFragment)?.updateLens(l)
+            if (l != null) lensViewModel.updateLens(l)
         }
     }
 
@@ -139,7 +178,7 @@ class MainActivity : AppCompatActivity(),
             val c = dao.getCamera(bundle.getInt("camera"))
             dao.close()
             val f = FilmRoll(0, bundle.getString("name")!!, c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
-            (currentFragment as? FilmRollFragment)?.insertFilmRoll(f)
+            filmRollViewModel.insert(f.toEntity())
         }
     }
 
@@ -151,19 +190,17 @@ class MainActivity : AppCompatActivity(),
             val c = dao.getCamera(bundle.getInt("camera"))
             dao.close()
             val f = FilmRoll(bundle.getInt("id"), bundle.getString("name")!!, bundle.getString("created")!!, Util.dateToStringUTC(Date()), c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
-            (currentFragment as? FilmRollFragment)?.updateFilmRoll(f)
+            filmRollViewModel.update(f.toEntity())
         }
     }
 
-    // editPhotoListLauncherの内容はRoom化に伴い不要になった
     private val editPhotoListLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
 
     private val addAccessoryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val bundle = result.data?.extras ?: return@registerForActivityResult
-            // Room化したときは、新規作成時のidは0でよい
             val a = Accessory(0, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
-            (currentFragment as? AccessoryFragment)?.insertAccessory(a)
+            accessoryViewModel.insert(a.toEntity())
         }
     }
 
@@ -171,7 +208,7 @@ class MainActivity : AppCompatActivity(),
         if (result.resultCode == RESULT_OK) {
             val bundle = result.data?.extras ?: return@registerForActivityResult
             val a = Accessory(bundle.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
-            (currentFragment as? AccessoryFragment)?.updateAccessory(a)
+            accessoryViewModel.update(a.toEntity())
         }
     }
 
@@ -232,7 +269,6 @@ class MainActivity : AppCompatActivity(),
                 Toast.makeText(this, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
                 return@registerForActivityResult
             }
-            // DB置換前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
             val calendar = Calendar.getInstance()
             val sdf = SimpleDateFormat("yyyyMMddHHmmss")
             val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
@@ -249,7 +285,6 @@ class MainActivity : AppCompatActivity(),
             dst.transferFrom(src, 0, src.size())
             src.close()
             dst.close()
-            //再起動する。一般ユーザーであればDB_VERSION=16以前のデータしか持っていないので、データ変換処理が走るはず
             val intent = RestartActivity.createIntent(applicationContext)
             startActivity(intent)
         }
@@ -279,17 +314,6 @@ class MainActivity : AppCompatActivity(),
         pendingImportMode = null
     }
 
-    //private var localBroadcastManager: androidx.localbroadcastmanager.content.LocalBroadcastManager? = null
-    //private var progressFilter: IntentFilter? = null
-    //private var progressReceiver: ProgressReceiver? = null
-    private var mExportViewModel: ExportProgressViewModel? = null
-    private var mImportViewModel: ImportProgressViewModel? = null
-    private var mDbConvViewModel: DbConvProgressViewModel? = null
-    private var isIntentServiceWorking: Int = 0 //0: None, 1: DB conversion
-
-    private lateinit var currentFragment: androidx.fragment.app.Fragment
-    private val pinnedFilterViewId: ArrayList<Int> = arrayListOf()
-
     internal val PERMISSIONS =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
@@ -300,219 +324,89 @@ class MainActivity : AppCompatActivity(),
                 Manifest.permission.ACCESS_MEDIA_LOCATION)
         }
 
-    fun selectFragment(currentFragmentId: Int, filtertype: Int, filtervalue: ArrayList<String>){
-        //val f: androidx.fragment.app.Fragment
-        val transaction = supportFragmentManager.beginTransaction()
-        when (currentFragmentId) {
-            ID_CAMERA -> {
-                currentFragment = CameraFragment()
-                setTitle(R.string.title_activity_cam_list)
-                supportActionBar?.subtitle = ""
-            }
-            ID_LENS -> {
-                currentFragment = LensFragment()
-                setTitle(R.string.title_activity_lens_list)
-                supportActionBar?.subtitle = ""
-            }
-            ID_ACCESSORY -> {
-                currentFragment = AccessoryFragment()
-                setTitle(R.string.title_activity_accessory_list)
-                supportActionBar?.subtitle = ""
-            }
-            ID_FAVORITES -> {
-                currentFragment = FavoritePhotoFragment()
-                setTitle(R.string.title_activity_favorites)
-                supportActionBar?.subtitle = ""
-            }
-            else -> {
-                currentFragment = FilmRollFragment.newInstance(filtertype, filtervalue)
-                setTitle(R.string.title_activity_filmroll_list)
-                val dao = TrisquelDao(this)
-                dao.connection()
-                val subtitle = when(filtertype){
-                    1 -> {
-                        val c = dao.getCamera(filtervalue[0].toInt())
-                        "📷 " + c?.manufacturer + " " + c?.modelName
-                    }
-                    2 -> "🎞 " + filtervalue.joinToString(" ")
-                    else -> ""
-                }
-                dao.close()
-                supportActionBar?.subtitle = subtitle
-            }
-        }
-
-        //addではなくreplaceでないとonCreateが再び呼ばれたときに変になる（以前作ったfragmentの残骸が残って表示される）
-        //この辺の処理は画面回転なども考えるとよろしくないが先送りする
-        transaction.replace(R.id.container, currentFragment)
-        transaction.commit()
-    }
-
-    fun refreshFab() {
-        val fab = findViewById<FloatingActionButton>(R.id.fab)
-        when (currentFragment) {
-            is CameraFragment -> fab.setImageResource(R.drawable.ic_menu_camera_white)
-            is LensFragment -> fab.setImageResource(R.drawable.ic_lens_white)
-            is AccessoryFragment -> fab.setImageResource(R.drawable.ic_extension_white)
-            else -> fab.setImageResource(R.drawable.ic_filmroll_vector_white)
-        }
-        fab.setOnClickListener {
-            val intent: Intent
-            when (currentFragment) {
-                is CameraFragment -> {
-                    val fragment = SelectDialogFragment.Builder()
-                            .build(RETCODE_CAMERA_TYPE)
-                    fragment.arguments?.putInt("id", -1) //dummy value
-                    fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)))
-                    fragment.showOn(this@MainActivity, "dialog")
-                }
-                is LensFragment -> {
-                    intent = Intent(application, EditLensActivity::class.java)
-                    addLensLauncher.launch(intent)
-                }
-                is AccessoryFragment -> {
-                    intent = Intent(application, EditAccessoryActivity::class.java)
-                    addAccessoryLauncher.launch(intent)
-                }
-                else -> {
-                    intent = Intent(application, EditFilmRollActivity::class.java)
-                    if(currentFragment is FilmRollFragment){
-                        val filter = (currentFragment as FilmRollFragment).currentFilter
-                        when(filter.first){
-                            1 -> intent.putExtra("default_camera", filter.second[0].toInt())
-                            2 -> {
-                                intent.putExtra("default_manufacturer", filter.second[0])
-                                intent.putExtra("default_brand", filter.second[1])
-                            }
-                        }
-                    }
-                    addFilmRollLauncher.launch(intent)
-                }
-            }
-        }
-    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mExportViewModel = ViewModelProvider(this)[ExportProgressViewModel::class.java]
-        mExportViewModel!!.workInfos.observe(this,
-            Observer { listOfWorkInfo ->
-                if (listOfWorkInfo.isNullOrEmpty()) {
-                    return@Observer
-                }
-                val workInfo = listOfWorkInfo[0]
-                if (workInfo.state.isFinished) {
-                    //WorkInfo.State.SUCCEEDED
-                    var status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
-                    // XXX: なんかよくわからんがstatusが空で返ってきてしまうパターンがあるのでワークアラウンドを入れる
-                    if (status == "") {
-                        if(workInfo.state == WorkInfo.State.CANCELLED) {
-                            status = "Backup cancelled."
-                        }else if(workInfo.state == WorkInfo.State.FAILED) {
-                            status = "Backup failed."
-                        }
-                    }
-                    val progress = workInfo.outputData.getDouble(ExportWorker.PARAM_PERCENTAGE, 100.0)
-                    setProgressPercentage(progress, status, false)
-                    Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
-                } else {
-                    val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
-                    val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
-                    setProgressPercentage(progress, status, false)
-                }
-            }
-        )
-        mImportViewModel = ViewModelProvider(this)[ImportProgressViewModel::class.java]
-        mImportViewModel!!.workInfos.observe(this,
-            Observer { listOfWorkInfo ->
-                if (listOfWorkInfo.isNullOrEmpty()) {
-                    return@Observer
-                }
-                val workInfo = listOfWorkInfo[0]
-                if (workInfo.state.isFinished) {
-                    //WorkInfo.State.SUCCEEDED
-                    var status = workInfo.outputData.getString(ImportWorker.PARAM_STATUS) ?: ""
-                    // XXX: なんかよくわからんがstatusが空で返ってきてしまうパターンがあるのでワークアラウンドを入れる
-                    if (status == "") {
-                        if(workInfo.state == WorkInfo.State.CANCELLED) {
-                            status = "Import cancelled."
-                        }else if(workInfo.state == WorkInfo.State.FAILED) {
-                            status = "Import failed."
-                        }
-                    }
-                    val progress = workInfo.outputData.getDouble(ImportWorker.PARAM_PERCENTAGE, 100.0)
-                    setProgressPercentage(progress, status, false)
-                    Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
-                } else {
-                    val status = workInfo.progress.getString(ImportWorker.PARAM_STATUS) ?: ""
-                    val progress = workInfo.progress.getDouble(ImportWorker.PARAM_PERCENTAGE, 0.0)
-                    setProgressPercentage(progress, status, false)
-                }
-            }
-        )
-        mDbConvViewModel = ViewModelProvider(this)[DbConvProgressViewModel::class.java]
-        mDbConvViewModel!!.workInfos.observe(this,
-            Observer { listOfWorkInfo ->
-                if (listOfWorkInfo.isNullOrEmpty()) {
-                    return@Observer
-                }
-                val workInfo = listOfWorkInfo[0]
-                if (workInfo.state.isFinished) {
-                    //WorkInfo.State.SUCCEEDED
-                    val status = workInfo.outputData.getString(DbConvWorker.PARAM_STATUS) ?: ""
-                    val progress = workInfo.outputData.getDouble(DbConvWorker.PARAM_PERCENTAGE, 100.0)
-                    setProgressPercentage(progress, status, false)
-                    Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
-                } else {
-                    val status = workInfo.progress.getString(DbConvWorker.PARAM_STATUS) ?: ""
-                    val progress = workInfo.progress.getDouble(DbConvWorker.PARAM_PERCENTAGE, 0.0)
-                    setProgressPercentage(progress, status, false)
-                }
-            }
-        )
-        setContentView(R.layout.activity_main2)
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        val currentFragmentId = if (savedInstanceState != null) {
-            savedInstanceState.getInt("current_fragment")
-        } else {
-            ID_FILMROLL
-        }
+        
+        cameraViewModel = ViewModelProvider(this)[CameraViewModel::class.java]
+        lensViewModel = ViewModelProvider(this)[LensViewModel::class.java]
+        accessoryViewModel = ViewModelProvider(this)[AccessoryViewModel::class.java]
+        filmRollViewModel = ViewModelProvider(this)[FilmRollViewModel::class.java]
 
-        isIntentServiceWorking = if (savedInstanceState != null){
-            savedInstanceState.getInt("is_intent_service_working")
-        } else {
-            0
-        }
+        mExportViewModel = ViewModelProvider(this)[ExportProgressViewModel::class.java]
+        mExportViewModel!!.workInfos.observe(this, Observer { listOfWorkInfo ->
+            if (listOfWorkInfo.isNullOrEmpty()) return@Observer
+            val workInfo = listOfWorkInfo[0]
+            if (workInfo.state.isFinished) {
+                var status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
+                if (status == "") {
+                    if (workInfo.state == WorkInfo.State.CANCELLED) status = "Backup cancelled."
+                    else if (workInfo.state == WorkInfo.State.FAILED) status = "Backup failed."
+                }
+                val progress = workInfo.outputData.getDouble(ExportWorker.PARAM_PERCENTAGE, 100.0)
+                setProgressPercentage(progress, status, false)
+                Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
+            } else {
+                val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
+                val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
+                setProgressPercentage(progress, status, false)
+            }
+        })
+        
+        mImportViewModel = ViewModelProvider(this)[ImportProgressViewModel::class.java]
+        mImportViewModel!!.workInfos.observe(this, Observer { listOfWorkInfo ->
+            if (listOfWorkInfo.isNullOrEmpty()) return@Observer
+            val workInfo = listOfWorkInfo[0]
+            if (workInfo.state.isFinished) {
+                var status = workInfo.outputData.getString(ImportWorker.PARAM_STATUS) ?: ""
+                if (status == "") {
+                    if (workInfo.state == WorkInfo.State.CANCELLED) status = "Import cancelled."
+                    else if (workInfo.state == WorkInfo.State.FAILED) status = "Import failed."
+                }
+                val progress = workInfo.outputData.getDouble(ImportWorker.PARAM_PERCENTAGE, 100.0)
+                setProgressPercentage(progress, status, false)
+                Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
+            } else {
+                val status = workInfo.progress.getString(ImportWorker.PARAM_STATUS) ?: ""
+                val progress = workInfo.progress.getDouble(ImportWorker.PARAM_PERCENTAGE, 0.0)
+                setProgressPercentage(progress, status, false)
+            }
+        })
+        
+        mDbConvViewModel = ViewModelProvider(this)[DbConvProgressViewModel::class.java]
+        mDbConvViewModel!!.workInfos.observe(this, Observer { listOfWorkInfo ->
+            if (listOfWorkInfo.isNullOrEmpty()) return@Observer
+            val workInfo = listOfWorkInfo[0]
+            if (workInfo.state.isFinished) {
+                val status = workInfo.outputData.getString(DbConvWorker.PARAM_STATUS) ?: ""
+                val progress = workInfo.outputData.getDouble(DbConvWorker.PARAM_PERCENTAGE, 100.0)
+                setProgressPercentage(progress, status, false)
+                Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
+            } else {
+                val status = workInfo.progress.getString(DbConvWorker.PARAM_STATUS) ?: ""
+                val progress = workInfo.progress.getDouble(DbConvWorker.PARAM_PERCENTAGE, 0.0)
+                setProgressPercentage(progress, status, false)
+            }
+        })
+
+        isIntentServiceWorking = savedInstanceState?.getInt("is_intent_service_working") ?: 0
         pendingExportMode = if (savedInstanceState?.containsKey("pending_export_mode") == true) savedInstanceState.getInt("pending_export_mode") else null
         pendingImportMode = if (savedInstanceState?.containsKey("pending_import_mode") == true) savedInstanceState.getInt("pending_import_mode") else null
 
         val filtertype = savedInstanceState?.getInt("filmroll_filtertype") ?: 0
         val filtervalue = savedInstanceState?.getStringArrayList("filmroll_filtervalue") ?: arrayListOf("")
-        selectFragment(currentFragmentId, filtertype, filtervalue)
+        currentFilter = Pair(filtertype, filtervalue)
+        if (filtertype != 0) {
+            currentSubtitle = getFilterLabel(currentFilter)
+        }
+        
+        val routeMap = mapOf(ID_FILMROLL to ROUTE_FILMROLLS, ID_CAMERA to ROUTE_CAMERAS, ID_LENS to ROUTE_LENSES, ID_ACCESSORY to ROUTE_ACCESSORIES, ID_FAVORITES to ROUTE_FAVORITES)
+        val initialRoute = routeMap[savedInstanceState?.getInt("current_fragment") ?: ID_FILMROLL] ?: ROUTE_FILMROLLS
 
-        refreshFab()
-
-        val drawer = findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
-        val toggle = ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
-        drawer.addDrawerListener(toggle)
-        toggle.syncState()
-
-        val navigationView = findViewById<NavigationView>(R.id.nav_view)
-        navigationView.setNavigationItemSelectedListener(this)
-
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val drawerLayout = findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
-                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                    drawerLayout.closeDrawer(GravityCompat.START)
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                    isEnabled = true
-                }
+        setContent {
+            MaterialTheme {
+                MainAppScreen(initialRoute)
             }
-        })
+        }
     }
 
     private fun fixOrientation(){
@@ -530,7 +424,6 @@ class MainActivity : AppCompatActivity(),
 
     override fun onResume() {
         super.onResume()
-
         val dao = TrisquelDao(this)
         dao.connection()
         val dbConvForAndroid11Done = dao.getConversionState() >= 1
@@ -545,46 +438,32 @@ class MainActivity : AppCompatActivity(),
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val lastVersion = pref.getInt("last_version", 0)
         if (0 < lastVersion && lastVersion < Util.TRISQUEL_VERSION) {
-            val fragment = YesNoDialogFragment.Builder()
-                    .build(RETCODE_OPEN_RELEASE_NOTES)
+            val fragment = YesNoDialogFragment.Builder().build(RETCODE_OPEN_RELEASE_NOTES)
             fragment.arguments?.putString("title", "Trisquel")
-            //if (lastVersion != 0) {
-                fragment.arguments?.putString("message", getString(R.string.warning_newversion))
-            //} else {
-                //fragment.arguments?.putString("message", getString(R.string.warning_firstrun))
-            //}
+            fragment.arguments?.putString("message", getString(R.string.warning_newversion))
             fragment.arguments?.putString("positive", getString(R.string.show_release_notes))
             fragment.arguments?.putString("negative", getString(R.string.close))
             fragment.showOn(this, "dialog")
         }
-        val e = pref.edit()
-        e.putInt("last_version", Util.TRISQUEL_VERSION)
-        e.apply()
+        pref.edit().putInt("last_version", Util.TRISQUEL_VERSION).apply()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putInt("current_fragment", when (currentFragment) {
-            is CameraFragment -> ID_CAMERA
-            is LensFragment -> ID_LENS
-            is AccessoryFragment -> ID_ACCESSORY
-            is FavoritePhotoFragment -> ID_FAVORITES
+        outState.putInt("current_fragment", when (currentRoute) {
+            ROUTE_CAMERAS -> ID_CAMERA
+            ROUTE_LENSES -> ID_LENS
+            ROUTE_ACCESSORIES -> ID_ACCESSORY
+            ROUTE_FAVORITES -> ID_FAVORITES
             else -> ID_FILMROLL
         })
-        if(currentFragment is FilmRollFragment){
-            val (filtertype, filtervalue) = (currentFragment as FilmRollFragment).currentFilter
-            outState.putInt("filmroll_filtertype", filtertype)
-            outState.putStringArrayList("filmroll_filtervalue", filtervalue)
+        if (currentRoute == ROUTE_FILMROLLS) {
+            outState.putInt("filmroll_filtertype", currentFilter.first)
+            outState.putStringArrayList("filmroll_filtervalue", currentFilter.second)
         }
         outState.putInt("is_intent_service_working", isIntentServiceWorking)
         pendingExportMode?.let { outState.putInt("pending_export_mode", it) }
         pendingImportMode?.let { outState.putInt("pending_import_mode", it) }
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
     }
 
     fun getPinnedFilters(): ArrayList<Pair<Int, ArrayList<String>>>{
@@ -613,9 +492,7 @@ class MainActivity : AppCompatActivity(),
         jsonfilter.put("type", newfilter.first)
         jsonfilter.put("values", JSONArray(newfilter.second))
         array.put(jsonfilter)
-        val e = pref.edit()
-        e.putString("pinned_filters", array.toString())
-        e.apply()
+        pref.edit().putString("pinned_filters", array.toString()).apply()
     }
 
     fun removePinnedFilter(filter: Pair<Int, ArrayList<String>>){
@@ -631,208 +508,26 @@ class MainActivity : AppCompatActivity(),
             for (j in 0 until jsonfiltervalues.length()){
                 filtervalues.add(jsonfiltervalues.getString(j))
             }
-            if(filtertype == filter.first && filtervalues.containsAll(filtervalues)){
+            if(filtertype == filter.first && filtervalues.containsAll(filter.second)){
                 array.remove(i)
                 break
             }
         }
-
-        val e = pref.edit()
-        e.putString("pinned_filters", array.toString())
-        e.apply()
+        pref.edit().putString("pinned_filters", array.toString()).apply()
     }
 
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val sortmenu = menu.findItem(R.id.action_sort)
-        sortmenu.isVisible = when(currentFragment){
-            is FilmRollFragment, is CameraFragment, is LensFragment, is AccessoryFragment -> true
-            else -> false
+    fun getFilterLabel(f: Pair<Int, ArrayList<String>>): String {
+        return when(f.first) {
+            1 -> {
+                val dao = TrisquelDao(this)
+                dao.connection()
+                val c = dao.getCamera(f.second[0].toInt())
+                dao.close()
+                if (c != null) "📷 " + c.manufacturer + " " + c.modelName else ""
+            }
+            2 -> "🎞 " + f.second.joinToString(" ")
+            else -> ""
         }
-        sortmenu.setShowAsAction(
-                when (currentFragment) {
-                    is CameraFragment, is LensFragment, is AccessoryFragment -> SHOW_AS_ACTION_IF_ROOM
-                    else -> SHOW_AS_ACTION_NEVER
-                }
-        )
-        val filtermenu = menu.findItem(R.id.action_filter)
-        filtermenu.isVisible = when(currentFragment){
-            is FilmRollFragment -> true
-            else -> false
-        }
-        val searchmenu = menu.findItem(R.id.action_search)
-        searchmenu.isVisible = when(currentFragment){
-            is FilmRollFragment -> true
-            else -> false
-        }
-
-        val pinfiltermenu = menu.findItem(R.id.action_pin_current_filter)
-        val unpinfiltermenu = menu.findItem(R.id.action_unpin_current_filter)
-        val filters = getPinnedFilters()
-        pinfiltermenu.isVisible = when(currentFragment){
-            is FilmRollFragment -> {
-                val currentFilter = (currentFragment as FilmRollFragment).currentFilter
-                currentFilter.first != 0 &&
-                        (filters.find {
-                            it.first == currentFilter.first &&
-                                    it.second.containsAll(currentFilter.second)
-                        } == null)
-            }
-            else -> false
-        }
-        unpinfiltermenu.isVisible = when(currentFragment){
-            is FilmRollFragment -> (currentFragment as FilmRollFragment).currentFilter.first != 0 && !pinfiltermenu.isVisible
-            else -> false
-        }
-
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val id = item.itemId
-
-        if (id == R.id.action_settings) {
-            val intent = Intent(application, SettingsActivity::class.java)
-            startActivity(intent)
-            return true
-        } else if (id == R.id.action_search) {
-            val dao = TrisquelDao(this)
-            dao.connection()
-            val tags = dao.allTags
-            dao.close()
-
-            val fragment = SearchCondDialogFragment.Builder().build(RETCODE_SEARCH)
-            fragment.arguments?.putString("title", getString(R.string.title_dialog_search_by_tags))
-            fragment.arguments?.putStringArray("labels", tags.sortedBy { it.label }.map { it.label }.toTypedArray())
-            fragment.showOn(this, "dialog")
-            return true
-        } else if (id == R.id.action_sort){
-            val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)
-            val arr = when(currentFragment){
-                is FilmRollFragment -> arrayOf(
-                        getString(R.string.label_created_date),
-                        getString(R.string.label_name),
-                        getString(R.string.label_camera),
-                        getString(R.string.label_brand))
-                is CameraFragment -> arrayOf(
-                        getString(R.string.label_created_date),
-                        getString(R.string.label_name),
-                        getString(R.string.label_mount),
-                        getString(R.string.label_format))
-                is LensFragment -> arrayOf(
-                        getString(R.string.label_created_date),
-                        getString(R.string.label_name),
-                        getString(R.string.label_mount),
-                        getString(R.string.label_focal_length))
-                is AccessoryFragment -> arrayOf(
-                        getString(R.string.label_created_date),
-                        getString(R.string.label_name),
-                        getString(R.string.label_accessory_type))
-                else -> arrayOf()
-            }
-            val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-            val key = when(currentFragment){
-                is FilmRollFragment -> pref.getInt("filmroll_sortkey", 0)
-                is CameraFragment -> pref.getInt("camera_sortkey", 0)
-                is LensFragment -> pref.getInt("lens_sortkey", 0)
-                is AccessoryFragment -> pref.getInt("accessory_sortkey", 0)
-                else -> 0
-            }
-            fragment.arguments?.putString("title", getString(R.string.label_sort_by))
-            fragment.arguments?.putInt("selected", key)
-            fragment.arguments?.putStringArray("items", arr)
-            fragment.arguments?.putString("positive", getString(android.R.string.ok))
-            fragment.showOn(this, "dialog")
-        } else if (id == R.id.action_filter){
-            val vItem: View = findViewById(R.id.action_filter)
-            val popupMenu = PopupMenu(this, vItem, Gravity.NO_GRAVITY, R.attr.actionOverflowMenuStyle, 0)
-            popupMenu.inflate(R.menu.menu_filter)
-            val nofilter_item = popupMenu.menu.findItem(R.id.action_no_filtering)
-            if (currentFragment is FilmRollFragment) {
-                nofilter_item.isVisible = (currentFragment as FilmRollFragment).currentFilter.first != 0
-            }
-            val filters = getPinnedFilters()
-            val dao_ = TrisquelDao(this) // 警告が鬱陶しいので仮にアンダースコアをつける
-            dao_.connection()
-            while(filters.size > pinnedFilterViewId.size){
-                pinnedFilterViewId.add(View.generateViewId())
-            }
-            for((i, f) in filters.withIndex()){
-                when(f.first){
-                    1 -> {
-                        val c = dao_.getCamera(f.second[0].toInt())
-                        if (c != null)
-                            popupMenu.menu.add(0, pinnedFilterViewId[i], 0, c.manufacturer + " " + c.modelName)
-                    }
-                    2 -> {
-                        popupMenu.menu.add(0, pinnedFilterViewId[i], 0, f.second.joinToString(" "))
-                    }
-                }
-            }
-            dao_.close() // いままでどうやらcloseを忘れていたらしい
-
-            //popupMenu.menu.add(R.id.group_recent_filter, View.generateViewId() , 0, "hogehoge")
-            popupMenu.setOnMenuItemClickListener {
-                when (it.itemId) {
-                    R.id.action_no_filtering ->
-                        if (currentFragment is FilmRollFragment) {
-                            (currentFragment as FilmRollFragment).currentFilter = Pair(0, arrayListOf(""))
-                            supportActionBar?.subtitle = ""
-                        }
-                    R.id.action_filter_by_camera ->
-                        if (currentFragment is FilmRollFragment) {
-                            val fragment = SelectDialogFragment.Builder()
-                                    .build(RETCODE_FILTER_CAMERA)
-
-                            val dao = TrisquelDao(this)
-                            dao.connection()
-                            val cs = dao.allCameras
-                            dao.close()
-                            cs.sortBy { it.manufacturer + " " + it.modelName }
-                            fragment.arguments?.putStringArray("items", cs.map { it.manufacturer + " " + it.modelName }.toTypedArray())
-                            fragment.arguments?.putIntegerArrayList("ids", ArrayList(cs.map { it.id }))
-                            fragment.showOn(this@MainActivity, "dialog")
-                        }
-                    R.id.action_filter_by_filmbrand ->
-                        if (currentFragment is FilmRollFragment) {
-                            val fragment = SelectDialogFragment.Builder()
-                                    .build(RETCODE_FILTER_FILM_BRAND)
-                            val dao = TrisquelDao(this)
-                            dao.connection()
-                            val fbs = dao.availableFilmBrandList
-                            dao.close()
-                            fragment.arguments?.putStringArray("items", fbs.map { it.first + " " + it.second }.toTypedArray())
-                            fragment.showOn(this@MainActivity, "dialog")
-                        }
-                    else -> {
-                        if(pinnedFilterViewId.contains(it.itemId) && currentFragment is FilmRollFragment){
-                            val index = pinnedFilterViewId.indexOf(it.itemId)
-                            val f = getPinnedFilters()[index]
-                            (currentFragment as FilmRollFragment).currentFilter = f
-                            val dao = TrisquelDao(this)
-                            dao.connection()
-                            val subtitle = when(f.first){
-                                1 -> {
-                                    val c = dao.getCamera(f.second[0].toInt())
-                                    "📷 " + c?.manufacturer + " " + c?.modelName
-                                }
-                                2 -> "🎞 " + f.second.joinToString(" ")
-                                else -> ""
-                            }
-                            supportActionBar?.subtitle = subtitle
-                            dao.close()
-                        }
-                    }
-                }
-                true
-            }
-            popupMenu.show()
-        } else if (id == R.id.action_pin_current_filter){
-            addPinnedFilter((currentFragment as FilmRollFragment).currentFilter)
-        } else if (id == R.id.action_unpin_current_filter){
-            removePinnedFilter((currentFragment as FilmRollFragment).currentFilter)
-        }
-
-        return super.onOptionsItemSelected(item)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -844,10 +539,6 @@ class MainActivity : AppCompatActivity(),
             intent.putExtra("status", status)
             sendBroadcast(intent)
             releaseOrientation()
-            if(lifecycle.currentState == Lifecycle.State.RESUMED) {
-                selectFragment(ID_FILMROLL, 0, arrayListOf(""))
-                refreshFab()
-            }
         }else {
             intent.action = ACTION_UPDATE_PROGRESS_DIALOG
             intent.putExtra("percentage", percentage)
@@ -857,7 +548,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     fun checkSQLiteFileFormat(pfd: ParcelFileDescriptor): Boolean{
-        // "SQLite format 3\0"
         val header = byteArrayOf(
                 0x53, 0x51, 0x4c, 0x69,
                 0x74, 0x65, 0x20, 0x66,
@@ -873,266 +563,29 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        // Handle navigation view item clicks here.
-        val id = item.itemId
-
-        val fab = findViewById<FloatingActionButton>(R.id.fab)
-        val drawer = findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
-        var titleRsc: Int = 0
-        var fabRsc: Int = 0
-        when(id) {
-            R.id.nav_settings -> {
-                val intent = Intent(application, SettingsActivity::class.java)
-                startActivity(intent)
-                drawer.closeDrawer(GravityCompat.START)
-                return true
-            }
-            R.id.nav_backup_sqlite -> {
-                val fragment = RichSelectionDialogFragment.Builder()
-                        .build(RETCODE_EXPORT_DB)
-                fragment.arguments?.putInt("id", -1) //dummy value
-                fragment.arguments?.putString("title", getString(R.string.title_backup_mode_selection))
-                fragment.arguments?.putIntegerArrayList("items_icon",
-                        arrayListOf(R.drawable.ic_export,
-                                R.drawable.ic_export_img,
-                                R.drawable.ic_help))
-                fragment.arguments?.putStringArray("items_title",
-                        arrayOf(getString(R.string.title_slim_backup),
-                                getString(R.string.title_whole_backup),
-                                getString(R.string.title_backup_help)))
-                fragment.arguments?.putStringArray("items_desc",
-                        arrayOf(getString(R.string.description_slim_backup),
-                                getString(R.string.description_whole_backup),
-                                getString(R.string.description_backup_help)))
-                fragment.showOn(this@MainActivity, "dialog")
-                drawer.closeDrawer(GravityCompat.START)
-                return true
-            }
-            R.id.nav_import -> {
-                val fragment = RichSelectionDialogFragment.Builder()
-                        .build(RETCODE_IMPORT_DB)
-                fragment.arguments?.putInt("id", -1) //dummy value
-                fragment.arguments?.putString("title", getString(R.string.title_import_mode_selection))
-                fragment.arguments?.putIntegerArrayList("items_icon",
-                        arrayListOf(R.drawable.ic_merge,
-                                R.drawable.ic_restore,
-                                //R.drawable.ic_db_restore,
-                                R.drawable.ic_help))
-                fragment.arguments?.putStringArray("items_title",
-                        arrayOf(getString(R.string.title_merge_zip),
-                                getString(R.string.title_import_zip),
-                                //getString(R.string.title_import_db),
-                                getString(R.string.title_backup_help)))
-                fragment.arguments?.putStringArray("items_desc",
-                        arrayOf(getString(R.string.description_merge_zip),
-                                getString(R.string.description_import_zip),
-                                //getString(R.string.description_import_db),
-                                getString(R.string.description_backup_help)))
-                fragment.showOn(this@MainActivity, "dialog")
-                drawer.closeDrawer(GravityCompat.START)
-                return true
-            }
-            R.id.nav_license -> {
-                val intent = Intent(this, LicenseActivity::class.java)
-                startActivity(intent)
-                drawer.closeDrawer(GravityCompat.START)
-                return true
-            }
-            R.id.nav_release_notes -> {
-                val uri = Uri.parse(RELEASE_NOTES_URL) // + Integer.toString(Util.TRISQUEL_VERSION)
-                val i = Intent(Intent.ACTION_VIEW, uri)
-                startActivity(i)
-                drawer.closeDrawer(GravityCompat.START)
-                return true
-            }
-            R.id.nav_camera -> {
-                currentFragment = CameraFragment()
-                titleRsc = R.string.title_activity_cam_list
-                fabRsc = R.drawable.ic_menu_camera_white
-            }
-            R.id.nav_lens -> {
-                currentFragment = LensFragment()
-                titleRsc = R.string.title_activity_lens_list
-                fabRsc = R.drawable.ic_lens_white
-            }
-            R.id.nav_filmrolls -> {
-                currentFragment = FilmRollFragment()
-                titleRsc = R.string.title_activity_filmroll_list
-                fabRsc = R.drawable.ic_filmroll_vector_white
-            }
-            R.id.nav_favorites -> {
-                currentFragment = FavoritePhotoFragment()
-                titleRsc = R.string.title_activity_favorites
-            }
-            R.id.nav_accessory -> {
-                currentFragment = AccessoryFragment()
-                titleRsc = R.string.title_activity_accessory_list
-                fabRsc = R.drawable.ic_extension_white
-            }
-        }
-
-        val transaction = supportFragmentManager.beginTransaction()
-        transaction.replace(R.id.container, currentFragment)
-        transaction.commit()
-        setTitle(titleRsc)
-        supportActionBar?.subtitle = ""
-
-        when(id){
-            R.id.nav_favorites -> {
-                fab.hide()
-            }
-            R.id.nav_camera, R.id.nav_lens, R.id.nav_filmrolls, R.id.nav_accessory -> {
-                //一旦隠さないと設定したリソースが反映されない。
-                //おそらくAndroid側のバグ
-                fab.hide()
-                fab.setImageResource(fabRsc)
-                fab.show()
-            }
-        }
-
-        invalidateOptionsMenu()
-
-        drawer.closeDrawer(GravityCompat.START)
-        return true
-    }
-
-    override fun onListFragmentInteraction(item: CameraSpec, isLong: Boolean) {
-        if (isLong) {
-            val dao = TrisquelDao(applicationContext)
-            dao.connection()
-            val used = dao.getCameraUsage(item.id)
-            dao.close()
-            if (used) {
-                val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(item.modelName))
-                fragment.showOn(this, "dialog")
-            } else {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(RETCODE_DELETE_CAMERA)
-                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.modelName))
-                fragment.arguments?.putInt("id", item.id)
-                fragment.showOn(this, "dialog")
-            }
-        } else {
-            val intent = Intent(application, EditCameraActivity::class.java)
-            intent.putExtra("id", item.id)
-            intent.putExtra("type", item.type)
-            editCameraLauncher.launch(intent)
-        }
-    }
-
-    override fun onListFragmentInteraction(item: LensSpec, isLong: Boolean) {
-        if (isLong) {
-
-            val dao = TrisquelDao(applicationContext)
-            dao.connection()
-            val used = dao.getLensUsage(item.id)
-            dao.close()
-            if (used) {
-                val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(item.modelName))
-                fragment.showOn(this, "dialog")
-            } else {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(RETCODE_DELETE_LENS)
-                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.modelName))
-                fragment.arguments?.putInt("id", item.id)
-                fragment.showOn(this, "dialog")
-            }
-        } else {
-            val intent = Intent(application, EditLensActivity::class.java)
-            intent.putExtra("id", item.id)
-            editLensLauncher.launch(intent)
-        }
-    }
-
-    override fun onListFragmentInteraction(item: FilmRoll, isLong: Boolean) {
-        if (isLong) {
-            val fragment = YesNoDialogFragment.Builder()
-                    .build(RETCODE_DELETE_FILMROLL)
-            fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.name))
-            fragment.arguments?.putInt("id", item.id)
-            fragment.showOn(this, "dialog")
-        } else {
-            val intent = Intent(application, EditPhotoListActivity::class.java)
-            intent.putExtra("id", item.id)
-            editPhotoListLauncher.launch(intent)
-        }
-    }
-
-    override fun onListFragmentInteraction(accessory: Accessory, isLong: Boolean) {
-        if (isLong) {
-            val dao = TrisquelDao(applicationContext)
-            dao.connection()
-            val accessoryUsed = dao.getAccessoryUsed(accessory.id)
-            dao.close()
-            if (accessoryUsed) {
-                val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(accessory.name))
-                fragment.showOn(this, "dialog")
-            } else {
-                val fragment = YesNoDialogFragment.Builder()
-                        .build(RETCODE_DELETE_ACCESSORY)
-                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(accessory.name))
-                fragment.arguments?.putInt("id", accessory.id)
-                fragment.showOn(this, "dialog")
-            }
-        } else {
-            val intent = Intent(application, EditAccessoryActivity::class.java)
-            intent.putExtra("id", accessory.id)
-            editAccessoryLauncher.launch(intent)
-        }
-    }
-
-    override fun onListFragmentInteraction(item: Photo?, list: List<Photo?>) {
-        val intent = Intent(application, GalleryActivity::class.java)
-        intent.putExtra("photo", item)
-        intent.putParcelableArrayListExtra("favList", ArrayList(list))
-        startActivity(intent)
-    }
-
-    @Suppress("UNUSED_PARAMETER")
-    fun onListFragmentInteraction(item: DummyContent.DummyItem?) {
-
-    }
-
-    override fun onFragmentInteraction(uri: Uri) {
-
-    }
-
-    private fun checkPermAndExportDB(mode: Int) { // 0: Slim 1: Whole
-        val readDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-        val mediaLocDenied =
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
-        val notificationDenied =
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
-                false
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+    private fun checkPermAndExportDB(mode: Int) {
+        val readDenied = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
+        else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val mediaLocDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
+        val notificationDenied = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) false
+        else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
         if (readDenied || mediaLocDenied || notificationDenied){
             pendingExportMode = mode
             requestExportPermissionsLauncher.launch(PERMISSIONS)
             return
         }
-
         exportDBDialog(mode)
     }
 
-    fun checkPermAndImportDB(mode: Int) { // 0: merge, 1: replace, 2: replace by .db
-        val readDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-        val mediaLocDenied =
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
-        val notificationDenied =
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
-                false
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+    private fun checkPermAndImportDB(mode: Int) {
+        val readDenied = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
+        else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        val mediaLocDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
+        val notificationDenied = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) false
+        else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
         if (readDenied || mediaLocDenied || notificationDenied){
             pendingImportMode = mode
@@ -1155,11 +608,11 @@ class MainActivity : AppCompatActivity(),
         else        backupDirChosenForFullExLauncher.launch(chooserIntent)
     }
 
-    private fun importDBDialogSinceN(mode: Int) {
+    private fun importDBDialog(mode: Int) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
         intent.addCategory(Intent.CATEGORY_OPENABLE)
         if(mode == 2){
-            intent.type = "*/*" //本当はSQLite3のMIME Typeを登録したいが、うまくいかない
+            intent.type = "*/*"
         }else {
             intent.type = "application/zip"
         }
@@ -1170,12 +623,97 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    private fun importDBDialog(mode: Int) {
-        importDBDialogSinceN(mode)
+    fun onCameraInteraction(item: CameraSpec, isLong: Boolean) {
+        if (isLong) {
+            val dao = TrisquelDao(applicationContext)
+            dao.connection()
+            val used = dao.getCameraUsage(item.id)
+            dao.close()
+            if (used) {
+                val fragment = AlertDialogFragment.Builder().build(99)
+                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(item.modelName))
+                fragment.showOn(this, "dialog")
+            } else {
+                val fragment = YesNoDialogFragment.Builder().build(RETCODE_DELETE_CAMERA)
+                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.modelName))
+                fragment.arguments?.putInt("id", item.id)
+                fragment.showOn(this, "dialog")
+            }
+        } else {
+            val intent = Intent(application, EditCameraActivity::class.java)
+            intent.putExtra("id", item.id)
+            intent.putExtra("type", item.type)
+            editCameraLauncher.launch(intent)
+        }
+    }
+
+    fun onLensInteraction(item: LensSpec, isLong: Boolean) {
+        if (isLong) {
+            val dao = TrisquelDao(applicationContext)
+            dao.connection()
+            val used = dao.getLensUsage(item.id)
+            dao.close()
+            if (used) {
+                val fragment = AlertDialogFragment.Builder().build(99)
+                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(item.modelName))
+                fragment.showOn(this, "dialog")
+            } else {
+                val fragment = YesNoDialogFragment.Builder().build(RETCODE_DELETE_LENS)
+                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.modelName))
+                fragment.arguments?.putInt("id", item.id)
+                fragment.showOn(this, "dialog")
+            }
+        } else {
+            val intent = Intent(application, EditLensActivity::class.java)
+            intent.putExtra("id", item.id)
+            editLensLauncher.launch(intent)
+        }
+    }
+
+    fun onFilmRollInteraction(item: FilmRoll, isLong: Boolean) {
+        if (isLong) {
+            val fragment = YesNoDialogFragment.Builder().build(RETCODE_DELETE_FILMROLL)
+            fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.name))
+            fragment.arguments?.putInt("id", item.id)
+            fragment.showOn(this, "dialog")
+        } else {
+            val intent = Intent(application, EditPhotoListActivity::class.java)
+            intent.putExtra("id", item.id)
+            editPhotoListLauncher.launch(intent)
+        }
+    }
+
+    fun onAccessoryInteraction(accessory: Accessory, isLong: Boolean) {
+        if (isLong) {
+            val dao = TrisquelDao(applicationContext)
+            dao.connection()
+            val accessoryUsed = dao.getAccessoryUsed(accessory.id)
+            dao.close()
+            if (accessoryUsed) {
+                val fragment = AlertDialogFragment.Builder().build(99)
+                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(accessory.name))
+                fragment.showOn(this, "dialog")
+            } else {
+                val fragment = YesNoDialogFragment.Builder().build(RETCODE_DELETE_ACCESSORY)
+                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(accessory.name))
+                fragment.arguments?.putInt("id", accessory.id)
+                fragment.showOn(this, "dialog")
+            }
+        } else {
+            val intent = Intent(application, EditAccessoryActivity::class.java)
+            intent.putExtra("id", accessory.id)
+            editAccessoryLauncher.launch(intent)
+        }
+    }
+
+    fun onPhotoInteraction(item: Photo?, list: List<Photo?>) {
+        val intent = Intent(application, GalleryActivity::class.java)
+        intent.putExtra("photo", item)
+        intent.putParcelableArrayListExtra("favList", ArrayList(list))
+        startActivity(intent)
     }
 
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
-        val frag: androidx.fragment.app.Fragment = currentFragment
         when (requestCode) {
             RETCODE_OPEN_RELEASE_NOTES -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val uri = Uri.parse(RELEASE_NOTES_URL)
@@ -1184,51 +722,35 @@ class MainActivity : AppCompatActivity(),
             }
             RETCODE_EXPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val mode = data.getIntExtra("which", 0)
-                if (mode < 2)
-                    checkPermAndExportDB(mode)
-                else {
-                    val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
-                    startActivity(Intent(Intent.ACTION_VIEW, uri))
-                }
+                if (mode < 2) checkPermAndExportDB(mode)
+                else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
             }
             RETCODE_BACKUP_PROGRESS -> if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
                 mExportViewModel?.cancelExport()
             }
             RETCODE_IMPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val mode = data.getIntExtra("which", 0)
-                if (mode < 2)
-                    checkPermAndImportDB(mode)
-                else {
-                    val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")
-                    startActivity(Intent(Intent.ACTION_VIEW, uri))
-                }
+                if (mode < 2) checkPermAndImportDB(mode)
+                else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
             }
             RETCODE_IMPORT_PROGRESS -> if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
                 mImportViewModel?.cancelExport()
             }
             RETCODE_DELETE_FILMROLL -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val id = data.getIntExtra("id", -1)
-                if (id != -1) {
-                    if (frag is FilmRollFragment) frag.deleteFilmRoll(id)
-                }
+                if (id != -1) filmRollViewModel.delete(id)
             }
             RETCODE_DELETE_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val id = data.getIntExtra("id", -1)
-                if (id != -1 && frag is CameraFragment) {
-                    frag.deleteCamera(id)
-                }
+                if (id != -1) cameraViewModel.deleteCamera(id)
             }
             RETCODE_DELETE_LENS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val id = data.getIntExtra("id", -1)
-                if (id != -1 && frag is LensFragment) {
-                    frag.deleteLens(id)
-                }
+                if (id != -1) lensViewModel.deleteLens(id)
             }
             RETCODE_DELETE_ACCESSORY -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val id = data.getIntExtra("id", -1)
-                if (id != -1 && frag is AccessoryFragment) {
-                    frag.deleteAccessory(id)
-                }
+                if (id != -1) accessoryViewModel.delete(id)
             }
             RETCODE_CAMERA_TYPE -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val which = data.getIntExtra("which", 0)
@@ -1238,58 +760,50 @@ class MainActivity : AppCompatActivity(),
             }
             RETCODE_SORT -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val which = data.getIntExtra("which", 0)
-
                 val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-                val key = when (frag) {
-                    is FilmRollFragment -> "filmroll_sortkey"
-                    is CameraFragment -> "camera_sortkey"
-                    is LensFragment -> "lens_sortkey"
-                    is AccessoryFragment -> "accessory_sortkey"
+                val key = when (currentRoute) {
+                    ROUTE_FILMROLLS -> "filmroll_sortkey"
+                    ROUTE_CAMERAS -> "camera_sortkey"
+                    ROUTE_LENSES -> "lens_sortkey"
+                    ROUTE_ACCESSORIES -> "accessory_sortkey"
                     else -> ""
                 }
-                val e = pref.edit()
-                e.putInt(key, which)
-                e.apply()
+                if (key.isNotEmpty()) pref.edit().putInt(key, which).apply()
 
-                when (frag) {
-                    is FilmRollFragment -> frag.changeSortKey(which)
-                    is CameraFragment -> frag.changeSortKey(which)
-                    is LensFragment -> frag.changeSortKey(which)
-                    is AccessoryFragment -> frag.changeSortKey(which)
+                when (currentRoute) {
+                    ROUTE_FILMROLLS -> filmRollViewModel.viewRule.value = Pair(which, filmRollViewModel.viewRule.value?.second ?: Pair(0, ""))
+                    ROUTE_CAMERAS -> cameraViewModel.changeSortKey(which)
+                    ROUTE_LENSES -> lensViewModel.changeSortKey(which)
+                    ROUTE_ACCESSORIES -> accessoryViewModel.sortingRule.value = which
                 }
             }
             RETCODE_FILTER_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (currentFragment is FilmRollFragment) {
+                if (currentRoute == ROUTE_FILMROLLS) {
                     val cameraid = data.getIntExtra("which_id", -1)
                     if (cameraid != -1) {
-                        (currentFragment as FilmRollFragment).currentFilter = Pair(1, arrayListOf(cameraid.toString()))
-                        val dao = TrisquelDao(this)
-                        dao.connection()
-                        val c = dao.getCamera(cameraid)
-                        dao.close()
-                        if (c != null) {
-                            supportActionBar?.subtitle = "📷 " + c.manufacturer + " " + c.modelName
-                        }
+                        currentFilter = Pair(1, arrayListOf(cameraid.toString()))
+                        currentSubtitle = getFilterLabel(currentFilter)
+                        filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this).getInt("filmroll_sortkey", 0), Pair(1, cameraid.toString()))
                     }
                 }
             }
             RETCODE_FILTER_FILM_BRAND -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (currentFragment is FilmRollFragment) {
+                if (currentRoute == ROUTE_FILMROLLS) {
                     val which = data.getIntExtra("which", -1)
                     val dao = TrisquelDao(this)
                     dao.connection()
                     val brands = dao.availableFilmBrandList
                     dao.close()
                     if (which != -1) {
-                        (currentFragment as FilmRollFragment).currentFilter =
-                                Pair(2, arrayListOf(brands[which].first, brands[which].second))
-                        supportActionBar?.subtitle = "🎞 " + brands[which].second
+                        currentFilter = Pair(2, arrayListOf(brands[which].first, brands[which].second))
+                        currentSubtitle = getFilterLabel(currentFilter)
+                        filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this).getInt("filmroll_sortkey", 0), Pair(2, brands[which].second))
                     }
                 }
             }
             RETCODE_SEARCH -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
                 val tags = data.getStringArrayListExtra("checked_labels")
-                if (tags!!.size > 0) {
+                if (tags != null && tags.isNotEmpty()) {
                     val intent = Intent(application, SearchActivity::class.java)
                     intent.putExtra("tags", tags)
                     searchLauncher.launch(intent)
@@ -1298,7 +812,396 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    override fun onDialogCancelled(requestCode: Int) {
-        // onDialogResult(requestCode, DialogInterface.BUTTON_NEUTRAL, null);
+    override fun onDialogCancelled(requestCode: Int) {}
+
+    data class DrawerItem(val route: String, val title: String, val iconRes: Int)
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun MainAppScreen(initialRoute: String) {
+        val drawerState = androidx.compose.material3.rememberDrawerState(initialValue = DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
+        val navController = rememberNavController()
+        
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val observedRoute = navBackStackEntry?.destination?.route ?: initialRoute
+
+        LaunchedEffect(observedRoute) {
+            currentRoute = observedRoute
+        }
+
+        var showFilterMenu by remember { mutableStateOf(false) }
+        var showOverflowMenu by remember { mutableStateOf(false) }
+
+        val drawerItems = listOf(
+            DrawerItem(ROUTE_FILMROLLS, getString(R.string.title_activity_filmroll_list), R.drawable.ic_filmroll_vector),
+            DrawerItem(ROUTE_FAVORITES, getString(R.string.title_activity_favorites), R.drawable.ic_fav_border_black)
+        )
+        val gearItems = listOf(
+            DrawerItem(ROUTE_CAMERAS, getString(R.string.title_activity_cam_list), R.drawable.ic_menu_camera),
+            DrawerItem(ROUTE_LENSES, getString(R.string.title_activity_lens_list), R.drawable.ic_lens),
+            DrawerItem(ROUTE_ACCESSORIES, getString(R.string.title_activity_accessory_list), R.drawable.ic_extension_black_24dp)
+        )
+        val infoItems = listOf(
+            DrawerItem("settings", getString(R.string.action_settings), R.drawable.ic_settings_black_24dp),
+            DrawerItem("backup", getString(R.string.title_backup), R.drawable.ic_export),
+            DrawerItem("import", getString(R.string.title_import), R.drawable.ic_import)
+        )
+        val otherItems = listOf(
+            DrawerItem("release_notes", getString(R.string.action_releasenotes), 0),
+            DrawerItem("license", getString(R.string.action_license), 0)
+        )
+
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet {
+                    Spacer(Modifier.height(12.dp))
+                    LazyColumn {
+                        items(drawerItems) { item ->
+                            NavigationDrawerItem(
+                                label = { Text(item.title) },
+                                selected = observedRoute == item.route,
+                                icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
+                                onClick = {
+                                    navController.navigate(item.route) { launchSingleTop = true }
+                                    scope.launch { drawerState.close() }
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                        }
+                        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+                        item { Text(getString(R.string.menu_category_gears), Modifier.padding(16.dp, 8.dp)) }
+                        items(gearItems) { item ->
+                            NavigationDrawerItem(
+                                label = { Text(item.title) },
+                                selected = observedRoute == item.route,
+                                icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
+                                onClick = {
+                                    navController.navigate(item.route) { launchSingleTop = true }
+                                    scope.launch { drawerState.close() }
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                        }
+                        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+                        items(infoItems) { item ->
+                            NavigationDrawerItem(
+                                label = { Text(item.title) },
+                                selected = false,
+                                icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
+                                onClick = {
+                                    scope.launch { drawerState.close() }
+                                    when (item.route) {
+                                        "settings" -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                                        "backup" -> {
+                                            val fragment = RichSelectionDialogFragment.Builder().build(RETCODE_EXPORT_DB)
+                                            fragment.arguments?.putInt("id", -1)
+                                            fragment.arguments?.putString("title", getString(R.string.title_backup_mode_selection))
+                                            fragment.arguments?.putIntegerArrayList("items_icon", arrayListOf(R.drawable.ic_export, R.drawable.ic_export_img, R.drawable.ic_help))
+                                            fragment.arguments?.putStringArray("items_title", arrayOf(getString(R.string.title_slim_backup), getString(R.string.title_whole_backup), getString(R.string.title_backup_help)))
+                                            fragment.arguments?.putStringArray("items_desc", arrayOf(getString(R.string.description_slim_backup), getString(R.string.description_whole_backup), getString(R.string.description_backup_help)))
+                                            fragment.showOn(this@MainActivity, "dialog")
+                                        }
+                                        "import" -> {
+                                            val fragment = RichSelectionDialogFragment.Builder().build(RETCODE_IMPORT_DB)
+                                            fragment.arguments?.putInt("id", -1)
+                                            fragment.arguments?.putString("title", getString(R.string.title_import_mode_selection))
+                                            fragment.arguments?.putIntegerArrayList("items_icon", arrayListOf(R.drawable.ic_merge, R.drawable.ic_restore, R.drawable.ic_help))
+                                            fragment.arguments?.putStringArray("items_title", arrayOf(getString(R.string.title_merge_zip), getString(R.string.title_import_zip), getString(R.string.title_backup_help)))
+                                            fragment.arguments?.putStringArray("items_desc", arrayOf(getString(R.string.description_merge_zip), getString(R.string.description_import_zip), getString(R.string.description_backup_help)))
+                                            fragment.showOn(this@MainActivity, "dialog")
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                        }
+                        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+                        items(otherItems) { item ->
+                            NavigationDrawerItem(
+                                label = { Text(item.title) },
+                                selected = false,
+                                onClick = {
+                                    scope.launch { drawerState.close() }
+                                    when (item.route) {
+                                        "release_notes" -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RELEASE_NOTES_URL)))
+                                        "license" -> startActivity(Intent(this@MainActivity, LicenseActivity::class.java))
+                                    }
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        ) {
+            Scaffold(
+                topBar = {
+                    val titleRes = when(observedRoute) {
+                        ROUTE_CAMERAS -> R.string.title_activity_cam_list
+                        ROUTE_LENSES -> R.string.title_activity_lens_list
+                        ROUTE_ACCESSORIES -> R.string.title_activity_accessory_list
+                        ROUTE_FAVORITES -> R.string.title_activity_favorites
+                        else -> R.string.title_activity_filmroll_list
+                    }
+                    TopAppBar(
+                        title = {
+                            Column {
+                                Text(getString(titleRes))
+                                if (observedRoute == ROUTE_FILMROLLS && currentSubtitle.isNotEmpty()) {
+                                    Text(currentSubtitle, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                            actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, "Menu")
+                            }
+                        },
+                        actions = {
+                            if (observedRoute in listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES)) {
+                                IconButton(onClick = {
+                                    val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)
+                                    val arr = when(observedRoute){
+                                        ROUTE_FILMROLLS -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_camera), getString(R.string.label_brand))
+                                        ROUTE_CAMERAS -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_mount), getString(R.string.label_format))
+                                        ROUTE_LENSES -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_mount), getString(R.string.label_focal_length))
+                                        ROUTE_ACCESSORIES -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_accessory_type))
+                                        else -> arrayOf()
+                                    }
+                                    val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+                                    val key = when(observedRoute){
+                                        ROUTE_FILMROLLS -> pref.getInt("filmroll_sortkey", 0)
+                                        ROUTE_CAMERAS -> pref.getInt("camera_sortkey", 0)
+                                        ROUTE_LENSES -> pref.getInt("lens_sortkey", 0)
+                                        ROUTE_ACCESSORIES -> pref.getInt("accessory_sortkey", 0)
+                                        else -> 0
+                                    }
+                                    fragment.arguments?.putString("title", getString(R.string.label_sort_by))
+                                    fragment.arguments?.putInt("selected", key)
+                                    fragment.arguments?.putStringArray("items", arr)
+                                    fragment.arguments?.putString("positive", getString(android.R.string.ok))
+                                    fragment.showOn(this@MainActivity, "dialog")
+                                }) {
+                                    Icon(painterResource(R.drawable.ic_sort_white_24dp), null)
+                                }
+                            }
+                            if (observedRoute == ROUTE_FILMROLLS) {
+                                androidx.compose.foundation.layout.Box {
+                                    IconButton(onClick = { showFilterMenu = true }) {
+                                        Icon(painterResource(R.drawable.ic_filter_white), null)
+                                    }
+                                    DropdownMenu(expanded = showFilterMenu, onDismissRequest = { showFilterMenu = false }) {
+                                        if (currentFilter.first != 0) {
+                                            DropdownMenuItem(
+                                                text = { Text(getString(R.string.label_no_filter)) },
+                                                onClick = {
+                                                    currentFilter = Pair(0, arrayListOf())
+                                                    currentSubtitle = ""
+                                                    filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(0, ""))
+                                                    showFilterMenu = false
+                                                }
+                                            )
+                                        }
+                                        DropdownMenuItem(
+                                            text = { Text(getString(R.string.label_filter_by_camera)) },
+                                            onClick = {
+                                                val fragment = SelectDialogFragment.Builder().build(RETCODE_FILTER_CAMERA)
+                                                val dao = TrisquelDao(this@MainActivity)
+                                                dao.connection()
+                                                val cs = dao.allCameras
+                                                dao.close()
+                                                cs.sortBy { it.manufacturer + " " + it.modelName }
+                                                fragment.arguments?.putStringArray("items", cs.map { it.manufacturer + " " + it.modelName }.toTypedArray())
+                                                fragment.arguments?.putIntegerArrayList("ids", ArrayList(cs.map { it.id }))
+                                                fragment.showOn(this@MainActivity, "dialog")
+                                                showFilterMenu = false
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(getString(R.string.label_filter_by_film_brand)) },
+                                            onClick = {
+                                                val fragment = SelectDialogFragment.Builder().build(RETCODE_FILTER_FILM_BRAND)
+                                                val dao = TrisquelDao(this@MainActivity)
+                                                dao.connection()
+                                                val fbs = dao.availableFilmBrandList
+                                                dao.close()
+                                                fragment.arguments?.putStringArray("items", fbs.map { it.first + " " + it.second }.toTypedArray())
+                                                fragment.showOn(this@MainActivity, "dialog")
+                                                showFilterMenu = false
+                                            }
+                                        )
+                                        val pinnedFilters = getPinnedFilters()
+                                        if (pinnedFilters.isNotEmpty()) {
+                                            HorizontalDivider()
+                                            pinnedFilters.forEach { f ->
+                                                DropdownMenuItem(
+                                                    text = { Text(getFilterLabel(f)) },
+                                                    onClick = {
+                                                        currentFilter = f
+                                                        currentSubtitle = getFilterLabel(f)
+                                                        val searchStr = if(f.first == 1) f.second[0].toInt().toString() else f.second[1]
+                                                        filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(f.first, searchStr))
+                                                        showFilterMenu = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                IconButton(onClick = {
+                                    val dao = TrisquelDao(this@MainActivity)
+                                    dao.connection()
+                                    val tags = dao.allTags
+                                    dao.close()
+                                    val fragment = SearchCondDialogFragment.Builder().build(RETCODE_SEARCH)
+                                    fragment.arguments?.putString("title", getString(R.string.title_dialog_search_by_tags))
+                                    fragment.arguments?.putStringArray("labels", tags.sortedBy { it.label }.map { it.label }.toTypedArray())
+                                    fragment.showOn(this@MainActivity, "dialog")
+                                }) {
+                                    Icon(painterResource(R.drawable.ic_search_white_24dp), null)
+                                }
+                                
+                                androidx.compose.foundation.layout.Box {
+                                    IconButton(onClick = { showOverflowMenu = true }) {
+                                        Icon(Icons.Default.MoreVert, null)
+                                    }
+                                    DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
+                                        val pinnedFilters = getPinnedFilters()
+                                        val isPinned = pinnedFilters.any { it.first == currentFilter.first && it.second.containsAll(currentFilter.second) }
+                                        if (currentFilter.first != 0 && !isPinned) {
+                                            DropdownMenuItem(
+                                                text = { Text(getString(R.string.action_pin_current_filter)) },
+                                                onClick = { addPinnedFilter(currentFilter); showOverflowMenu = false }
+                                            )
+                                        } else if (currentFilter.first != 0 && isPinned) {
+                                            DropdownMenuItem(
+                                                text = { Text(getString(R.string.action_unpin_current_filter)) },
+                                                onClick = { removePinnedFilter(currentFilter); showOverflowMenu = false }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    )
+                },
+                floatingActionButton = {
+                    if (observedRoute != ROUTE_FAVORITES) {
+                        FloatingActionButton(onClick = {
+                            when (observedRoute) {
+                                ROUTE_CAMERAS -> {
+                                    val fragment = SelectDialogFragment.Builder().build(RETCODE_CAMERA_TYPE)
+                                    fragment.arguments?.putInt("id", -1)
+                                    fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)))
+                                    fragment.showOn(this@MainActivity, "dialog")
+                                }
+                                ROUTE_LENSES -> {
+                                    val intent = Intent(application, EditLensActivity::class.java)
+                                    addLensLauncher.launch(intent)
+                                }
+                                ROUTE_ACCESSORIES -> {
+                                    val intent = Intent(application, EditAccessoryActivity::class.java)
+                                    addAccessoryLauncher.launch(intent)
+                                }
+                                ROUTE_FILMROLLS -> {
+                                    val intent = Intent(application, EditFilmRollActivity::class.java)
+                                    if (currentFilter.first == 1) {
+                                        intent.putExtra("default_camera", currentFilter.second[0].toInt())
+                                    } else if (currentFilter.first == 2) {
+                                        intent.putExtra("default_manufacturer", currentFilter.second[0])
+                                        intent.putExtra("default_brand", currentFilter.second[1])
+                                    }
+                                    addFilmRollLauncher.launch(intent)
+                                }
+                            }
+                        }, containerColor = MaterialTheme.colorScheme.secondary) {
+                            val iconRes = when (observedRoute) {
+                                ROUTE_CAMERAS -> R.drawable.ic_menu_camera_white
+                                ROUTE_LENSES -> R.drawable.ic_lens_white
+                                ROUTE_ACCESSORIES -> R.drawable.ic_extension_white
+                                else -> R.drawable.ic_filmroll_vector_white
+                            }
+                            Icon(painterResource(iconRes), null, tint = Color.White)
+                        }
+                    }
+                }
+            ) { paddingValues ->
+                NavHost(navController, startDestination = initialRoute, modifier = Modifier.padding(paddingValues)) {
+                    composable(ROUTE_FILMROLLS) {
+                        val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
+                        FilmRollListScreen(
+                            filmrolls = filmrolls,
+                            onItemClick = { onFilmRollInteraction(FilmRoll.fromEntity(it), false) },
+                            onItemLongClick = { onFilmRollInteraction(FilmRoll.fromEntity(it), true) },
+                            emptyMessage = getString(R.string.warning_filmroll_not_registered)
+                        )
+                    }
+                    composable(ROUTE_CAMERAS) {
+                        val cameras by cameraViewModel.cameras.observeAsState(emptyList())
+                        CameraListScreen(
+                            cameras = cameras,
+                            onItemClick = { onCameraInteraction(it, false) },
+                            onItemLongClick = { onCameraInteraction(it, true) },
+                            emptyMessage = getString(R.string.warning_cam_not_registered),
+                            scrollTargetIndex = null,
+                            onScrollConsumed = {}
+                        )
+                    }
+                    composable(ROUTE_LENSES) {
+                        val lenses by lensViewModel.lenses.observeAsState(emptyList())
+                        LensListScreen(
+                            lenses = lenses,
+                            onItemClick = { onLensInteraction(it, false) },
+                            onItemLongClick = { onLensInteraction(it, true) },
+                            emptyMessage = getString(R.string.warning_lens_not_registered),
+                            scrollTargetIndex = null,
+                            onScrollConsumed = {}
+                        )
+                    }
+                    composable(ROUTE_ACCESSORIES) {
+                        val accessories by accessoryViewModel.allAccessories.observeAsState(emptyList())
+                        AccessoryListScreen(
+                            accessories = accessories,
+                            onItemClick = { onAccessoryInteraction(Accessory.fromEntity(it), false) },
+                            onItemLongClick = { onAccessoryInteraction(Accessory.fromEntity(it), true) },
+                            emptyMessage = getString(R.string.warning_accessory_not_registered)
+                        )
+                    }
+                    composable(ROUTE_FAVORITES) {
+                        val context = LocalContext.current
+                        val groupedPhotos = remember { mutableStateOf<List<Pair<String, List<Photo>>>>(emptyList()) }
+                        LaunchedEffect(Unit) {
+                            withContext(Dispatchers.IO) {
+                                val dao = TrisquelDao(context)
+                                dao.connection()
+                                val list = dao.getAllFavedPhotos()
+                                val map = list.groupBy { it.filmrollid }
+                                val list2 = map.values.sortedByDescending { it[0].date }
+                                val result = list2.map { l ->
+                                    val sortedList = l.sortedBy { it.frameIndex }
+                                    val filmrollName = dao.getFilmRoll(l[0].filmrollid)?.name ?: ""
+                                    Pair(filmrollName, sortedList)
+                                }
+                                dao.close()
+                                withContext(Dispatchers.Main) { groupedPhotos.value = result }
+                            }
+                        }
+                        FavoritePhotoScreen(
+                            groupedPhotos = groupedPhotos.value,
+                            columnCount = 3,
+                            onItemClick = { photo, list -> onPhotoInteraction(photo, list) }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
