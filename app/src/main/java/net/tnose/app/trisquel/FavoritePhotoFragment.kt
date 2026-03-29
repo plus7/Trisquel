@@ -5,9 +5,39 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.github.chuross.recyclerviewadapters.CompositeRecyclerAdapter
-import com.github.chuross.recyclerviewadapters.SpanSizeLookupBuilder
-
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.integration.compose.placeholder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * A fragment representing a list of Items.
@@ -21,50 +51,51 @@ class FavoritePhotoFragment : androidx.fragment.app.Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         arguments?.let {
             columnCount = it.getInt(ARG_COLUMN_COUNT)
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.fragment_favorite_photo_list, container, false)
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setContent {
+                MaterialTheme {
+                    val context = LocalContext.current
+                    val groupedPhotos = remember { mutableStateOf<List<Pair<String, List<Photo>>>>(emptyList()) }
 
-        // Set the adapter
-        if (view is androidx.recyclerview.widget.RecyclerView) {
-            with(view) {
-                val dao = TrisquelDao(this.context)
-                dao.connection()
-                val list = dao.getAllFavedPhotos()
+                    LaunchedEffect(Unit) {
+                        withContext(Dispatchers.IO) {
+                            val dao = TrisquelDao(context)
+                            dao.connection()
+                            val list = dao.getAllFavedPhotos()
 
-                val map = list.groupBy { it.filmrollid }
-                val list2 = map.values.sortedByDescending { it[0].date }
-                val compositeAdapter = CompositeRecyclerAdapter()
+                            val map = list.groupBy { it.filmrollid }
+                            val list2 = map.values.sortedByDescending { it[0].date }
 
-                val glm = androidx.recyclerview.widget.GridLayoutManager(context, columnCount)
-                val spans = SpanSizeLookupBuilder(compositeAdapter)
-
-                for(l in list2) {
-                    val localAdapter = FavPhotoLocalAdapter(context)
-                    val sortedList = l.sortedBy { it.frameIndex }
-                    localAdapter.addAll(sortedList)
-                    localAdapter.setOnItemClickListener { viewHolder, i, photo ->
-                        listener?.onListFragmentInteraction(photo, sortedList)
+                            val result = list2.map { l ->
+                                val sortedList = l.sortedBy { it.frameIndex }
+                                val filmrollName = dao.getFilmRoll(l[0].filmrollid)?.name ?: ""
+                                Pair(filmrollName, sortedList)
+                            }
+                            dao.close()
+                            
+                            withContext(Dispatchers.Main) {
+                                groupedPhotos.value = result
+                            }
+                        }
                     }
-                    val filmrollName = dao.getFilmRoll(l[0].filmrollid)!!.name
-                    val header = FavPhotoHeader(context, filmrollName)
-                    compositeAdapter.add(header)
-                    spans.register(header, columnCount)
-                    compositeAdapter.add(localAdapter)
+
+                    FavoritePhotoScreen(
+                        groupedPhotos = groupedPhotos.value,
+                        columnCount = columnCount,
+                        onItemClick = { photo, list -> listener?.onListFragmentInteraction(photo, list) }
+                    )
                 }
-                dao.close()
-                glm.spanSizeLookup = spans.build()
-                layoutManager = glm
-                adapter = compositeAdapter //MyFavPhotoRecyclerViewAdapter(list, listener)
             }
         }
-        return view
     }
 
     override fun onAttach(context: Context) {
@@ -81,17 +112,6 @@ class FavoritePhotoFragment : androidx.fragment.app.Fragment() {
         listener = null
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     *
-     *
-     * See the Android Training lesson
-     * [Communicating with Other Fragments](http://developer.android.com/training/basics/fragments/communicating.html)
-     * for more information.
-     */
     interface OnListFragmentInteractionListener {
         fun onListFragmentInteraction(item: Photo?, list: List<Photo?>)
     }
@@ -105,5 +125,84 @@ class FavoritePhotoFragment : androidx.fragment.app.Fragment() {
                         putInt(ARG_COLUMN_COUNT, columnCount)
                     }
                 }
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun FavoritePhotoScreen(
+    groupedPhotos: List<Pair<String, List<Photo>>>,
+    columnCount: Int,
+    onItemClick: (Photo, List<Photo>) -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(columnCount),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        groupedPhotos.forEach { (filmrollName, photos) ->
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(
+                    text = filmrollName,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                )
+            }
+            
+            items(photos) { photo ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .padding(2.dp)
+                        .clickable { onItemClick(photo, photos) }
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    if (photo.supplementalImages.isNotEmpty()) {
+                        val path = photo.supplementalImages[0]
+                        val model = if (path.startsWith("/")) java.io.File(path) else android.net.Uri.parse(path)
+                        GlideImage(
+                            model = model,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                            loading = placeholder(R.drawable.general_image_gray),
+                            failure = placeholder(R.drawable.ic_error_circle)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFDDDDDD)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "%.0fmm".format(photo.focalLength),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = "F%s".format(photo.aperture.toString()),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                                if (photo.shutterSpeed > 0) {
+                                    Text(
+                                        text = Util.doubleToStringShutterSpeed(photo.shutterSpeed),
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
