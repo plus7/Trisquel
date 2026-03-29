@@ -16,15 +16,24 @@ import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,22 +46,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.os.BundleCompat
@@ -75,6 +89,41 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+
+sealed class ActiveDialog {
+    data class Alert(val message: String) : ActiveDialog()
+    data class Confirm(
+        val title: String? = null,
+        val message: String,
+        val positive: String? = null,
+        val negative: String? = null,
+        val onConfirm: () -> Unit
+    ) : ActiveDialog()
+    data class SingleChoice(
+        val title: String,
+        val items: Array<String>,
+        val selected: Int,
+        val onConfirm: (Int) -> Unit
+    ) : ActiveDialog()
+    data class Select(
+        val title: String? = null,
+        val items: Array<String>,
+        val ids: List<Int>? = null,
+        val onSelected: (Int, Int?) -> Unit
+    ) : ActiveDialog()
+    data class RichSelection(
+        val title: String,
+        val icons: List<Int>,
+        val titles: Array<String>,
+        val descs: Array<String>,
+        val onSelected: (Int) -> Unit
+    ) : ActiveDialog()
+    data class SearchCond(
+        val title: String,
+        val labels: Array<String>,
+        val onSearch: (ArrayList<String>) -> Unit
+    ) : ActiveDialog()
+}
 
 class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     companion object {
@@ -126,6 +175,8 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     internal var currentRoute = ROUTE_FILMROLLS
     internal var currentFilter = Pair(0, arrayListOf<String>())
     internal var currentSubtitle = ""
+
+    private val activeDialogState = mutableStateOf<ActiveDialog?>(null)
 
     private val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -439,12 +490,17 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val lastVersion = pref.getInt("last_version", 0)
         if (0 < lastVersion && lastVersion < Util.TRISQUEL_VERSION) {
-            val fragment = YesNoDialogFragment.Builder().build(RETCODE_OPEN_RELEASE_NOTES)
-            fragment.arguments?.putString("title", "Trisquel")
-            fragment.arguments?.putString("message", getString(R.string.warning_newversion))
-            fragment.arguments?.putString("positive", getString(R.string.show_release_notes))
-            fragment.arguments?.putString("negative", getString(R.string.close))
-            fragment.showOn(this, "dialog")
+            activeDialogState.value = ActiveDialog.Confirm(
+                title = "Trisquel",
+                message = getString(R.string.warning_newversion),
+                positive = getString(R.string.show_release_notes),
+                negative = getString(R.string.close),
+                onConfirm = {
+                    val uri = Uri.parse(RELEASE_NOTES_URL)
+                    val i = Intent(Intent.ACTION_VIEW, uri)
+                    startActivity(i)
+                }
+            )
         }
         pref.edit().putInt("last_version", Util.TRISQUEL_VERSION).apply()
     }
@@ -631,14 +687,12 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             val used = dao.getCameraUsage(item.id)
             dao.close()
             if (used) {
-                val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(item.modelName))
-                fragment.showOn(this, "dialog")
+                activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName))
             } else {
-                val fragment = YesNoDialogFragment.Builder().build(RETCODE_DELETE_CAMERA)
-                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.modelName))
-                fragment.arguments?.putInt("id", item.id)
-                fragment.showOn(this, "dialog")
+                activeDialogState.value = ActiveDialog.Confirm(
+                    message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
+                    onConfirm = { cameraViewModel.deleteCamera(item.id) }
+                )
             }
         } else {
             val intent = Intent(application, EditCameraActivity::class.java)
@@ -655,14 +709,12 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             val used = dao.getLensUsage(item.id)
             dao.close()
             if (used) {
-                val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(item.modelName))
-                fragment.showOn(this, "dialog")
+                activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName))
             } else {
-                val fragment = YesNoDialogFragment.Builder().build(RETCODE_DELETE_LENS)
-                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.modelName))
-                fragment.arguments?.putInt("id", item.id)
-                fragment.showOn(this, "dialog")
+                activeDialogState.value = ActiveDialog.Confirm(
+                    message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
+                    onConfirm = { lensViewModel.deleteLens(item.id) }
+                )
             }
         } else {
             val intent = Intent(application, EditLensActivity::class.java)
@@ -673,10 +725,10 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
 
     fun onFilmRollInteraction(item: FilmRoll, isLong: Boolean) {
         if (isLong) {
-            val fragment = YesNoDialogFragment.Builder().build(RETCODE_DELETE_FILMROLL)
-            fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(item.name))
-            fragment.arguments?.putInt("id", item.id)
-            fragment.showOn(this, "dialog")
+            activeDialogState.value = ActiveDialog.Confirm(
+                message = getString(R.string.msg_confirm_remove_item).format(item.name),
+                onConfirm = { filmRollViewModel.delete(item.id) }
+            )
         } else {
             val intent = Intent(application, EditPhotoListActivity::class.java)
             intent.putExtra("id", item.id)
@@ -691,14 +743,12 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             val accessoryUsed = dao.getAccessoryUsed(accessory.id)
             dao.close()
             if (accessoryUsed) {
-                val fragment = AlertDialogFragment.Builder().build(99)
-                fragment.arguments?.putString("message", getString(R.string.msg_cannot_remove_item).format(accessory.name))
-                fragment.showOn(this, "dialog")
+                activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(accessory.name))
             } else {
-                val fragment = YesNoDialogFragment.Builder().build(RETCODE_DELETE_ACCESSORY)
-                fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(accessory.name))
-                fragment.arguments?.putInt("id", accessory.id)
-                fragment.showOn(this, "dialog")
+                activeDialogState.value = ActiveDialog.Confirm(
+                    message = getString(R.string.msg_confirm_remove_item).format(accessory.name),
+                    onConfirm = { accessoryViewModel.delete(accessory.id) }
+                )
             }
         } else {
             val intent = Intent(application, EditAccessoryActivity::class.java)
@@ -714,101 +764,32 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         startActivity(intent)
     }
 
+    private fun handleSort(route: String, which: Int) {
+        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        val key = when (route) {
+            ROUTE_FILMROLLS -> "filmroll_sortkey"
+            ROUTE_CAMERAS -> "camera_sortkey"
+            ROUTE_LENSES -> "lens_sortkey"
+            ROUTE_ACCESSORIES -> "accessory_sortkey"
+            else -> ""
+        }
+        if (key.isNotEmpty()) pref.edit().putInt(key, which).apply()
+
+        when (route) {
+            ROUTE_FILMROLLS -> filmRollViewModel.viewRule.value = Pair(which, filmRollViewModel.viewRule.value?.second ?: Pair(0, ""))
+            ROUTE_CAMERAS -> cameraViewModel.changeSortKey(which)
+            ROUTE_LENSES -> lensViewModel.changeSortKey(which)
+            ROUTE_ACCESSORIES -> accessoryViewModel.sortingRule.value = which
+        }
+    }
+
     override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
         when (requestCode) {
-            RETCODE_OPEN_RELEASE_NOTES -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val uri = Uri.parse(RELEASE_NOTES_URL)
-                val i = Intent(Intent.ACTION_VIEW, uri)
-                startActivity(i)
-            }
-            RETCODE_EXPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val mode = data.getIntExtra("which", 0)
-                if (mode < 2) checkPermAndExportDB(mode)
-                else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
-            }
             RETCODE_BACKUP_PROGRESS -> if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
                 mExportViewModel?.cancelExport()
             }
-            RETCODE_IMPORT_DB -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val mode = data.getIntExtra("which", 0)
-                if (mode < 2) checkPermAndImportDB(mode)
-                else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
-            }
             RETCODE_IMPORT_PROGRESS -> if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
                 mImportViewModel?.cancelExport()
-            }
-            RETCODE_DELETE_FILMROLL -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val id = data.getIntExtra("id", -1)
-                if (id != -1) filmRollViewModel.delete(id)
-            }
-            RETCODE_DELETE_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val id = data.getIntExtra("id", -1)
-                if (id != -1) cameraViewModel.deleteCamera(id)
-            }
-            RETCODE_DELETE_LENS -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val id = data.getIntExtra("id", -1)
-                if (id != -1) lensViewModel.deleteLens(id)
-            }
-            RETCODE_DELETE_ACCESSORY -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val id = data.getIntExtra("id", -1)
-                if (id != -1) accessoryViewModel.delete(id)
-            }
-            RETCODE_CAMERA_TYPE -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val which = data.getIntExtra("which", 0)
-                val intent = Intent(application, EditCameraActivity::class.java)
-                intent.putExtra("type", which)
-                addCameraLauncher.launch(intent)
-            }
-            RETCODE_SORT -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val which = data.getIntExtra("which", 0)
-                val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-                val key = when (currentRoute) {
-                    ROUTE_FILMROLLS -> "filmroll_sortkey"
-                    ROUTE_CAMERAS -> "camera_sortkey"
-                    ROUTE_LENSES -> "lens_sortkey"
-                    ROUTE_ACCESSORIES -> "accessory_sortkey"
-                    else -> ""
-                }
-                if (key.isNotEmpty()) pref.edit().putInt(key, which).apply()
-
-                when (currentRoute) {
-                    ROUTE_FILMROLLS -> filmRollViewModel.viewRule.value = Pair(which, filmRollViewModel.viewRule.value?.second ?: Pair(0, ""))
-                    ROUTE_CAMERAS -> cameraViewModel.changeSortKey(which)
-                    ROUTE_LENSES -> lensViewModel.changeSortKey(which)
-                    ROUTE_ACCESSORIES -> accessoryViewModel.sortingRule.value = which
-                }
-            }
-            RETCODE_FILTER_CAMERA -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (currentRoute == ROUTE_FILMROLLS) {
-                    val cameraid = data.getIntExtra("which_id", -1)
-                    if (cameraid != -1) {
-                        currentFilter = Pair(1, arrayListOf(cameraid.toString()))
-                        currentSubtitle = getFilterLabel(currentFilter)
-                        filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this).getInt("filmroll_sortkey", 0), Pair(1, cameraid.toString()))
-                    }
-                }
-            }
-            RETCODE_FILTER_FILM_BRAND -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                if (currentRoute == ROUTE_FILMROLLS) {
-                    val which = data.getIntExtra("which", -1)
-                    val dao = TrisquelDao(this)
-                    dao.connection()
-                    val brands = dao.availableFilmBrandList
-                    dao.close()
-                    if (which != -1) {
-                        currentFilter = Pair(2, arrayListOf(brands[which].first, brands[which].second))
-                        currentSubtitle = getFilterLabel(currentFilter)
-                        filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this).getInt("filmroll_sortkey", 0), Pair(2, brands[which].second))
-                    }
-                }
-            }
-            RETCODE_SEARCH -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val tags = data.getStringArrayListExtra("checked_labels")
-                if (tags != null && tags.isNotEmpty()) {
-                    val intent = Intent(application, SearchActivity::class.java)
-                    intent.putExtra("tags", tags)
-                    searchLauncher.launch(intent)
-                }
             }
         }
     }
@@ -816,6 +797,161 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     override fun onDialogCancelled(requestCode: Int) {}
 
     data class DrawerItem(val route: String, val title: String, val iconRes: Int)
+
+    @Composable
+    fun TrisquelDialogManager(
+        activeDialog: ActiveDialog?,
+        onDismiss: () -> Unit
+    ) {
+        if (activeDialog == null) return
+
+        when (activeDialog) {
+            is ActiveDialog.Alert -> {
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    confirmButton = {
+                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
+                    },
+                    text = { Text(activeDialog.message) }
+                )
+            }
+            is ActiveDialog.Confirm -> {
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { activeDialog.title?.let { Text(it) } ?: Text("Trisquel") },
+                    text = { Text(activeDialog.message) },
+                    confirmButton = {
+                        TextButton(onClick = { activeDialog.onConfirm(); onDismiss() }) {
+                            Text(activeDialog.positive ?: stringResource(android.R.string.ok))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = onDismiss) {
+                            Text(activeDialog.negative ?: stringResource(android.R.string.cancel))
+                        }
+                    }
+                )
+            }
+            is ActiveDialog.SingleChoice -> {
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { Text(activeDialog.title) },
+                    text = {
+                        LazyColumn {
+                            itemsIndexed(activeDialog.items) { index, item ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { activeDialog.onConfirm(index); onDismiss() }
+                                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(selected = index == activeDialog.selected, onClick = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(item)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+                    }
+                )
+            }
+            is ActiveDialog.Select -> {
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { activeDialog.title?.let { Text(it) } },
+                    text = {
+                        LazyColumn {
+                            itemsIndexed(activeDialog.items) { index, item ->
+                                Text(
+                                    text = item,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            activeDialog.onSelected(index, activeDialog.ids?.get(index))
+                                            onDismiss()
+                                        }
+                                        .padding(16.dp)
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+                    }
+                )
+            }
+            is ActiveDialog.RichSelection -> {
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { Text(activeDialog.title) },
+                    text = {
+                        LazyColumn {
+                            itemsIndexed(activeDialog.titles) { index, title ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { activeDialog.onSelected(index); onDismiss() }
+                                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(painterResource(activeDialog.icons[index]), null, modifier = Modifier.size(24.dp))
+                                    Spacer(Modifier.width(16.dp))
+                                    Column {
+                                        Text(title, style = MaterialTheme.typography.titleMedium)
+                                        Text(activeDialog.descs[index], style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+                    }
+                )
+            }
+            is ActiveDialog.SearchCond -> {
+                val selectedLabels = remember { mutableStateListOf<String>() }
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { Text(activeDialog.title) },
+                    text = {
+                        LazyColumn {
+                            items(activeDialog.labels) { label ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (selectedLabels.contains(label)) selectedLabels.remove(label)
+                                            else selectedLabels.add(label)
+                                        }
+                                        .padding(vertical = 8.dp, horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(checked = selectedLabels.contains(label), onCheckedChange = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(label)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            activeDialog.onSearch(ArrayList(selectedLabels))
+                            onDismiss()
+                        }) {
+                            Text(stringResource(android.R.string.ok))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+                    }
+                )
+            }
+        }
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -851,6 +987,11 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val otherItems = listOf(
             DrawerItem("release_notes", getString(R.string.action_releasenotes), 0),
             DrawerItem("license", getString(R.string.action_license), 0)
+        )
+
+        TrisquelDialogManager(
+            activeDialog = activeDialogState.value,
+            onDismiss = { activeDialogState.value = null }
         )
 
         ModalNavigationDrawer(
@@ -896,22 +1037,28 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                                     when (item.route) {
                                         "settings" -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                                         "backup" -> {
-                                            val fragment = RichSelectionDialogFragment.Builder().build(RETCODE_EXPORT_DB)
-                                            fragment.arguments?.putInt("id", -1)
-                                            fragment.arguments?.putString("title", getString(R.string.title_backup_mode_selection))
-                                            fragment.arguments?.putIntegerArrayList("items_icon", arrayListOf(R.drawable.ic_export, R.drawable.ic_export_img, R.drawable.ic_help))
-                                            fragment.arguments?.putStringArray("items_title", arrayOf(getString(R.string.title_slim_backup), getString(R.string.title_whole_backup), getString(R.string.title_backup_help)))
-                                            fragment.arguments?.putStringArray("items_desc", arrayOf(getString(R.string.description_slim_backup), getString(R.string.description_whole_backup), getString(R.string.description_backup_help)))
-                                            fragment.showOn(this@MainActivity, "dialog")
+                                            activeDialogState.value = ActiveDialog.RichSelection(
+                                                title = getString(R.string.title_backup_mode_selection),
+                                                icons = listOf(R.drawable.ic_export, R.drawable.ic_export_img, R.drawable.ic_help),
+                                                titles = arrayOf(getString(R.string.title_slim_backup), getString(R.string.title_whole_backup), getString(R.string.title_backup_help)),
+                                                descs = arrayOf(getString(R.string.description_slim_backup), getString(R.string.description_whole_backup), getString(R.string.description_backup_help)),
+                                                onSelected = { mode ->
+                                                    if (mode < 2) checkPermAndExportDB(mode)
+                                                    else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
+                                                }
+                                            )
                                         }
                                         "import" -> {
-                                            val fragment = RichSelectionDialogFragment.Builder().build(RETCODE_IMPORT_DB)
-                                            fragment.arguments?.putInt("id", -1)
-                                            fragment.arguments?.putString("title", getString(R.string.title_import_mode_selection))
-                                            fragment.arguments?.putIntegerArrayList("items_icon", arrayListOf(R.drawable.ic_merge, R.drawable.ic_restore, R.drawable.ic_help))
-                                            fragment.arguments?.putStringArray("items_title", arrayOf(getString(R.string.title_merge_zip), getString(R.string.title_import_zip), getString(R.string.title_backup_help)))
-                                            fragment.arguments?.putStringArray("items_desc", arrayOf(getString(R.string.description_merge_zip), getString(R.string.description_import_zip), getString(R.string.description_backup_help)))
-                                            fragment.showOn(this@MainActivity, "dialog")
+                                            activeDialogState.value = ActiveDialog.RichSelection(
+                                                title = getString(R.string.title_import_mode_selection),
+                                                icons = listOf(R.drawable.ic_merge, R.drawable.ic_restore, R.drawable.ic_help),
+                                                titles = arrayOf(getString(R.string.title_merge_zip), getString(R.string.title_import_zip), getString(R.string.title_backup_help)),
+                                                descs = arrayOf(getString(R.string.description_merge_zip), getString(R.string.description_import_zip), getString(R.string.description_backup_help)),
+                                                onSelected = { mode ->
+                                                    if (mode < 2) checkPermAndImportDB(mode)
+                                                    else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
+                                                }
+                                            )
                                         }
                                     }
                                 },
@@ -969,7 +1116,6 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                         actions = {
                             if (observedRoute in listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES)) {
                                 IconButton(onClick = {
-                                    val fragment = SingleChoiceDialogFragment.Builder().build(RETCODE_SORT)
                                     val arr = when(observedRoute){
                                         ROUTE_FILMROLLS -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_camera), getString(R.string.label_brand))
                                         ROUTE_CAMERAS -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_mount), getString(R.string.label_format))
@@ -985,17 +1131,18 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                                         ROUTE_ACCESSORIES -> pref.getInt("accessory_sortkey", 0)
                                         else -> 0
                                     }
-                                    fragment.arguments?.putString("title", getString(R.string.label_sort_by))
-                                    fragment.arguments?.putInt("selected", key)
-                                    fragment.arguments?.putStringArray("items", arr)
-                                    fragment.arguments?.putString("positive", getString(android.R.string.ok))
-                                    fragment.showOn(this@MainActivity, "dialog")
+                                    activeDialogState.value = ActiveDialog.SingleChoice(
+                                        title = getString(R.string.label_sort_by),
+                                        items = arr,
+                                        selected = key,
+                                        onConfirm = { handleSort(observedRoute, it) }
+                                    )
                                 }) {
                                     Icon(painterResource(R.drawable.ic_sort_white_24dp), null)
                                 }
                             }
                             if (observedRoute == ROUTE_FILMROLLS) {
-                                androidx.compose.foundation.layout.Box {
+                                Box {
                                     IconButton(onClick = { showFilterMenu = true }) {
                                         Icon(painterResource(R.drawable.ic_filter_white), null)
                                     }
@@ -1014,28 +1161,40 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                                         DropdownMenuItem(
                                             text = { Text(getString(R.string.label_filter_by_camera)) },
                                             onClick = {
-                                                val fragment = SelectDialogFragment.Builder().build(RETCODE_FILTER_CAMERA)
                                                 val dao = TrisquelDao(this@MainActivity)
                                                 dao.connection()
                                                 val cs = dao.allCameras
                                                 dao.close()
                                                 cs.sortBy { it.manufacturer + " " + it.modelName }
-                                                fragment.arguments?.putStringArray("items", cs.map { it.manufacturer + " " + it.modelName }.toTypedArray())
-                                                fragment.arguments?.putIntegerArrayList("ids", ArrayList(cs.map { it.id }))
-                                                fragment.showOn(this@MainActivity, "dialog")
+                                                activeDialogState.value = ActiveDialog.Select(
+                                                    items = cs.map { it.manufacturer + " " + it.modelName }.toTypedArray(),
+                                                    ids = cs.map { it.id },
+                                                    onSelected = { _, id ->
+                                                        if (id != null) {
+                                                            currentFilter = Pair(1, arrayListOf(id.toString()))
+                                                            currentSubtitle = getFilterLabel(currentFilter)
+                                                            filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(1, id.toString()))
+                                                        }
+                                                    }
+                                                )
                                                 showFilterMenu = false
                                             }
                                         )
                                         DropdownMenuItem(
                                             text = { Text(getString(R.string.label_filter_by_film_brand)) },
                                             onClick = {
-                                                val fragment = SelectDialogFragment.Builder().build(RETCODE_FILTER_FILM_BRAND)
                                                 val dao = TrisquelDao(this@MainActivity)
                                                 dao.connection()
                                                 val fbs = dao.availableFilmBrandList
                                                 dao.close()
-                                                fragment.arguments?.putStringArray("items", fbs.map { it.first + " " + it.second }.toTypedArray())
-                                                fragment.showOn(this@MainActivity, "dialog")
+                                                activeDialogState.value = ActiveDialog.Select(
+                                                    items = fbs.map { it.first + " " + it.second }.toTypedArray(),
+                                                    onSelected = { which, _ ->
+                                                        currentFilter = Pair(2, arrayListOf(fbs[which].first, fbs[which].second))
+                                                        currentSubtitle = getFilterLabel(currentFilter)
+                                                        filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(2, fbs[which].second))
+                                                    }
+                                                )
                                                 showFilterMenu = false
                                             }
                                         )
@@ -1062,15 +1221,22 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                                     dao.connection()
                                     val tags = dao.allTags
                                     dao.close()
-                                    val fragment = SearchCondDialogFragment.Builder().build(RETCODE_SEARCH)
-                                    fragment.arguments?.putString("title", getString(R.string.title_dialog_search_by_tags))
-                                    fragment.arguments?.putStringArray("labels", tags.sortedBy { it.label }.map { it.label }.toTypedArray())
-                                    fragment.showOn(this@MainActivity, "dialog")
+                                    activeDialogState.value = ActiveDialog.SearchCond(
+                                        title = getString(R.string.title_dialog_search_by_tags),
+                                        labels = tags.sortedBy { it.label }.map { it.label }.toTypedArray(),
+                                        onSearch = { checkedLabels ->
+                                            if (checkedLabels.isNotEmpty()) {
+                                                val intent = Intent(application, SearchActivity::class.java)
+                                                intent.putExtra("tags", checkedLabels)
+                                                searchLauncher.launch(intent)
+                                            }
+                                        }
+                                    )
                                 }) {
                                     Icon(painterResource(R.drawable.ic_search_white_24dp), null)
                                 }
                                 
-                                androidx.compose.foundation.layout.Box {
+                                Box {
                                     IconButton(onClick = { showOverflowMenu = true }) {
                                         Icon(Icons.Default.MoreVert, null)
                                     }
@@ -1099,10 +1265,14 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                         FloatingActionButton(onClick = {
                             when (observedRoute) {
                                 ROUTE_CAMERAS -> {
-                                    val fragment = SelectDialogFragment.Builder().build(RETCODE_CAMERA_TYPE)
-                                    fragment.arguments?.putInt("id", -1)
-                                    fragment.arguments?.putStringArray("items", arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)))
-                                    fragment.showOn(this@MainActivity, "dialog")
+                                    activeDialogState.value = ActiveDialog.Select(
+                                        items = arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)),
+                                        onSelected = { which, _ ->
+                                            val intent = Intent(application, EditCameraActivity::class.java)
+                                            intent.putExtra("type", which)
+                                            addCameraLauncher.launch(intent)
+                                        }
+                                    )
                                 }
                                 ROUTE_LENSES -> {
                                     val intent = Intent(application, EditLensActivity::class.java)
