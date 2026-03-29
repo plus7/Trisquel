@@ -1,42 +1,75 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
+import androidx.core.os.BundleCompat
+import androidx.lifecycle.ViewModelProvider
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
 
-// 実装がEditPhotoListActivityなどから丸コピ状態＆微妙に違うところがあるのが気に食わないが、仕方がない
-class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInteractionListener, AbstractDialogFragment.Callback {
-    internal val REQCODE_EDIT_PHOTO = 101
-    internal val REQCODE_SELECT_THUMBNAIL = 103
-    internal val REQCODE_EDIT_PHOTOINDEX = 104
-    internal val REQCODE_INDEX_SHIFT = 105
-    internal val DIALOG_DELETE_PHOTO = 200
+class SearchActivity : AppCompatActivity() {
+    companion object {
+        const val REQCODE_SELECT_THUMBNAIL = 103
+    }
+
+    private lateinit var searchViewModel: SearchViewModel
+    private var thumbnailEditingPhoto: Photo? = null
+    private var isDirty: Boolean = false
+    private val dirtyFilmRolls: ArrayList<Int> = arrayListOf()
+
+    private val activeDialogState = mutableStateOf<ActiveDialog?>(null)
 
     private val PERMISSIONS =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
-            arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.CAMERA)
+            arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.CAMERA)
         } else {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.CAMERA)
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA)
         }
-    private var thumbnailEditingPhoto: Photo? = null
-    var fragment: SearchFragment? = null
-    var isDirty: Boolean = false
-    var dirtyFilmRolls: ArrayList<Int> = arrayListOf()
+
+    private val editPhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val bundle = result.data?.extras ?: return@registerForActivityResult
+            val p = BundleCompat.getParcelable(bundle, "photo", Photo::class.java)
+            val tags: ArrayList<String>? = bundle.getStringArrayList("tags")
+            if(p != null){
+                searchViewModel.tagPhoto(p.id, p.filmrollid, tags ?: arrayListOf())
+                searchViewModel.update(p.toEntity())
+                if (!dirtyFilmRolls.contains(p.filmrollid)) dirtyFilmRolls.add(p.filmrollid)
+                isDirty = true
+            }
+        }
+    }
 
     private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         val granted = permissions.entries.all { it.value }
@@ -50,84 +83,70 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_search)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        
+        searchViewModel = ViewModelProvider(this)[SearchViewModel::class.java]
+        val tags = intent.getStringArrayListExtra("tags") ?: arrayListOf()
+        searchViewModel.searchTags.value = tags.toList()
 
-        val tags = intent.getStringArrayListExtra("tags")
-        title = getString(R.string.action_search) + ": " + tags!!.joinToString(", ")
-
-        if(savedInstanceState != null){
-            val tbid = savedInstanceState.getInt("thumbnail_editing_id")
-            if(tbid != -1){
+        if (savedInstanceState != null) {
+            val tbid = savedInstanceState.getInt("thumbnail_editing_id", -1)
+            if (tbid != -1) {
                 val dao = TrisquelDao(applicationContext)
                 dao.connection()
-                val p = dao.getPhoto(tbid)
-                thumbnailEditingPhoto = p
+                thumbnailEditingPhoto = dao.getPhoto(tbid)
                 dao.close()
-            }else{
-                thumbnailEditingPhoto = null
             }
-            isDirty = intent.getBooleanExtra("isDirty", false)
+            isDirty = savedInstanceState.getBoolean("is_dirty", false)
+            savedInstanceState.getIntegerArrayList("dirty_filmrolls")?.let {
+                dirtyFilmRolls.clear()
+                dirtyFilmRolls.addAll(it)
+            }
         }
-
-        val transaction = supportFragmentManager.beginTransaction()
-        val f = SearchFragment.newInstance(tags)
-        fragment = f
-        transaction.replace(R.id.container, f)
-        transaction.commit()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                val data = Intent()
-                data.putExtra("dirtyFilmRolls", dirtyFilmRolls)
-                setResult(RESULT_OK, data)
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
-                isEnabled = true
+                goBack()
             }
         })
-    }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putInt("thumbnail_editing_id", thumbnailEditingPhoto?.id ?: -1)
-        outState.putBoolean("isDirty", isDirty)
-        super.onSaveInstanceState(outState)
-    }
-
-    override fun onListFragmentInteraction(item: Photo, isLong: Boolean) {
-        if (isLong) {
-            val fragment = YesNoDialogFragment.Builder()
-                    .build(DIALOG_DELETE_PHOTO)
-            fragment.arguments?.putString("message", getString(R.string.msg_confirm_remove_item).format(getString(R.string.this_photo)))
-            fragment.arguments?.putInt("id", item.id)
-            fragment.showOn(this, "dialog")
-        } else {
-            val intent = Intent(application, EditPhotoActivity::class.java)
-            intent.putExtra("filmroll", item.filmrollid)
-            intent.putExtra("id", item.id)
-            intent.putExtra("frameIndex", item.frameIndex)
-            startActivityForResult(intent, REQCODE_EDIT_PHOTO)
+        setContent {
+            MaterialTheme {
+                SearchScreen(tags.joinToString(", "))
+            }
         }
     }
 
-    fun editThumbPhoto(){
-        Matisse.from(this)
-                .choose(MimeType.ofImage())
-                .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
-                .capture(true)
-                .countable(true)
-                .maxSelectable(1)
-                .thumbnailScale(0.85f)
-                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-                .imageEngine(Glide4Engine())
-                .forResult(REQCODE_SELECT_THUMBNAIL)
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("thumbnail_editing_id", thumbnailEditingPhoto?.id ?: -1)
+        outState.putBoolean("is_dirty", isDirty)
+        outState.putIntegerArrayList("dirty_filmrolls", dirtyFilmRolls)
     }
 
-    fun checkPermAndEditThumbPhoto(){
-        val readDenied =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
-            else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+    private fun goBack() {
+        val data = Intent()
+        data.putExtra("dirtyFilmRolls", dirtyFilmRolls)
+        setResult(RESULT_OK, data)
+        finish()
+    }
+
+    private fun editThumbPhoto() {
+        Matisse.from(this)
+            .choose(MimeType.ofImage())
+            .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
+            .capture(true)
+            .countable(true)
+            .maxSelectable(1)
+            .thumbnailScale(0.85f)
+            .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+            .imageEngine(Glide4Engine())
+            .forResult(REQCODE_SELECT_THUMBNAIL)
+    }
+
+    private fun checkPermAndEditThumbPhoto() {
+        val readDenied = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
+        else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val cameraDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
         if (readDenied || cameraDenied) {
             requestPermissionLauncher.launch(PERMISSIONS)
@@ -136,11 +155,30 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
         editThumbPhoto()
     }
 
-    override fun onThumbnailClick(item: Photo) {
-        if(item.supplementalImages.size == 0) {
+    fun onPhotoInteraction(item: Photo, isLong: Boolean) {
+        if (isLong) {
+            activeDialogState.value = ActiveDialog.Confirm(
+                message = getString(R.string.msg_confirm_remove_item).format(getString(R.string.this_photo)),
+                onConfirm = {
+                    if (!dirtyFilmRolls.contains(item.filmrollid)) dirtyFilmRolls.add(item.filmrollid)
+                    searchViewModel.delete(item.id)
+                    isDirty = true
+                }
+            )
+        } else {
+            val intent = Intent(application, EditPhotoActivity::class.java)
+            intent.putExtra("filmroll", item.filmrollid)
+            intent.putExtra("id", item.id)
+            intent.putExtra("frameIndex", item.frameIndex)
+            editPhotoLauncher.launch(intent)
+        }
+    }
+
+    fun onThumbnailClick(item: Photo) {
+        if (item.supplementalImages.isEmpty()) {
             thumbnailEditingPhoto = item
             checkPermAndEditThumbPhoto()
-        }else {
+        } else {
             val dao = TrisquelDao(this)
             dao.connection()
             val ps = dao.getPhotosByFilmRollId(item.filmrollid)
@@ -153,82 +191,97 @@ class SearchActivity : AppCompatActivity(), SearchFragment.OnListFragmentInterac
         }
     }
 
-    override fun onFavoriteClick(item: Photo) {
+    fun onFavoriteClick(item: Photo) {
         item.favorite = !item.favorite
-        fragment!!.toggleFavPhoto(item)
-    }
-
-    override fun onIndexClick(item: Photo) {
-
-    }
-
-    override fun onIndexLongClick(item: Photo) {
-
-    }
-
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
-        when (requestCode) {
-            DIALOG_DELETE_PHOTO -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {
-                val id = data.getIntExtra("id", -1)
-                val dao = TrisquelDao(this)
-                dao.connection()
-                val p = dao.getPhoto(id)
-                dao.close()
-                if(p != null) {
-                    dirtyFilmRolls.add(p.filmrollid)
-                    fragment!!.deletePhoto(id)
-                    isDirty = true
-                }
-            }
-            REQCODE_EDIT_PHOTOINDEX -> if (resultCode == DialogInterface.BUTTON_POSITIVE) {}
-            REQCODE_INDEX_SHIFT -> if (resultCode == DialogInterface.BUTTON_POSITIVE){}
-        }
-    }
-
-    override fun onDialogCancelled(requestCode: Int) {
-        // onDialogResult(requestCode, DialogInterface.BUTTON_NEUTRAL, null);
+        searchViewModel.update(item.toEntity())
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if(data == null){
-            thumbnailEditingPhoto = null
+        if (resultCode != RESULT_OK || data == null) {
+            if (requestCode == REQCODE_SELECT_THUMBNAIL) thumbnailEditingPhoto = null
             return
         }
 
-        val bundle = data.extras
-        when (requestCode) {
-            REQCODE_EDIT_PHOTO -> if (resultCode == RESULT_OK) {
-                val p: Photo? = bundle!!.getParcelable("photo")
-                val tags: ArrayList<String>? = bundle.getStringArrayList("tags")
-                if(p != null){
-                    fragment!!.updatePhoto(p, tags)
-                    dirtyFilmRolls.add(p.filmrollid)
-                }
-            }
-            REQCODE_SELECT_THUMBNAIL -> if (resultCode == RESULT_OK) {
-                //val paths = Matisse.obtainPathResult(data)
-                val uris = Matisse.obtainResult(data)
-                val p = thumbnailEditingPhoto
-                if(uris.size > 0 && p != null){
-                    p.supplementalImages.add(uris[0].toString())
-                    fragment!!.updatePhoto(p, null)
-                    thumbnailEditingPhoto = null
-                    //dirtyFilmRolls.add(p.filmrollid) // 今の所不要
-                }
+        if (requestCode == REQCODE_SELECT_THUMBNAIL) {
+            val uris = Matisse.obtainResult(data)
+            val p = thumbnailEditingPhoto
+            if (uris != null && uris.isNotEmpty() && p != null) {
+                p.supplementalImages.add(uris[0].toString())
+                searchViewModel.update(p.toEntity())
+                thumbnailEditingPhoto = null
+                isDirty = true
             }
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                val data = Intent()
-                data.putExtra("dirtyFilmRolls", dirtyFilmRolls)
-                setResult(RESULT_OK, data)
-                finish()
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun SearchScreen(tagString: String) {
+        TrisquelDialogManager(
+            activeDialog = activeDialogState.value,
+            onDismiss = { activeDialogState.value = null }
+        )
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(stringResource(R.string.action_search))
+                            Text(tagString, style = MaterialTheme.typography.bodySmall)
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { goBack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
+        ) { paddingValues ->
+            val photos by searchViewModel.photosByAndQuery.observeAsState(emptyList())
+            Column(modifier = Modifier.padding(paddingValues)) {
+                SearchListScreen(
+                    photos = photos,
+                    onItemClick = { onPhotoInteraction(it, false) },
+                    onItemLongClick = { onPhotoInteraction(it, true) },
+                    onIndexClick = { },
+                    onIndexLongClick = { },
+                    onThumbnailClick = { onThumbnailClick(it) },
+                    onFavoriteClick = { onFavoriteClick(it) }
+                )
             }
         }
-        return super.onOptionsItemSelected(item)
+    }
+
+    @Composable
+    fun TrisquelDialogManager(activeDialog: ActiveDialog?, onDismiss: () -> Unit) {
+        if (activeDialog == null) return
+        when (activeDialog) {
+            is ActiveDialog.Confirm -> {
+                AlertDialog(
+                    onDismissRequest = onDismiss,
+                    title = { activeDialog.title?.let { Text(it) } ?: Text("Trisquel") },
+                    text = { Text(activeDialog.message) },
+                    confirmButton = {
+                        TextButton(onClick = { activeDialog.onConfirm(); onDismiss() }) {
+                            Text(activeDialog.positive ?: stringResource(android.R.string.ok))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = onDismiss) {
+                            Text(activeDialog.negative ?: stringResource(android.R.string.cancel))
+                        }
+                    }
+                )
+            }
+            else -> {}
+        }
     }
 }

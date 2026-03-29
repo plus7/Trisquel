@@ -30,7 +30,8 @@
             android:launchMode="singleInstance"
             android:process=":restart_process"
             android:theme="@android:style/Theme.NoTitleBar" />
-        <activity android:name=".SearchActivity" />
+        <activity android:name=".SearchActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".EditCameraActivity"
             android:label="@string/title_activity_reg_cam"
