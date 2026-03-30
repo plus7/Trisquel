@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -44,7 +45,7 @@ class SettingsActivity : AppCompatActivity() {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
 
         setContent {
-            MaterialTheme {
+            TrisquelTheme {
                 SettingsScreen(sharedPreferences)
             }
         }
