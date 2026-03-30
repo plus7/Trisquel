@@ -45,6 +45,26 @@ class LensViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
+        val l = androidx.core.os.BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
+        if (l != null) {
+            dao.connection()
+            dao.addLens(l)
+            dao.close()
+            load()
+        }
+    }
+
+    fun handleEditResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
+        val l = androidx.core.os.BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
+        if (l != null) {
+            dao.connection()
+            dao.updateLens(l)
+            dao.close()
+            load()
+        }
+    }
+
     fun insertLens(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
         dao.connection()
         dao.addLens(lens)

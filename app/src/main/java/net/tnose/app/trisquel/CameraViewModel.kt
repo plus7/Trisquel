@@ -45,6 +45,40 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
+        val bundle = intent?.extras ?: return@launch
+        val c = androidx.core.os.BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
+        dao.connection()
+        val newId = dao.addCamera(c)
+        if (c.type == 1) {
+            val l = androidx.core.os.BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
+            if (l != null) {
+                l.body = newId.toInt()
+                dao.addLens(l)
+            }
+        }
+        dao.close()
+        load()
+    }
+
+    fun handleEditResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
+        val bundle = intent?.extras ?: return@launch
+        val c = androidx.core.os.BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
+        dao.connection()
+        dao.updateCamera(c)
+        if (c.type == 1) {
+            val lensid = dao.getFixedLensIdByBody(c.id)
+            val l = androidx.core.os.BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
+            if (l != null) {
+                l.id = lensid
+                l.body = c.id
+                dao.updateLens(l)
+            }
+        }
+        dao.close()
+        load()
+    }
+
     fun insertCamera(camera: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
         dao.connection()
         dao.addCamera(camera)

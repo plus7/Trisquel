@@ -14,6 +14,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.clickable
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -163,92 +165,6 @@ class MainActivity : AppCompatActivity() {
     internal var currentSubtitle = ""
 
     private val activeDialogState = mutableStateOf<ActiveDialog?>(null)
-
-    private val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val bundle = result.data?.extras ?: return@registerForActivityResult
-            val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java)!!
-            cameraViewModel.insertCamera(c)
-            if (c.type == 1) {
-                val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
-                l.body = c.id
-                lensViewModel.insertLens(l)
-            }
-        }
-    }
-
-    private val editCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val bundle = result.data?.extras ?: return@registerForActivityResult
-            val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java)!!
-            cameraViewModel.updateCamera(c)
-            if (c.type == 1) {
-                val dao = TrisquelDao(this)
-                dao.connection()
-                val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)!!
-                val lensid = dao.getFixedLensIdByBody(c.id)
-                l.id = lensid
-                dao.close()
-                lensViewModel.updateLens(l)
-            }
-        }
-    }
-
-    private val addLensLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val l = BundleCompat.getParcelable(result.data?.extras ?: return@registerForActivityResult, "lensspec", LensSpec::class.java)
-            if (l != null) lensViewModel.insertLens(l)
-        }
-    }
-
-    private val editLensLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val l = BundleCompat.getParcelable(result.data?.extras ?: return@registerForActivityResult, "lensspec", LensSpec::class.java)
-            if (l != null) lensViewModel.updateLens(l)
-        }
-    }
-
-    private val addFilmRollLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val bundle = result.data?.extras ?: return@registerForActivityResult
-            val dao = TrisquelDao(this.applicationContext)
-            dao.connection()
-            val c = dao.getCamera(bundle.getInt("camera"))
-            dao.close()
-            val f = FilmRoll(0, bundle.getString("name")!!, c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
-            filmRollViewModel.insert(f.toEntity())
-        }
-    }
-
-    private val editFilmRollLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val bundle = result.data?.extras ?: return@registerForActivityResult
-            val dao = TrisquelDao(this.applicationContext)
-            dao.connection()
-            val c = dao.getCamera(bundle.getInt("camera"))
-            dao.close()
-            val f = FilmRoll(bundle.getInt("id"), bundle.getString("name")!!, bundle.getString("created")!!, Util.dateToStringUTC(Date()), c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
-            filmRollViewModel.update(f.toEntity())
-        }
-    }
-
-    private val editPhotoListLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
-
-    private val addAccessoryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val bundle = result.data?.extras ?: return@registerForActivityResult
-            val a = Accessory(0, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
-            accessoryViewModel.insert(a.toEntity())
-        }
-    }
-
-    private val editAccessoryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val bundle = result.data?.extras ?: return@registerForActivityResult
-            val a = Accessory(bundle.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
-            accessoryViewModel.update(a.toEntity())
-        }
-    }
 
     private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -627,80 +543,55 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun onCameraInteraction(item: CameraSpec, isLong: Boolean) {
-        if (isLong) {
-            val dao = TrisquelDao(applicationContext)
-            dao.connection()
-            val used = dao.getCameraUsage(item.id)
-            dao.close()
-            if (used) {
-                activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName))
-            } else {
-                activeDialogState.value = ActiveDialog.Confirm(
-                    message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
-                    onConfirm = { cameraViewModel.deleteCamera(item.id) }
-                )
-            }
+    fun onCameraDeleteRequest(item: CameraSpec) {
+        val dao = TrisquelDao(applicationContext)
+        dao.connection()
+        val used = dao.getCameraUsage(item.id)
+        dao.close()
+        if (used) {
+            activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName))
         } else {
-            val intent = Intent(application, EditCameraActivity::class.java)
-            intent.putExtra("id", item.id)
-            intent.putExtra("type", item.type)
-            editCameraLauncher.launch(intent)
-        }
-    }
-
-    fun onLensInteraction(item: LensSpec, isLong: Boolean) {
-        if (isLong) {
-            val dao = TrisquelDao(applicationContext)
-            dao.connection()
-            val used = dao.getLensUsage(item.id)
-            dao.close()
-            if (used) {
-                activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName))
-            } else {
-                activeDialogState.value = ActiveDialog.Confirm(
-                    message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
-                    onConfirm = { lensViewModel.deleteLens(item.id) }
-                )
-            }
-        } else {
-            val intent = Intent(application, EditLensActivity::class.java)
-            intent.putExtra("id", item.id)
-            editLensLauncher.launch(intent)
-        }
-    }
-
-    fun onFilmRollInteraction(item: FilmRoll, isLong: Boolean) {
-        if (isLong) {
             activeDialogState.value = ActiveDialog.Confirm(
-                message = getString(R.string.msg_confirm_remove_item).format(item.name),
-                onConfirm = { filmRollViewModel.delete(item.id) }
+                message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
+                onConfirm = { cameraViewModel.deleteCamera(item.id) }
             )
-        } else {
-            val intent = Intent(application, EditPhotoListActivity::class.java)
-            intent.putExtra("id", item.id)
-            editPhotoListLauncher.launch(intent)
         }
     }
 
-    fun onAccessoryInteraction(accessory: Accessory, isLong: Boolean) {
-        if (isLong) {
-            val dao = TrisquelDao(applicationContext)
-            dao.connection()
-            val accessoryUsed = dao.getAccessoryUsed(accessory.id)
-            dao.close()
-            if (accessoryUsed) {
-                activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(accessory.name))
-            } else {
-                activeDialogState.value = ActiveDialog.Confirm(
-                    message = getString(R.string.msg_confirm_remove_item).format(accessory.name),
-                    onConfirm = { accessoryViewModel.delete(accessory.id) }
-                )
-            }
+    fun onLensDeleteRequest(item: LensSpec) {
+        val dao = TrisquelDao(applicationContext)
+        dao.connection()
+        val used = dao.getLensUsage(item.id)
+        dao.close()
+        if (used) {
+            activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName))
         } else {
-            val intent = Intent(application, EditAccessoryActivity::class.java)
-            intent.putExtra("id", accessory.id)
-            editAccessoryLauncher.launch(intent)
+            activeDialogState.value = ActiveDialog.Confirm(
+                message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
+                onConfirm = { lensViewModel.deleteLens(item.id) }
+            )
+        }
+    }
+
+    fun onFilmRollDeleteRequest(item: FilmRoll) {
+        activeDialogState.value = ActiveDialog.Confirm(
+            message = getString(R.string.msg_confirm_remove_item).format(item.name),
+            onConfirm = { filmRollViewModel.delete(item.id) }
+        )
+    }
+
+    fun onAccessoryDeleteRequest(accessory: Accessory) {
+        val dao = TrisquelDao(applicationContext)
+        dao.connection()
+        val accessoryUsed = dao.getAccessoryUsed(accessory.id)
+        dao.close()
+        if (accessoryUsed) {
+            activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(accessory.name))
+        } else {
+            activeDialogState.value = ActiveDialog.Confirm(
+                message = getString(R.string.msg_confirm_remove_item).format(accessory.name),
+                onConfirm = { accessoryViewModel.delete(accessory.id) }
+            )
         }
     }
 
@@ -1216,30 +1107,33 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     )
-                },
-                floatingActionButton = {
-                    if (observedRoute != ROUTE_FAVORITES) {
-                        FloatingActionButton(onClick = {
-                            when (observedRoute) {
-                                ROUTE_CAMERAS -> {
-                                    activeDialogState.value = ActiveDialog.Select(
-                                        items = arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)),
-                                        onSelected = { which, _ ->
-                                            val intent = Intent(application, EditCameraActivity::class.java)
-                                            intent.putExtra("type", which)
-                                            addCameraLauncher.launch(intent)
-                                        }
-                                    )
-                                }
-                                ROUTE_LENSES -> {
-                                    val intent = Intent(application, EditLensActivity::class.java)
-                                    addLensLauncher.launch(intent)
-                                }
-                                ROUTE_ACCESSORIES -> {
-                                    val intent = Intent(application, EditAccessoryActivity::class.java)
-                                    addAccessoryLauncher.launch(intent)
-                                }
-                                ROUTE_FILMROLLS -> {
+                }
+            ) { paddingValues ->
+                NavHost(navController, startDestination = initialRoute, modifier = Modifier.padding(paddingValues)) {
+                    composable(ROUTE_FILMROLLS) {
+                        val addFilmRollLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                            if (result.resultCode == RESULT_OK) filmRollViewModel.handleAddResult(result.data)
+                        }
+                        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                            if (result.resultCode == RESULT_OK) filmRollViewModel.handleEditResult(result.data)
+                        }
+                        val editPhotoListLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+
+                        val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
+                        Box(Modifier.fillMaxSize()) {
+                            FilmRollListScreen(
+                                filmrolls = filmrolls,
+                                onItemClick = { item ->
+                                    val f = FilmRoll.fromEntity(item)
+                                    val intent = Intent(application, EditPhotoListActivity::class.java)
+                                    intent.putExtra("id", f.id)
+                                    editPhotoListLauncher.launch(intent)
+                                },
+                                onItemLongClick = { onFilmRollDeleteRequest(FilmRoll.fromEntity(it)) },
+                                emptyMessage = getString(R.string.warning_filmroll_not_registered)
+                            )
+                            FloatingActionButton(
+                                onClick = {
                                     val intent = Intent(application, EditFilmRollActivity::class.java)
                                     if (currentFilter.first == 1) {
                                         intent.putExtra("default_camera", currentFilter.second[0].toInt())
@@ -1248,60 +1142,118 @@ class MainActivity : AppCompatActivity() {
                                         intent.putExtra("default_brand", currentFilter.second[1])
                                     }
                                     addFilmRollLauncher.launch(intent)
-                                }
+                                },
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                            ) {
+                                Icon(painterResource(R.drawable.ic_filmroll_vector_white), null, tint = Color.White)
                             }
-                        }, containerColor = MaterialTheme.colorScheme.secondary) {
-                            val iconRes = when (observedRoute) {
-                                ROUTE_CAMERAS -> R.drawable.ic_menu_camera_white
-                                ROUTE_LENSES -> R.drawable.ic_lens_white
-                                ROUTE_ACCESSORIES -> R.drawable.ic_extension_white
-                                else -> R.drawable.ic_filmroll_vector_white
-                            }
-                            Icon(painterResource(iconRes), null, tint = Color.White)
                         }
                     }
-                }
-            ) { paddingValues ->
-                NavHost(navController, startDestination = initialRoute, modifier = Modifier.padding(paddingValues)) {
-                    composable(ROUTE_FILMROLLS) {
-                        val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
-                        FilmRollListScreen(
-                            filmrolls = filmrolls,
-                            onItemClick = { onFilmRollInteraction(FilmRoll.fromEntity(it), false) },
-                            onItemLongClick = { onFilmRollInteraction(FilmRoll.fromEntity(it), true) },
-                            emptyMessage = getString(R.string.warning_filmroll_not_registered)
-                        )
-                    }
                     composable(ROUTE_CAMERAS) {
+                        val addCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                            if (result.resultCode == RESULT_OK) cameraViewModel.handleAddResult(result.data)
+                        }
+                        val editCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                            if (result.resultCode == RESULT_OK) cameraViewModel.handleEditResult(result.data)
+                        }
                         val cameras by cameraViewModel.cameras.observeAsState(emptyList())
-                        CameraListScreen(
-                            cameras = cameras,
-                            onItemClick = { onCameraInteraction(it, false) },
-                            onItemLongClick = { onCameraInteraction(it, true) },
-                            emptyMessage = getString(R.string.warning_cam_not_registered),
-                            scrollTargetIndex = null,
-                            onScrollConsumed = {}
-                        )
+                        Box(Modifier.fillMaxSize()) {
+                            CameraListScreen(
+                                cameras = cameras,
+                                onItemClick = { item ->
+                                    val intent = Intent(application, EditCameraActivity::class.java)
+                                    intent.putExtra("id", item.id)
+                                    intent.putExtra("type", item.type)
+                                    editCameraLauncher.launch(intent)
+                                },
+                                onItemLongClick = { onCameraDeleteRequest(it) },
+                                emptyMessage = getString(R.string.warning_cam_not_registered),
+                                scrollTargetIndex = null,
+                                onScrollConsumed = {}
+                            )
+                            FloatingActionButton(
+                                onClick = {
+                                    activeDialogState.value = ActiveDialog.Select(
+                                        items = arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)),
+                                        onSelected = { which, _ ->
+                                            val intent = Intent(application, EditCameraActivity::class.java)
+                                            intent.putExtra("type", which)
+                                            addCameraLauncher.launch(intent)
+                                        }
+                                    )
+                                },
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                            ) {
+                                Icon(painterResource(R.drawable.ic_menu_camera_white), null, tint = Color.White)
+                            }
+                        }
                     }
                     composable(ROUTE_LENSES) {
+                        val addLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                            if (result.resultCode == RESULT_OK) lensViewModel.handleAddResult(result.data)
+                        }
+                        val editLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                            if (result.resultCode == RESULT_OK) lensViewModel.handleEditResult(result.data)
+                        }
                         val lenses by lensViewModel.lenses.observeAsState(emptyList())
-                        LensListScreen(
-                            lenses = lenses,
-                            onItemClick = { onLensInteraction(it, false) },
-                            onItemLongClick = { onLensInteraction(it, true) },
-                            emptyMessage = getString(R.string.warning_lens_not_registered),
-                            scrollTargetIndex = null,
-                            onScrollConsumed = {}
-                        )
+                        Box(Modifier.fillMaxSize()) {
+                            LensListScreen(
+                                lenses = lenses,
+                                onItemClick = { item ->
+                                    val intent = Intent(application, EditLensActivity::class.java)
+                                    intent.putExtra("id", item.id)
+                                    editLensLauncher.launch(intent)
+                                },
+                                onItemLongClick = { onLensDeleteRequest(it) },
+                                emptyMessage = getString(R.string.warning_lens_not_registered),
+                                scrollTargetIndex = null,
+                                onScrollConsumed = {}
+                            )
+                            FloatingActionButton(
+                                onClick = {
+                                    val intent = Intent(application, EditLensActivity::class.java)
+                                    addLensLauncher.launch(intent)
+                                },
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                            ) {
+                                Icon(painterResource(R.drawable.ic_lens_white), null, tint = Color.White)
+                            }
+                        }
                     }
                     composable(ROUTE_ACCESSORIES) {
+                        val addAccessoryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                            if (result.resultCode == RESULT_OK) accessoryViewModel.handleAddResult(result.data)
+                        }
+                        val editAccessoryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                            if (result.resultCode == RESULT_OK) accessoryViewModel.handleEditResult(result.data)
+                        }
                         val accessories by accessoryViewModel.allAccessories.observeAsState(emptyList())
-                        AccessoryListScreen(
-                            accessories = accessories,
-                            onItemClick = { onAccessoryInteraction(Accessory.fromEntity(it), false) },
-                            onItemLongClick = { onAccessoryInteraction(Accessory.fromEntity(it), true) },
-                            emptyMessage = getString(R.string.warning_accessory_not_registered)
-                        )
+                        Box(Modifier.fillMaxSize()) {
+                            AccessoryListScreen(
+                                accessories = accessories,
+                                onItemClick = { item ->
+                                    val a = Accessory.fromEntity(item)
+                                    val intent = Intent(application, EditAccessoryActivity::class.java)
+                                    intent.putExtra("id", a.id)
+                                    editAccessoryLauncher.launch(intent)
+                                },
+                                onItemLongClick = { onAccessoryDeleteRequest(Accessory.fromEntity(it)) },
+                                emptyMessage = getString(R.string.warning_accessory_not_registered)
+                            )
+                            FloatingActionButton(
+                                onClick = {
+                                    val intent = Intent(application, EditAccessoryActivity::class.java)
+                                    addAccessoryLauncher.launch(intent)
+                                },
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                            ) {
+                                Icon(painterResource(R.drawable.ic_extension_white), null, tint = Color.White)
+                            }
+                        }
                     }
                     composable(ROUTE_FAVORITES) {
                         val context = LocalContext.current

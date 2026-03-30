@@ -6,17 +6,17 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Date
 
 class AccessoryViewModel(application: Application?) : AndroidViewModel(
     application!!
 ) {
     private val mRepository: TrisquelRepo
-    //private val mAllAccessories: LiveData<List<AccessoryEntity>>
 
     init {
         mRepository = TrisquelRepo(application)
-        //mAllAccessories = mRepository.getAllAccessories()
     }
 
     val sortingRule = MutableLiveData<Int>(0)
@@ -24,6 +24,18 @@ class AccessoryViewModel(application: Application?) : AndroidViewModel(
     val allAccessories: LiveData<List<AccessoryEntity>> = sortingRule.switchMap {
         val x = mRepository.getAllAccessories(it)
         x
+    }
+
+    fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
+        val bundle = intent?.extras ?: return@launch
+        val a = Accessory(0, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
+        mRepository.upsertAccessory(a.toEntity())
+    }
+
+    fun handleEditResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
+        val bundle = intent?.extras ?: return@launch
+        val a = Accessory(bundle.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
+        mRepository.upsertAccessory(a.toEntity())
     }
 
     fun insert(entity: AccessoryEntity) = viewModelScope.launch {
