@@ -146,22 +146,6 @@ class MainActivity : AppCompatActivity() {
         const val ROUTE_LENSES = "lenses"
         const val ROUTE_ACCESSORIES = "accessories"
         const val ROUTE_FAVORITES = "favorites"
-
-        const val RETCODE_ALERT = 200
-        const val RETCODE_CAMERA_TYPE = 300
-        const val RETCODE_OPEN_RELEASE_NOTES = 100
-        const val RETCODE_DELETE_FILMROLL = 101
-        const val RETCODE_DELETE_CAMERA = 102
-        const val RETCODE_DELETE_LENS = 103
-        const val RETCODE_DELETE_ACCESSORY = 104
-        const val RETCODE_EXPORT_DB = 400
-        const val RETCODE_SDCARD_PERM = 401
-        const val RETCODE_SORT = 402
-        const val RETCODE_FILTER_CAMERA = 403
-        const val RETCODE_FILTER_FILM_BRAND = 404
-        const val RETCODE_SEARCH = 405
-        const val RETCODE_DBCONV_PROGRESS = 408
-
         const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
     }
 
