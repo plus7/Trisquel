@@ -102,6 +102,7 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -313,7 +314,7 @@ class MainActivity : AppCompatActivity() {
         val initialRoute = routeMap[savedInstanceState?.getInt("current_fragment") ?: ID_FILMROLL] ?: ROUTE_FILMROLLS
 
         setContent {
-            MaterialTheme {
+            TrisquelTheme {
                 MainAppScreen(initialRoute)
             }
         }
