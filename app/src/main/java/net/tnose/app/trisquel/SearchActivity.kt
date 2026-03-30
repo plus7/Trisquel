@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -44,11 +45,10 @@ class SearchActivity : AppCompatActivity() {
     }
 
     private lateinit var searchViewModel: SearchViewModel
+    private val mainViewModel: MainViewModel by viewModels()
     private var thumbnailEditingPhoto: Photo? = null
     private var isDirty: Boolean = false
     private val dirtyFilmRolls: ArrayList<Int> = arrayListOf()
-
-    private val activeDialogState = mutableStateOf<ActiveDialog?>(null)
 
     private val PERMISSIONS =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
@@ -157,14 +157,14 @@ class SearchActivity : AppCompatActivity() {
 
     fun onPhotoInteraction(item: Photo, isLong: Boolean) {
         if (isLong) {
-            activeDialogState.value = ActiveDialog.Confirm(
+            mainViewModel.showDialog(ActiveDialog.Confirm(
                 message = getString(R.string.msg_confirm_remove_item).format(getString(R.string.this_photo)),
                 onConfirm = {
                     if (!dirtyFilmRolls.contains(item.filmrollid)) dirtyFilmRolls.add(item.filmrollid)
                     searchViewModel.delete(item.id)
                     isDirty = true
                 }
-            )
+            ))
         } else {
             val intent = Intent(application, EditPhotoActivity::class.java)
             intent.putExtra("filmroll", item.filmrollid)
@@ -219,8 +219,8 @@ class SearchActivity : AppCompatActivity() {
     @Composable
     fun SearchScreen(tagString: String) {
         TrisquelDialogManager(
-            activeDialog = activeDialogState.value,
-            onDismiss = { activeDialogState.value = null }
+            activeDialog = mainViewModel.activeDialog,
+            onDismiss = { mainViewModel.dismissDialog() }
         )
 
         Scaffold(
@@ -257,31 +257,6 @@ class SearchActivity : AppCompatActivity() {
                     onFavoriteClick = { onFavoriteClick(it) }
                 )
             }
-        }
-    }
-
-    @Composable
-    fun TrisquelDialogManager(activeDialog: ActiveDialog?, onDismiss: () -> Unit) {
-        if (activeDialog == null) return
-        when (activeDialog) {
-            is ActiveDialog.Confirm -> {
-                AlertDialog(
-                    onDismissRequest = onDismiss,
-                    title = { activeDialog.title?.let { Text(it) } ?: Text("Trisquel") },
-                    text = { Text(activeDialog.message) },
-                    confirmButton = {
-                        TextButton(onClick = { activeDialog.onConfirm(); onDismiss() }) {
-                            Text(activeDialog.positive ?: stringResource(android.R.string.ok))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = onDismiss) {
-                            Text(activeDialog.negative ?: stringResource(android.R.string.cancel))
-                        }
-                    }
-                )
-            }
-            else -> {}
         }
     }
 }

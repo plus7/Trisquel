@@ -16,6 +16,7 @@ import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -68,6 +69,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -101,47 +103,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 
-sealed class ActiveDialog {
-    data class Alert(val message: String) : ActiveDialog()
-    data class Confirm(
-        val title: String? = null,
-        val message: String,
-        val positive: String? = null,
-        val negative: String? = null,
-        val onConfirm: () -> Unit
-    ) : ActiveDialog()
-    data class SingleChoice(
-        val title: String,
-        val items: Array<String>,
-        val selected: Int,
-        val onConfirm: (Int) -> Unit
-    ) : ActiveDialog()
-    data class Select(
-        val title: String? = null,
-        val items: Array<String>,
-        val ids: List<Int>? = null,
-        val onSelected: (Int, Int?) -> Unit
-    ) : ActiveDialog()
-    data class RichSelection(
-        val title: String,
-        val icons: List<Int>,
-        val titles: Array<String>,
-        val descs: Array<String>,
-        val onSelected: (Int) -> Unit
-    ) : ActiveDialog()
-    data class SearchCond(
-        val title: String,
-        val labels: Array<String>,
-        val onSearch: (ArrayList<String>) -> Unit
-    ) : ActiveDialog()
-    data class Progress(
-        val title: String,
-        val percentage: Double,
-        val status: String,
-        val onCancel: () -> Unit
-    ) : ActiveDialog()
-}
-
 class MainActivity : AppCompatActivity() {
     companion object {
         const val ID_FILMROLL = 0
@@ -166,17 +127,14 @@ class MainActivity : AppCompatActivity() {
     private var mExportViewModel: ExportProgressViewModel? = null
     private var mImportViewModel: ImportProgressViewModel? = null
     private var mDbConvViewModel: DbConvProgressViewModel? = null
+    private val mainViewModel: MainViewModel by viewModels()
 
     internal var currentRoute = ROUTE_FILMROLLS
-    internal var currentFilter = Pair(0, arrayListOf<String>())
-    internal var currentSubtitle = ""
-
-    private val activeDialogState = mutableStateOf<ActiveDialog?>(null)
 
     private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
-            activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() }
+            mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() })
             mExportViewModel?.doExport(uri.toString(), 0)
         }
     }
@@ -184,7 +142,7 @@ class MainActivity : AppCompatActivity() {
     private val backupDirChosenForFullExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
-            activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() }
+            mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() })
             mExportViewModel?.doExport(uri.toString(), 1)
         }
     }
@@ -193,7 +151,7 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
             Log.d("ZipFile", uri.toString())
-            activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() }
+            mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() })
             mImportViewModel?.doImport(uri.toString(), 0)
         }
     }
@@ -202,7 +160,7 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
             Log.d("ZipFile", uri.toString())
-            activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() }
+            mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() })
             mImportViewModel?.doImport(uri.toString(), 1)
         }
     }
@@ -298,12 +256,12 @@ class MainActivity : AppCompatActivity() {
                     if (workInfo.state == WorkInfo.State.CANCELLED) status = "Backup cancelled."
                     else if (workInfo.state == WorkInfo.State.FAILED) status = "Backup failed."
                 }
-                activeDialogState.value = null
+                mainViewModel.dismissDialog()
                 Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
             } else {
                 val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
                 val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
-                activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_backup), progress, status) { mExportViewModel?.cancelExport() }
+                mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_backup), progress, status) { mExportViewModel?.cancelExport() })
             }
         })
         
@@ -317,12 +275,12 @@ class MainActivity : AppCompatActivity() {
                     if (workInfo.state == WorkInfo.State.CANCELLED) status = "Import cancelled."
                     else if (workInfo.state == WorkInfo.State.FAILED) status = "Import failed."
                 }
-                activeDialogState.value = null
+                mainViewModel.dismissDialog()
                 Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
             } else {
                 val status = workInfo.progress.getString(ImportWorker.PARAM_STATUS) ?: ""
                 val progress = workInfo.progress.getDouble(ImportWorker.PARAM_PERCENTAGE, 0.0)
-                activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_import), progress, status) { mImportViewModel?.cancelExport() }
+                mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_import), progress, status) { mImportViewModel?.cancelExport() })
             }
         })
         
@@ -332,12 +290,12 @@ class MainActivity : AppCompatActivity() {
             val workInfo = listOfWorkInfo[0]
             if (workInfo.state.isFinished) {
                 val status = workInfo.outputData.getString(DbConvWorker.PARAM_STATUS) ?: ""
-                activeDialogState.value = null
+                mainViewModel.dismissDialog()
                 Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
             } else {
                 val status = workInfo.progress.getString(DbConvWorker.PARAM_STATUS) ?: ""
                 val progress = workInfo.progress.getDouble(DbConvWorker.PARAM_PERCENTAGE, 0.0)
-                activeDialogState.value = ActiveDialog.Progress("DB Conversion", progress, status, {})
+                mainViewModel.showDialog(ActiveDialog.Progress("DB Conversion", progress, status, {}))
             }
         })
 
@@ -346,9 +304,9 @@ class MainActivity : AppCompatActivity() {
 
         val filtertype = savedInstanceState?.getInt("filmroll_filtertype") ?: 0
         val filtervalue = savedInstanceState?.getStringArrayList("filmroll_filtervalue") ?: arrayListOf("")
-        currentFilter = Pair(filtertype, filtervalue)
+        mainViewModel.currentFilter = Pair(filtertype, filtervalue)
         if (filtertype != 0) {
-            currentSubtitle = getFilterLabel(currentFilter)
+            mainViewModel.currentSubtitle = getFilterLabel(mainViewModel.currentFilter)
         }
         
         val routeMap = mapOf(ID_FILMROLL to ROUTE_FILMROLLS, ID_CAMERA to ROUTE_CAMERAS, ID_LENS to ROUTE_LENSES, ID_ACCESSORY to ROUTE_ACCESSORIES, ID_FAVORITES to ROUTE_FAVORITES)
@@ -378,7 +336,7 @@ class MainActivity : AppCompatActivity() {
         val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val lastVersion = pref.getInt("last_version", 0)
         if (0 < lastVersion && lastVersion < Util.TRISQUEL_VERSION) {
-            activeDialogState.value = ActiveDialog.Confirm(
+            mainViewModel.showDialog(ActiveDialog.Confirm(
                 title = "Trisquel",
                 message = getString(R.string.warning_newversion),
                 positive = getString(R.string.show_release_notes),
@@ -388,7 +346,7 @@ class MainActivity : AppCompatActivity() {
                     val i = Intent(Intent.ACTION_VIEW, uri)
                     startActivity(i)
                 }
-            )
+            ))
         }
         pref.edit().putInt("last_version", Util.TRISQUEL_VERSION).apply()
     }
@@ -403,8 +361,8 @@ class MainActivity : AppCompatActivity() {
             else -> ID_FILMROLL
         })
         if (currentRoute == ROUTE_FILMROLLS) {
-            outState.putInt("filmroll_filtertype", currentFilter.first)
-            outState.putStringArrayList("filmroll_filtervalue", currentFilter.second)
+            outState.putInt("filmroll_filtertype", mainViewModel.currentFilter.first)
+            outState.putStringArrayList("filmroll_filtervalue", mainViewModel.currentFilter.second)
         }
         pendingExportMode?.let { outState.putInt("pending_export_mode", it) }
         pendingImportMode?.let { outState.putInt("pending_import_mode", it) }
@@ -556,12 +514,12 @@ class MainActivity : AppCompatActivity() {
         val used = dao.getCameraUsage(item.id)
         dao.close()
         if (used) {
-            activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName))
+            mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName)))
         } else {
-            activeDialogState.value = ActiveDialog.Confirm(
+            mainViewModel.showDialog(ActiveDialog.Confirm(
                 message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
                 onConfirm = { cameraViewModel.deleteCamera(item.id) }
-            )
+            ))
         }
     }
 
@@ -571,20 +529,20 @@ class MainActivity : AppCompatActivity() {
         val used = dao.getLensUsage(item.id)
         dao.close()
         if (used) {
-            activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName))
+            mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName)))
         } else {
-            activeDialogState.value = ActiveDialog.Confirm(
+            mainViewModel.showDialog(ActiveDialog.Confirm(
                 message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
                 onConfirm = { lensViewModel.deleteLens(item.id) }
-            )
+            ))
         }
     }
 
     fun onFilmRollDeleteRequest(item: FilmRoll) {
-        activeDialogState.value = ActiveDialog.Confirm(
+        mainViewModel.showDialog(ActiveDialog.Confirm(
             message = getString(R.string.msg_confirm_remove_item).format(item.name),
             onConfirm = { filmRollViewModel.delete(item.id) }
-        )
+        ))
     }
 
     fun onAccessoryDeleteRequest(accessory: Accessory) {
@@ -593,12 +551,12 @@ class MainActivity : AppCompatActivity() {
         val accessoryUsed = dao.getAccessoryUsed(accessory.id)
         dao.close()
         if (accessoryUsed) {
-            activeDialogState.value = ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(accessory.name))
+            mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(accessory.name)))
         } else {
-            activeDialogState.value = ActiveDialog.Confirm(
+            mainViewModel.showDialog(ActiveDialog.Confirm(
                 message = getString(R.string.msg_confirm_remove_item).format(accessory.name),
                 onConfirm = { accessoryViewModel.delete(accessory.id) }
-            )
+            ))
         }
     }
 
@@ -630,184 +588,6 @@ class MainActivity : AppCompatActivity() {
 
     data class DrawerItem(val route: String, val title: String, val iconRes: Int)
 
-    @Composable
-    fun TrisquelDialogManager(
-        activeDialog: ActiveDialog?,
-        onDismiss: () -> Unit
-    ) {
-        if (activeDialog == null) return
-
-        when (activeDialog) {
-            is ActiveDialog.Alert -> {
-                AlertDialog(
-                    onDismissRequest = onDismiss,
-                    confirmButton = {
-                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
-                    },
-                    text = { Text(activeDialog.message) }
-                )
-            }
-            is ActiveDialog.Confirm -> {
-                AlertDialog(
-                    onDismissRequest = onDismiss,
-                    title = { activeDialog.title?.let { Text(it) } ?: Text("Trisquel") },
-                    text = { Text(activeDialog.message) },
-                    confirmButton = {
-                        TextButton(onClick = { activeDialog.onConfirm(); onDismiss() }) {
-                            Text(activeDialog.positive ?: stringResource(android.R.string.ok))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = onDismiss) {
-                            Text(activeDialog.negative ?: stringResource(android.R.string.cancel))
-                        }
-                    }
-                )
-            }
-            is ActiveDialog.SingleChoice -> {
-                AlertDialog(
-                    onDismissRequest = onDismiss,
-                    title = { Text(activeDialog.title) },
-                    text = {
-                        LazyColumn {
-                            itemsIndexed(activeDialog.items) { index, item ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { activeDialog.onConfirm(index); onDismiss() }
-                                        .padding(vertical = 12.dp, horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(selected = index == activeDialog.selected, onClick = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(item)
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
-                    }
-                )
-            }
-            is ActiveDialog.Select -> {
-                AlertDialog(
-                    onDismissRequest = onDismiss,
-                    title = { activeDialog.title?.let { Text(it) } },
-                    text = {
-                        LazyColumn {
-                            itemsIndexed(activeDialog.items) { index, item ->
-                                Text(
-                                    text = item,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            activeDialog.onSelected(index, activeDialog.ids?.get(index))
-                                            onDismiss()
-                                        }
-                                        .padding(16.dp)
-                                )
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
-                    }
-                )
-            }
-            is ActiveDialog.RichSelection -> {
-                AlertDialog(
-                    onDismissRequest = onDismiss,
-                    title = { Text(activeDialog.title) },
-                    text = {
-                        LazyColumn {
-                            itemsIndexed(activeDialog.titles) { index, title ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { activeDialog.onSelected(index); onDismiss() }
-                                        .padding(vertical = 12.dp, horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(painterResource(activeDialog.icons[index]), null, modifier = Modifier.size(24.dp))
-                                    Spacer(Modifier.width(16.dp))
-                                    Column {
-                                        Text(title, style = MaterialTheme.typography.titleMedium)
-                                        Text(activeDialog.descs[index], style = MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
-                    }
-                )
-            }
-            is ActiveDialog.SearchCond -> {
-                val selectedLabels = remember { mutableStateListOf<String>() }
-                AlertDialog(
-                    onDismissRequest = onDismiss,
-                    title = { Text(activeDialog.title) },
-                    text = {
-                        LazyColumn {
-                            items(activeDialog.labels) { label ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            if (selectedLabels.contains(label)) selectedLabels.remove(label)
-                                            else selectedLabels.add(label)
-                                        }
-                                        .padding(vertical = 8.dp, horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(checked = selectedLabels.contains(label), onCheckedChange = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(label)
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            activeDialog.onSearch(ArrayList(selectedLabels))
-                            onDismiss()
-                        }) {
-                            Text(stringResource(android.R.string.ok))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
-                    }
-                )
-            }
-            is ActiveDialog.Progress -> {
-                AlertDialog(
-                    onDismissRequest = {}, // Can't dismiss by clicking outside
-                    title = { Text(activeDialog.title) },
-                    text = {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            if (activeDialog.status.isNotEmpty()) {
-                                Text(activeDialog.status, modifier = Modifier.padding(bottom = 16.dp))
-                            }
-                            LinearProgressIndicator(
-                                progress = { (activeDialog.percentage / 100.0).toFloat() },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    },
-                    confirmButton = {},
-                    dismissButton = {
-                        TextButton(onClick = { activeDialog.onCancel(); onDismiss() }) {
-                            Text(stringResource(android.R.string.cancel))
-                        }
-                    }
-                )
-            }
-        }
-    }
-
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainAppScreen(initialRoute: String) {
@@ -822,8 +602,8 @@ class MainActivity : AppCompatActivity() {
             currentRoute = observedRoute
         }
 
-        var showFilterMenu by remember { mutableStateOf(false) }
-        var showOverflowMenu by remember { mutableStateOf(false) }
+        var showFilterMenu by rememberSaveable { mutableStateOf(false) }
+        var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
 
         val drawerItems = listOf(
             DrawerItem(ROUTE_FILMROLLS, getString(R.string.title_activity_filmroll_list), R.drawable.ic_filmroll_vector),
@@ -845,8 +625,8 @@ class MainActivity : AppCompatActivity() {
         )
 
         TrisquelDialogManager(
-            activeDialog = activeDialogState.value,
-            onDismiss = { activeDialogState.value = null }
+            activeDialog = mainViewModel.activeDialog,
+            onDismiss = { mainViewModel.dismissDialog() }
         )
 
         ModalNavigationDrawer(
@@ -892,7 +672,7 @@ class MainActivity : AppCompatActivity() {
                                     when (item.route) {
                                         "settings" -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                                         "backup" -> {
-                                            activeDialogState.value = ActiveDialog.RichSelection(
+                                            mainViewModel.showDialog(ActiveDialog.RichSelection(
                                                 title = getString(R.string.title_backup_mode_selection),
                                                 icons = listOf(R.drawable.ic_export, R.drawable.ic_export_img, R.drawable.ic_help),
                                                 titles = arrayOf(getString(R.string.title_slim_backup), getString(R.string.title_whole_backup), getString(R.string.title_backup_help)),
@@ -901,10 +681,10 @@ class MainActivity : AppCompatActivity() {
                                                     if (mode < 2) checkPermAndExportDB(mode)
                                                     else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
                                                 }
-                                            )
+                                            ))
                                         }
                                         "import" -> {
-                                            activeDialogState.value = ActiveDialog.RichSelection(
+                                            mainViewModel.showDialog(ActiveDialog.RichSelection(
                                                 title = getString(R.string.title_import_mode_selection),
                                                 icons = listOf(R.drawable.ic_merge, R.drawable.ic_restore, R.drawable.ic_help),
                                                 titles = arrayOf(getString(R.string.title_merge_zip), getString(R.string.title_import_zip), getString(R.string.title_backup_help)),
@@ -913,7 +693,7 @@ class MainActivity : AppCompatActivity() {
                                                     if (mode < 2) checkPermAndImportDB(mode)
                                                     else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
                                                 }
-                                            )
+                                            ))
                                         }
                                     }
                                 },
@@ -952,8 +732,8 @@ class MainActivity : AppCompatActivity() {
                         title = {
                             Column {
                                 Text(getString(titleRes))
-                                if (observedRoute == ROUTE_FILMROLLS && currentSubtitle.isNotEmpty()) {
-                                    Text(currentSubtitle, style = MaterialTheme.typography.bodySmall)
+                                if (observedRoute == ROUTE_FILMROLLS && mainViewModel.currentSubtitle.isNotEmpty()) {
+                                    Text(mainViewModel.currentSubtitle, style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         },
@@ -986,12 +766,12 @@ class MainActivity : AppCompatActivity() {
                                         ROUTE_ACCESSORIES -> pref.getInt("accessory_sortkey", 0)
                                         else -> 0
                                     }
-                                    activeDialogState.value = ActiveDialog.SingleChoice(
+                                    mainViewModel.showDialog(ActiveDialog.SingleChoice(
                                         title = getString(R.string.label_sort_by),
                                         items = arr,
                                         selected = key,
                                         onConfirm = { handleSort(observedRoute, it) }
-                                    )
+                                    ))
                                 }) {
                                     Icon(painterResource(R.drawable.ic_sort_white_24dp), null)
                                 }
@@ -1002,12 +782,12 @@ class MainActivity : AppCompatActivity() {
                                         Icon(painterResource(R.drawable.ic_filter_white), null)
                                     }
                                     DropdownMenu(expanded = showFilterMenu, onDismissRequest = { showFilterMenu = false }) {
-                                        if (currentFilter.first != 0) {
+                                        if (mainViewModel.currentFilter.first != 0) {
                                             DropdownMenuItem(
                                                 text = { Text(getString(R.string.label_no_filter)) },
                                                 onClick = {
-                                                    currentFilter = Pair(0, arrayListOf())
-                                                    currentSubtitle = ""
+                                                    mainViewModel.currentFilter = Pair(0, arrayListOf())
+                                                    mainViewModel.currentSubtitle = ""
                                                     filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(0, ""))
                                                     showFilterMenu = false
                                                 }
@@ -1021,17 +801,17 @@ class MainActivity : AppCompatActivity() {
                                                 val cs = dao.allCameras
                                                 dao.close()
                                                 cs.sortBy { it.manufacturer + " " + it.modelName }
-                                                activeDialogState.value = ActiveDialog.Select(
+                                                mainViewModel.showDialog(ActiveDialog.Select(
                                                     items = cs.map { it.manufacturer + " " + it.modelName }.toTypedArray(),
                                                     ids = cs.map { it.id },
                                                     onSelected = { _, id ->
                                                         if (id != null) {
-                                                            currentFilter = Pair(1, arrayListOf(id.toString()))
-                                                            currentSubtitle = getFilterLabel(currentFilter)
+                                                            mainViewModel.currentFilter = Pair(1, arrayListOf(id.toString()))
+                                                            mainViewModel.currentSubtitle = getFilterLabel(mainViewModel.currentFilter)
                                                             filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(1, id.toString()))
                                                         }
                                                     }
-                                                )
+                                                ))
                                                 showFilterMenu = false
                                             }
                                         )
@@ -1042,14 +822,14 @@ class MainActivity : AppCompatActivity() {
                                                 dao.connection()
                                                 val fbs = dao.availableFilmBrandList
                                                 dao.close()
-                                                activeDialogState.value = ActiveDialog.Select(
+                                                mainViewModel.showDialog(ActiveDialog.Select(
                                                     items = fbs.map { it.first + " " + it.second }.toTypedArray(),
                                                     onSelected = { which, _ ->
-                                                        currentFilter = Pair(2, arrayListOf(fbs[which].first, fbs[which].second))
-                                                        currentSubtitle = getFilterLabel(currentFilter)
+                                                        mainViewModel.currentFilter = Pair(2, arrayListOf(fbs[which].first, fbs[which].second))
+                                                        mainViewModel.currentSubtitle = getFilterLabel(mainViewModel.currentFilter)
                                                         filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(2, fbs[which].second))
                                                     }
-                                                )
+                                                ))
                                                 showFilterMenu = false
                                             }
                                         )
@@ -1060,8 +840,8 @@ class MainActivity : AppCompatActivity() {
                                                 DropdownMenuItem(
                                                     text = { Text(getFilterLabel(f)) },
                                                     onClick = {
-                                                        currentFilter = f
-                                                        currentSubtitle = getFilterLabel(f)
+                                                        mainViewModel.currentFilter = f
+                                                        mainViewModel.currentSubtitle = getFilterLabel(f)
                                                         val searchStr = if(f.first == 1) f.second[0].toInt().toString() else f.second[1]
                                                         filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(f.first, searchStr))
                                                         showFilterMenu = false
@@ -1076,7 +856,7 @@ class MainActivity : AppCompatActivity() {
                                     dao.connection()
                                     val tags = dao.allTags
                                     dao.close()
-                                    activeDialogState.value = ActiveDialog.SearchCond(
+                                    mainViewModel.showDialog(ActiveDialog.SearchCond(
                                         title = getString(R.string.title_dialog_search_by_tags),
                                         labels = tags.sortedBy { it.label }.map { it.label }.toTypedArray(),
                                         onSearch = { checkedLabels ->
@@ -1086,7 +866,7 @@ class MainActivity : AppCompatActivity() {
                                                 searchLauncher.launch(intent)
                                             }
                                         }
-                                    )
+                                    ))
                                 }) {
                                     Icon(painterResource(R.drawable.ic_search_white_24dp), null)
                                 }
@@ -1097,16 +877,16 @@ class MainActivity : AppCompatActivity() {
                                     }
                                     DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
                                         val pinnedFilters = getPinnedFilters()
-                                        val isPinned = pinnedFilters.any { it.first == currentFilter.first && it.second.containsAll(currentFilter.second) }
-                                        if (currentFilter.first != 0 && !isPinned) {
+                                        val isPinned = pinnedFilters.any { it.first == mainViewModel.currentFilter.first && it.second.containsAll(mainViewModel.currentFilter.second) }
+                                        if (mainViewModel.currentFilter.first != 0 && !isPinned) {
                                             DropdownMenuItem(
                                                 text = { Text(getString(R.string.action_pin_current_filter)) },
-                                                onClick = { addPinnedFilter(currentFilter); showOverflowMenu = false }
+                                                onClick = { addPinnedFilter(mainViewModel.currentFilter); showOverflowMenu = false }
                                             )
-                                        } else if (currentFilter.first != 0 && isPinned) {
+                                        } else if (mainViewModel.currentFilter.first != 0 && isPinned) {
                                             DropdownMenuItem(
                                                 text = { Text(getString(R.string.action_unpin_current_filter)) },
-                                                onClick = { removePinnedFilter(currentFilter); showOverflowMenu = false }
+                                                onClick = { removePinnedFilter(mainViewModel.currentFilter); showOverflowMenu = false }
                                             )
                                         }
                                     }
@@ -1142,11 +922,11 @@ class MainActivity : AppCompatActivity() {
                             FloatingActionButton(
                                 onClick = {
                                     val intent = Intent(application, EditFilmRollActivity::class.java)
-                                    if (currentFilter.first == 1) {
-                                        intent.putExtra("default_camera", currentFilter.second[0].toInt())
-                                    } else if (currentFilter.first == 2) {
-                                        intent.putExtra("default_manufacturer", currentFilter.second[0])
-                                        intent.putExtra("default_brand", currentFilter.second[1])
+                                    if (mainViewModel.currentFilter.first == 1) {
+                                        intent.putExtra("default_camera", mainViewModel.currentFilter.second[0].toInt())
+                                    } else if (mainViewModel.currentFilter.first == 2) {
+                                        intent.putExtra("default_manufacturer", mainViewModel.currentFilter.second[0])
+                                        intent.putExtra("default_brand", mainViewModel.currentFilter.second[1])
                                     }
                                     addFilmRollLauncher.launch(intent)
                                 },
@@ -1165,7 +945,7 @@ class MainActivity : AppCompatActivity() {
                             if (result.resultCode == RESULT_OK) cameraViewModel.handleEditResult(result.data)
                         }
                         val cameras by cameraViewModel.cameras.observeAsState(emptyList())
-                        var isFabExpanded by remember { mutableStateOf(false) }
+                        var isFabExpanded by rememberSaveable { mutableStateOf(false) }
                         val interactionSource = remember { MutableInteractionSource() }
                         
                         Box(Modifier.fillMaxSize()) {
