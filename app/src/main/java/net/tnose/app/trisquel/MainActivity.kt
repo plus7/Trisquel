@@ -17,7 +17,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +36,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -51,6 +56,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -67,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -1158,6 +1165,9 @@ class MainActivity : AppCompatActivity() {
                             if (result.resultCode == RESULT_OK) cameraViewModel.handleEditResult(result.data)
                         }
                         val cameras by cameraViewModel.cameras.observeAsState(emptyList())
+                        var isFabExpanded by remember { mutableStateOf(false) }
+                        val interactionSource = remember { MutableInteractionSource() }
+                        
                         Box(Modifier.fillMaxSize()) {
                             CameraListScreen(
                                 cameras = cameras,
@@ -1172,21 +1182,77 @@ class MainActivity : AppCompatActivity() {
                                 scrollTargetIndex = null,
                                 onScrollConsumed = {}
                             )
-                            FloatingActionButton(
-                                onClick = {
-                                    activeDialogState.value = ActiveDialog.Select(
-                                        items = arrayOf(getString(R.string.register_ilc), getString(R.string.register_flc)),
-                                        onSelected = { which, _ ->
-                                            val intent = Intent(application, EditCameraActivity::class.java)
-                                            intent.putExtra("type", which)
-                                            addCameraLauncher.launch(intent)
-                                        }
-                                    )
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondary,
+
+                            if (isFabExpanded) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.5f))
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = null
+                                        ) { isFabExpanded = false }
+                                )
+                            }
+
+                            Column(
+                                horizontalAlignment = Alignment.End,
                                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
                             ) {
-                                Icon(painterResource(R.drawable.ic_menu_camera_white), null, tint = Color.White)
+                                AnimatedVisibility(visible = isFabExpanded) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
+                                            Text(
+                                                text = getString(R.string.register_flc),
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                modifier = Modifier.padding(end = 16.dp)
+                                            )
+                                            SmallFloatingActionButton(
+                                                onClick = {
+                                                    isFabExpanded = false
+                                                    val intent = Intent(application, EditCameraActivity::class.java)
+                                                    intent.putExtra("type", 1)
+                                                    addCameraLauncher.launch(intent)
+                                                },
+                                                containerColor = MaterialTheme.colorScheme.secondary
+                                            ) {
+                                                Icon(painterResource(R.drawable.ic_menu_camera_white), contentDescription = null, tint = Color.White)
+                                            }
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
+                                            Text(
+                                                text = getString(R.string.register_ilc),
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                modifier = Modifier.padding(end = 16.dp)
+                                            )
+                                            SmallFloatingActionButton(
+                                                onClick = {
+                                                    isFabExpanded = false
+                                                    val intent = Intent(application, EditCameraActivity::class.java)
+                                                    intent.putExtra("type", 0)
+                                                    addCameraLauncher.launch(intent)
+                                                },
+                                                containerColor = MaterialTheme.colorScheme.secondary
+                                            ) {
+                                                Icon(painterResource(R.drawable.ic_menu_camera_white), contentDescription = null, tint = Color.White)
+                                            }
+                                        }
+                                    }
+                                }
+                                FloatingActionButton(
+                                    onClick = { isFabExpanded = !isFabExpanded },
+                                    containerColor = MaterialTheme.colorScheme.secondary,
+                                ) {
+                                    val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.graphicsLayer(rotationZ = rotation)
+                                    )
+                                }
                             }
                         }
                     }
