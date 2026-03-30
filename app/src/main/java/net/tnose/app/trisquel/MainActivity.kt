@@ -42,6 +42,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -72,6 +73,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.os.BundleCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -123,9 +125,15 @@ sealed class ActiveDialog {
         val labels: Array<String>,
         val onSearch: (ArrayList<String>) -> Unit
     ) : ActiveDialog()
+    data class Progress(
+        val title: String,
+        val percentage: Double,
+        val status: String,
+        val onCancel: () -> Unit
+    ) : ActiveDialog()
 }
 
-class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
+class MainActivity : AppCompatActivity() {
     companion object {
         const val ID_FILMROLL = 0
         const val ID_CAMERA = 1
@@ -152,13 +160,8 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         const val RETCODE_FILTER_CAMERA = 403
         const val RETCODE_FILTER_FILM_BRAND = 404
         const val RETCODE_SEARCH = 405
-        const val RETCODE_BACKUP_PROGRESS = 406
-        const val RETCODE_IMPORT_DB = 407
         const val RETCODE_DBCONV_PROGRESS = 408
-        const val RETCODE_IMPORT_PROGRESS = 414
 
-        const val ACTION_CLOSE_PROGRESS_DIALOG = "ACTION_CLOSE_PROGRESS_DIALOG"
-        const val ACTION_UPDATE_PROGRESS_DIALOG = "ACTION_UPDATE_PROGRESS_DIALOG"
         const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
     }
 
@@ -170,7 +173,6 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private var mExportViewModel: ExportProgressViewModel? = null
     private var mImportViewModel: ImportProgressViewModel? = null
     private var mDbConvViewModel: DbConvProgressViewModel? = null
-    private var isIntentServiceWorking: Int = 0 //0: None, 1: DB conversion
 
     internal var currentRoute = ROUTE_FILMROLLS
     internal var currentFilter = Pair(0, arrayListOf<String>())
@@ -267,10 +269,7 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
-            val fragment = ProgressDialog.Builder().build(RETCODE_BACKUP_PROGRESS)
-            fragment.showOn(this, "dialog")
-            isIntentServiceWorking = 2
-            fixOrientation()
+            activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() }
             mExportViewModel?.doExport(uri.toString(), 0)
         }
     }
@@ -278,10 +277,7 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
     private val backupDirChosenForFullExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
-            val fragment = ProgressDialog.Builder().build(RETCODE_BACKUP_PROGRESS)
-            fragment.showOn(this, "dialog")
-            isIntentServiceWorking = 2
-            fixOrientation()
+            activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() }
             mExportViewModel?.doExport(uri.toString(), 1)
         }
     }
@@ -290,10 +286,7 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
             Log.d("ZipFile", uri.toString())
-            val fragment = ProgressDialog.Builder().build(RETCODE_IMPORT_PROGRESS)
-            fragment.showOn(this, "dialog")
-            isIntentServiceWorking = 3
-            fixOrientation()
+            activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() }
             mImportViewModel?.doImport(uri.toString(), 0)
         }
     }
@@ -302,10 +295,7 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
             Log.d("ZipFile", uri.toString())
-            val fragment = ProgressDialog.Builder().build(RETCODE_IMPORT_PROGRESS)
-            fragment.showOn(this, "dialog")
-            isIntentServiceWorking = 3
-            fixOrientation()
+            activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() }
             mImportViewModel?.doImport(uri.toString(), 1)
         }
     }
@@ -315,30 +305,37 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.data ?: return@registerForActivityResult
             Log.d("DBFile", uri.toString())
-            val dbpath = this.getDatabasePath("trisquel.db")
-            val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException(uri.toString())
-            if (!checkSQLiteFileFormat(pfd)) {
-                Toast.makeText(this, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
-                return@registerForActivityResult
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    val dbpath = getDatabasePath("trisquel.db")
+                    val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException(uri.toString())
+                    if (!checkSQLiteFileFormat(pfd)) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
+                        }
+                        return@withContext
+                    }
+                    val calendar = Calendar.getInstance()
+                    val sdf = SimpleDateFormat("yyyyMMddHHmmss")
+                    val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+                    
+                    if (dbpath.exists()) {
+                        FileInputStream(dbpath).use { fis ->
+                            FileOutputStream(backupPath).use { fos ->
+                                fis.copyTo(fos)
+                            }
+                        }
+                    }
+                    
+                    FileInputStream(pfd.fileDescriptor).use { fis ->
+                        FileOutputStream(dbpath).use { fos ->
+                            fis.copyTo(fos)
+                        }
+                    }
+                }
+                val intent = RestartActivity.createIntent(applicationContext)
+                startActivity(intent)
             }
-            val calendar = Calendar.getInstance()
-            val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-            val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
-            val bu_fos = FileOutputStream(backupPath)
-            val bu_fis = FileInputStream(dbpath)
-            val bu_src = bu_fis.channel
-            val bu_dst = bu_fos.channel
-            bu_dst.transferFrom(bu_src, 0, bu_src.size())
-            bu_src.close()
-            bu_dst.close()
-            val fis = FileInputStream(pfd.fileDescriptor)
-            val src = fis.channel
-            val dst = FileOutputStream(dbpath).channel
-            dst.transferFrom(src, 0, src.size())
-            src.close()
-            dst.close()
-            val intent = RestartActivity.createIntent(applicationContext)
-            startActivity(intent)
         }
     }
 
@@ -394,13 +391,12 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     if (workInfo.state == WorkInfo.State.CANCELLED) status = "Backup cancelled."
                     else if (workInfo.state == WorkInfo.State.FAILED) status = "Backup failed."
                 }
-                val progress = workInfo.outputData.getDouble(ExportWorker.PARAM_PERCENTAGE, 100.0)
-                setProgressPercentage(progress, status, false)
+                activeDialogState.value = null
                 Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
             } else {
                 val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
                 val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
-                setProgressPercentage(progress, status, false)
+                activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_backup), progress, status) { mExportViewModel?.cancelExport() }
             }
         })
         
@@ -414,13 +410,12 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     if (workInfo.state == WorkInfo.State.CANCELLED) status = "Import cancelled."
                     else if (workInfo.state == WorkInfo.State.FAILED) status = "Import failed."
                 }
-                val progress = workInfo.outputData.getDouble(ImportWorker.PARAM_PERCENTAGE, 100.0)
-                setProgressPercentage(progress, status, false)
+                activeDialogState.value = null
                 Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
             } else {
                 val status = workInfo.progress.getString(ImportWorker.PARAM_STATUS) ?: ""
                 val progress = workInfo.progress.getDouble(ImportWorker.PARAM_PERCENTAGE, 0.0)
-                setProgressPercentage(progress, status, false)
+                activeDialogState.value = ActiveDialog.Progress(getString(R.string.title_import), progress, status) { mImportViewModel?.cancelExport() }
             }
         })
         
@@ -430,17 +425,15 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             val workInfo = listOfWorkInfo[0]
             if (workInfo.state.isFinished) {
                 val status = workInfo.outputData.getString(DbConvWorker.PARAM_STATUS) ?: ""
-                val progress = workInfo.outputData.getDouble(DbConvWorker.PARAM_PERCENTAGE, 100.0)
-                setProgressPercentage(progress, status, false)
+                activeDialogState.value = null
                 Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
             } else {
                 val status = workInfo.progress.getString(DbConvWorker.PARAM_STATUS) ?: ""
                 val progress = workInfo.progress.getDouble(DbConvWorker.PARAM_PERCENTAGE, 0.0)
-                setProgressPercentage(progress, status, false)
+                activeDialogState.value = ActiveDialog.Progress("DB Conversion", progress, status, {})
             }
         })
 
-        isIntentServiceWorking = savedInstanceState?.getInt("is_intent_service_working") ?: 0
         pendingExportMode = if (savedInstanceState?.containsKey("pending_export_mode") == true) savedInstanceState.getInt("pending_export_mode") else null
         pendingImportMode = if (savedInstanceState?.containsKey("pending_import_mode") == true) savedInstanceState.getInt("pending_import_mode") else null
 
@@ -461,19 +454,6 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
     }
 
-    private fun fixOrientation(){
-        val config = resources.configuration
-        if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        } else if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
-    }
-
-    fun releaseOrientation(){
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-    }
-
     override fun onResume() {
         super.onResume()
         val dao = TrisquelDao(this)
@@ -481,7 +461,8 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         val dbConvForAndroid11Done = dao.getConversionState() >= 1
         dao.close()
 
-        if(!dbConvForAndroid11Done && isIntentServiceWorking == 0) {
+        val isDbConvActive = mDbConvViewModel?.workInfos?.value?.firstOrNull()?.state?.isFinished == false
+        if(!dbConvForAndroid11Done && !isDbConvActive) {
             val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/")
             startActivity(Intent(Intent.ACTION_VIEW, uri))
             return
@@ -518,7 +499,6 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             outState.putInt("filmroll_filtertype", currentFilter.first)
             outState.putStringArrayList("filmroll_filtervalue", currentFilter.second)
         }
-        outState.putInt("is_intent_service_working", isIntentServiceWorking)
         pendingExportMode?.let { outState.putInt("pending_export_mode", it) }
         pendingImportMode?.let { outState.putInt("pending_import_mode", it) }
     }
@@ -584,23 +564,6 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
             }
             2 -> "🎞 " + f.second.joinToString(" ")
             else -> ""
-        }
-    }
-
-    @Suppress("UNUSED_PARAMETER")
-    fun setProgressPercentage(percentage: Double, status: String, error: Boolean){
-        val intent = Intent()
-        if(percentage >= 100.0){
-            isIntentServiceWorking = 0
-            intent.action = ACTION_CLOSE_PROGRESS_DIALOG
-            intent.putExtra("status", status)
-            sendBroadcast(intent)
-            releaseOrientation()
-        }else {
-            intent.action = ACTION_UPDATE_PROGRESS_DIALOG
-            intent.putExtra("percentage", percentage)
-            intent.putExtra("status", status)
-            sendBroadcast(intent)
         }
     }
 
@@ -783,19 +746,6 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
         }
     }
 
-    override fun onDialogResult(requestCode: Int, resultCode: Int, data: Intent) {
-        when (requestCode) {
-            RETCODE_BACKUP_PROGRESS -> if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                mExportViewModel?.cancelExport()
-            }
-            RETCODE_IMPORT_PROGRESS -> if (resultCode == DialogInterface.BUTTON_NEGATIVE) {
-                mImportViewModel?.cancelExport()
-            }
-        }
-    }
-
-    override fun onDialogCancelled(requestCode: Int) {}
-
     data class DrawerItem(val route: String, val title: String, val iconRes: Int)
 
     @Composable
@@ -947,6 +897,29 @@ class MainActivity : AppCompatActivity(), AbstractDialogFragment.Callback {
                     },
                     dismissButton = {
                         TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+                    }
+                )
+            }
+            is ActiveDialog.Progress -> {
+                AlertDialog(
+                    onDismissRequest = {}, // Can't dismiss by clicking outside
+                    title = { Text(activeDialog.title) },
+                    text = {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            if (activeDialog.status.isNotEmpty()) {
+                                Text(activeDialog.status, modifier = Modifier.padding(bottom = 16.dp))
+                            }
+                            LinearProgressIndicator(
+                                progress = { (activeDialog.percentage / 100.0).toFloat() },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { activeDialog.onCancel(); onDismiss() }) {
+                            Text(stringResource(android.R.string.cancel))
+                        }
                     }
                 )
             }
