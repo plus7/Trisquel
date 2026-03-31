@@ -1,10 +1,5 @@
 package net.tnose.app.trisquel
 
-import android.content.Context
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -45,98 +38,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.integration.compose.placeholder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-
-class SearchFragment : androidx.fragment.app.Fragment() {
-    private var mTags: ArrayList<String> = arrayListOf()
-    private var mListener: OnListFragmentInteractionListener? = null
-    private var mSearchViewModel: SearchViewModel? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            mTags = it.getStringArrayList("tags") ?: arrayListOf()
-        }
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        mSearchViewModel = ViewModelProvider(this).get(SearchViewModel::class.java)
-        mSearchViewModel!!.searchTags.value = mTags.toList()
-
-        return ComposeView(requireContext()).apply {
-            setContent {
-                MaterialTheme {
-                    val photos by mSearchViewModel!!.photosByAndQuery.observeAsState(initial = emptyList())
-                    SearchListScreen(
-                        photos = photos,
-                        onItemClick = { mListener?.onListFragmentInteraction(it, false) },
-                        onItemLongClick = { mListener?.onListFragmentInteraction(it, true) },
-                        onIndexClick = { mListener?.onIndexClick(it) },
-                        onIndexLongClick = { mListener?.onIndexLongClick(it) },
-                        onThumbnailClick = { mListener?.onThumbnailClick(it) },
-                        onFavoriteClick = { mListener?.onFavoriteClick(it) }
-                    )
-                }
-            }
-        }
-    }
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnListFragmentInteractionListener) {
-            mListener = context
-        } else {
-            throw RuntimeException(context.toString() + " must implement OnListFragmentInteractionListener")
-        }
-    }
-
-    override fun onDetach() {
-        super.onDetach()
-        mListener = null
-    }
-
-    interface OnListFragmentInteractionListener {
-        fun onListFragmentInteraction(item: Photo, isLong: Boolean)
-        fun onThumbnailClick(item: Photo)
-        fun onIndexClick(item: Photo)
-        fun onIndexLongClick(item: Photo)
-        fun onFavoriteClick(item: Photo)
-    }
-
-    fun toggleFavPhoto(p: Photo) {
-        mSearchViewModel!!.update(p.toEntity())
-    }
-
-    fun updatePhoto(p: Photo, tags: java.util.ArrayList<String>?) {
-        if (tags != null) {
-            mSearchViewModel!!.tagPhoto(p.id, p.filmrollid, tags)
-        }
-        mSearchViewModel!!.update(p.toEntity())
-    }
-
-    fun deletePhoto(id: Int) {
-        mSearchViewModel!!.delete(id)
-    }
-
-    companion object {
-        @JvmStatic
-        fun newInstance(tags: ArrayList<String>) =
-            SearchFragment().apply {
-                arguments = Bundle().apply {
-                    putStringArrayList("tags", tags)
-                }
-            }
-    }
-}
 
 @Composable
 fun SearchListScreen(
