@@ -1,10 +1,5 @@
 package net.tnose.app.trisquel
 
-import android.content.Context
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,7 +23,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -45,148 +38,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.integration.compose.placeholder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-
-class PhotoFragment : androidx.fragment.app.Fragment() {
-    private var mColumnCount = 1
-    private var mFilmRollId = -1
-    private var mListener: OnListFragmentInteractionListener? = null
-    private var mPhotoViewModel: PhotoViewModel? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        mColumnCount = arguments?.getInt(ARG_COLUMN_COUNT) ?: 1
-        mFilmRollId = arguments?.getInt(ARG_FILMROLL_ID) ?: -1
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        mPhotoViewModel = ViewModelProvider(this).get(PhotoViewModel::class.java)
-        mPhotoViewModel!!.filmRollId.value = mFilmRollId
-
-        return ComposeView(requireContext()).apply {
-            setContent {
-                MaterialTheme {
-                    val photos by mPhotoViewModel!!.photosByFilmRollId.observeAsState(initial = emptyList())
-                    PhotoListScreen(
-                        photos = photos,
-                        onItemClick = { mListener?.onListFragmentInteraction(it, false) },
-                        onItemLongClick = { mListener?.onListFragmentInteraction(it, true) },
-                        onIndexClick = { mListener?.onIndexClick(it) },
-                        onIndexLongClick = { mListener?.onIndexLongClick(it) },
-                        onThumbnailClick = { mListener?.onThumbnailClick(it) },
-                        onFavoriteClick = { mListener?.onFavoriteClick(it) }
-                    )
-                }
-            }
-        }
-    }
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnListFragmentInteractionListener) {
-            mListener = context
-        } else {
-            throw RuntimeException(context.toString() + " must implement OnListFragmentInteractionListener")
-        }
-    }
-
-    override fun onDetach() {
-        super.onDetach()
-        mListener = null
-    }
-
-    fun possibleDownShiftLimit(p: Photo): Int {
-        var curpos = curPosOf(p)
-        val list = mPhotoViewModel!!.photosByFilmRollId.value!!
-        return if (curpos > 0) {
-            val prev = list[curpos - 1]
-            prev.second.photo._index!!
-        } else {
-            0
-        }
-    }
-
-    private fun curPosOf(p: Photo): Int {
-        var curpos = -1
-        val list = mPhotoViewModel!!.photosByFilmRollId.value!!
-        for (i in list.indices) {
-            if (list[i].second.photo.id == p.id) {
-                curpos = i
-                break
-            }
-        }
-        return curpos
-    }
-
-    fun shiftFrameIndexFrom(p: Photo, amount: Int) {
-        if (p.frameIndex + amount < possibleDownShiftLimit(p)) throw Exception()
-
-        val curpos = curPosOf(p)
-        val list = mPhotoViewModel!!.photosByFilmRollId.value!!
-        for (i in curpos until list.size) {
-            val np = list[i].second.photo.copy(_index = list[i].second.photo._index!! + amount)
-            mPhotoViewModel!!.update(np)
-        }
-    }
-
-    fun insertPhoto(p: Photo, tags: ArrayList<String>?) {
-        if (p.frameIndex == -1) {
-            val list = mPhotoViewModel!!.photosByFilmRollId.value
-            p.frameIndex = if (list.isNullOrEmpty()) 0 else (list.last().second.photo._index ?: 0) + 1
-        }
-        if (tags != null) {
-            mPhotoViewModel!!.insertWithTag(p.toEntity(), mFilmRollId, tags)
-        } else {
-            mPhotoViewModel!!.insert(p.toEntity())
-        }
-    }
-
-    fun toggleFavPhoto(p: Photo) {
-        mPhotoViewModel!!.update(p.toEntity())
-    }
-
-    fun updatePhoto(p: Photo, tags: ArrayList<String>?) {
-        if (tags != null) {
-            mPhotoViewModel!!.tagPhoto(p.id, mFilmRollId, tags)
-        }
-        mPhotoViewModel!!.update(p.toEntity())
-    }
-
-    fun deletePhoto(id: Int) {
-        mPhotoViewModel!!.delete(id)
-    }
-
-    interface OnListFragmentInteractionListener {
-        fun onListFragmentInteraction(item: Photo, isLong: Boolean)
-        fun onThumbnailClick(item: Photo)
-        fun onIndexClick(item: Photo)
-        fun onIndexLongClick(item: Photo)
-        fun onFavoriteClick(item: Photo)
-    }
-
-    companion object {
-        private const val ARG_COLUMN_COUNT = "column-count"
-        private const val ARG_FILMROLL_ID = "filmroll_id"
-
-        fun newInstance(columnCount: Int, filmRollId: Int): PhotoFragment {
-            val fragment = PhotoFragment()
-            val args = Bundle()
-            args.putInt(ARG_COLUMN_COUNT, columnCount)
-            args.putInt(ARG_FILMROLL_ID, filmRollId)
-            fragment.arguments = args
-            return fragment
-        }
-    }
-}
 
 @Composable
 fun PhotoListScreen(

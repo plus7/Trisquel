@@ -8,7 +8,6 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
@@ -39,6 +38,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModelProvider
 import com.zhihu.matisse.Matisse
@@ -56,7 +55,7 @@ import com.zhihu.matisse.internal.entity.CaptureStrategy
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 import java.util.Date
 
-class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentInteractionListener {
+class EditPhotoListActivity : AppCompatActivity() {
     internal val REQCODE_ADD_PHOTO = 100
     internal val REQCODE_EDIT_PHOTO = 101
     internal val REQCODE_EDIT_FILMROLL = 102
@@ -73,7 +72,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
 
     var mFilmRoll by mutableStateOf<FilmRoll?>(null)
     private var thumbnailEditingPhoto: Photo? = null
-    var photo_fragment: PhotoFragment? = null
+    var mPhotoViewModel: PhotoViewModel? = null
     private var mFilmRollViewModel: FilmRollViewModel? = null
 
     // Compose state variables
@@ -160,6 +159,8 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         dao.close()
 
         mFilmRollViewModel = ViewModelProvider(this).get(FilmRollViewModel::class.java)
+        mPhotoViewModel = ViewModelProvider(this).get(PhotoViewModel::class.java)
+        mPhotoViewModel!!.filmRollId.value = id
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -200,11 +201,11 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         when (requestCode) {
             REQCODE_ADD_PHOTO -> if (resultCode == RESULT_OK) {
                 val p: Photo? = bundle!!.getParcelable("photo")
-                if(p != null) photo_fragment?.insertPhoto(p, tags)
+                if(p != null) insertPhoto(p, tags)
             }
             REQCODE_EDIT_PHOTO -> if (resultCode == RESULT_OK) {
                 val p: Photo? = bundle!!.getParcelable("photo")
-                if(p != null) photo_fragment?.updatePhoto(p, tags)
+                if(p != null) updatePhoto(p, tags)
             }
             REQCODE_EDIT_FILMROLL -> if (resultCode == RESULT_OK) {
                 val dao = TrisquelDao(this.applicationContext)
@@ -230,14 +231,14 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
                 val p = thumbnailEditingPhoto
                 if(uris.size > 0 && p != null){
                     p.supplementalImages.add(uris[0].toString())
-                    photo_fragment?.updatePhoto(p, null)
+                    updatePhoto(p, null)
                     thumbnailEditingPhoto = null
                 }
             }
         }
     }
 
-    override fun onListFragmentInteraction(item: Photo, isLong: Boolean) {
+    fun onListFragmentInteraction(item: Photo, isLong: Boolean) {
         if (isLong) {
             showOpDialog = item
         } else {
@@ -275,7 +276,7 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         editThumbPhoto()
     }
 
-    override fun onThumbnailClick(item: Photo) {
+    fun onThumbnailClick(item: Photo) {
         if(item.supplementalImages.size == 0) {
             thumbnailEditingPhoto = item
             checkPermAndEditThumbPhoto()
@@ -292,17 +293,78 @@ class EditPhotoListActivity : AppCompatActivity(), PhotoFragment.OnListFragmentI
         }
     }
 
-    override fun onFavoriteClick(item: Photo) {
+    fun onFavoriteClick(item: Photo) {
         item.favorite = !item.favorite
-        photo_fragment?.toggleFavPhoto(item)
+        toggleFavPhoto(item)
     }
 
-    override fun onIndexClick(item: Photo) {
+    fun onIndexClick(item: Photo) {
         showIndexDialog = item
     }
 
-    override fun onIndexLongClick(item: Photo) {
+    fun onIndexLongClick(item: Photo) {
         showShiftDialog = item
+    }
+
+    fun possibleDownShiftLimit(p: Photo): Int {
+        var curpos = curPosOf(p)
+        val list = mPhotoViewModel!!.photosByFilmRollId.value!!
+        return if (curpos > 0) {
+            val prev = list[curpos - 1]
+            prev.second.photo._index!!
+        } else {
+            0
+        }
+    }
+
+    private fun curPosOf(p: Photo): Int {
+        var curpos = -1
+        val list = mPhotoViewModel!!.photosByFilmRollId.value!!
+        for (i in list.indices) {
+            if (list[i].second.photo.id == p.id) {
+                curpos = i
+                break
+            }
+        }
+        return curpos
+    }
+
+    fun shiftFrameIndexFrom(p: Photo, amount: Int) {
+        if (p.frameIndex + amount < possibleDownShiftLimit(p)) throw Exception()
+
+        val curpos = curPosOf(p)
+        val list = mPhotoViewModel!!.photosByFilmRollId.value!!
+        for (i in curpos until list.size) {
+            val np = list[i].second.photo.copy(_index = list[i].second.photo._index!! + amount)
+            mPhotoViewModel!!.update(np)
+        }
+    }
+
+    fun insertPhoto(p: Photo, tags: ArrayList<String>?) {
+        if (p.frameIndex == -1) {
+            val list = mPhotoViewModel!!.photosByFilmRollId.value
+            p.frameIndex = if (list.isNullOrEmpty()) 0 else (list.last().second.photo._index ?: 0) + 1
+        }
+        if (tags != null) {
+            mPhotoViewModel!!.insertWithTag(p.toEntity(), mFilmRoll!!.id, tags)
+        } else {
+            mPhotoViewModel!!.insert(p.toEntity())
+        }
+    }
+
+    fun toggleFavPhoto(p: Photo) {
+        mPhotoViewModel!!.update(p.toEntity())
+    }
+
+    fun updatePhoto(p: Photo, tags: ArrayList<String>?) {
+        if (tags != null) {
+            mPhotoViewModel!!.tagPhoto(p.id, mFilmRoll!!.id, tags)
+        }
+        mPhotoViewModel!!.update(p.toEntity())
+    }
+
+    fun deletePhoto(id: Int) {
+        mPhotoViewModel!!.delete(id)
     }
 }
 
@@ -401,24 +463,18 @@ fun EditPhotoListScreen(
             }
         }
     ) { paddingValues ->
-        AndroidView(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize(),
-            factory = { ctx ->
-                FrameLayout(ctx).apply {
-                    this.id = R.id.container
-                }
-            },
-            update = { view ->
-                if (context.photo_fragment == null) {
-                    context.photo_fragment = PhotoFragment.newInstance(1, id)
-                    context.supportFragmentManager.beginTransaction()
-                        .replace(view.id, context.photo_fragment!!)
-                        .commit()
-                }
-            }
-        )
+        val photos by context.mPhotoViewModel!!.photosByFilmRollId.observeAsState(initial = emptyList())
+        androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
+            PhotoListScreen(
+                photos = photos,
+                onItemClick = { context.onListFragmentInteraction(it, false) },
+                onItemLongClick = { context.onListFragmentInteraction(it, true) },
+                onIndexClick = { context.onIndexClick(it) },
+                onIndexLongClick = { context.onIndexLongClick(it) },
+                onThumbnailClick = { context.onThumbnailClick(it) },
+                onFavoriteClick = { context.onFavoriteClick(it) }
+            )
+        }
     }
 
     if (context.showOpDialog != null) {
@@ -445,7 +501,7 @@ fun EditPhotoListScreen(
                                     dao.close()
                                     if (p != null) {
                                         when (index) {
-                                            0 -> context.photo_fragment?.deletePhoto(photo.id)
+                                            0 -> context.deletePhoto(photo.id)
                                             1 -> {
                                                 val intent = Intent(context, EditPhotoActivity::class.java)
                                                 intent.putExtra("filmroll", context.mFilmRoll!!.id)
@@ -492,7 +548,7 @@ fun EditPhotoListScreen(
                         dao.close()
                         if (p != null && p.frameIndex != newindex) {
                             p.frameIndex = newindex
-                            context.photo_fragment?.updatePhoto(p, null)
+                            context.updatePhoto(p, null)
                         }
                     }
                 }) {
@@ -510,7 +566,7 @@ fun EditPhotoListScreen(
     if (context.showShiftDialog != null) {
         val photo = context.showShiftDialog!!
         var input by remember { mutableStateOf((photo.frameIndex + 1).toString()) }
-        val downshiftLimit = context.photo_fragment?.possibleDownShiftLimit(photo) ?: 0
+        val downshiftLimit = context.possibleDownShiftLimit(photo)
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
             onDismissRequest = { context.showShiftDialog = null },
@@ -535,9 +591,9 @@ fun EditPhotoListScreen(
                     val p = dao.getPhoto(photo.id)
                     dao.close()
                     if (p != null) {
-                        val limit = context.photo_fragment?.possibleDownShiftLimit(p) ?: 0
+                        val limit = context.possibleDownShiftLimit(p)
                         if (newindex >= limit && p.frameIndex != newindex) {
-                            context.photo_fragment?.shiftFrameIndexFrom(p, newindex - p.frameIndex)
+                            context.shiftFrameIndexFrom(p, newindex - p.frameIndex)
                         }
                     }
                 }) {
