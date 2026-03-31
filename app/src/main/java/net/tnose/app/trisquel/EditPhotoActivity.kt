@@ -876,7 +876,7 @@ fun EditPhotoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(if (context.id > 0) R.string.title_activity_edit_photo else R.string.title_activity_edit_photo)) }, // Both are same in Trisquel logic conceptually
+                title = { Text(stringResource(if (context.id > 0) R.string.title_activity_edit_photo else R.string.title_activity_add_photo)) }, // Both are same in Trisquel logic conceptually
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
