@@ -2,48 +2,43 @@ package net.tnose.app.trisquel
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
 import android.os.Bundle
 import android.util.Log
-import android.widget.Button
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.LocationSettingsRequest
-import com.google.android.gms.location.SettingsClient
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
-import net.tnose.app.trisquel.databinding.ActivityMapsBinding
+import com.google.maps.android.compose.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.text.Normalizer
 
-class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallback {
+class MapsActivity : ComponentActivity() {
     internal val PERMISSIONS = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-    private var mMap: GoogleMap? = null
-    private var mMarker: Marker? = null
-    private var mFusedLocationClient: FusedLocationProviderClient? = null
-    private var mSettingsClient: SettingsClient? = null
-    private val locationSettingsRequest: LocationSettingsRequest? = null
-    private val locationCallback: LocationCallback? = null
-    private val locationRequest: LocationRequest? = null
-    private lateinit var binding: ActivityMapsBinding
+    
+    private var locationPermissionGranted = mutableStateOf(false)
 
     private val requestLocationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         val granted = permissions.entries.all { it.value }
         if (granted) {
-            setMyLocationEnabledAndGetLastLocation()
+            locationPermissionGranted.value = true
         } else {
             Toast.makeText(this, getString(R.string.error_permission_location), Toast.LENGTH_LONG).show()
         }
@@ -51,131 +46,176 @@ class MapsActivity : androidx.fragment.app.FragmentActivity(), OnMapReadyCallbac
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMapsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        val mapFragment = supportFragmentManager
-                .findFragmentById(R.id.map) as SupportMapFragment
-        mapFragment.getMapAsync(this)
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        mSettingsClient = LocationServices.getSettingsClient(this)
+        
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || 
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationPermissionGranted.value = true
+        } else {
+            requestLocationPermissionLauncher.launch(PERMISSIONS)
+        }
 
-        val b = findViewById<Button>(R.id.btnOk)
-        b.setOnClickListener {
-            val resultData = Intent()
-            if (mMap != null && mMarker != null) {
-                resultData.putExtra("latitude", mMarker!!.position.latitude)
-                resultData.putExtra("longitude", mMarker!!.position.longitude)
-
-                if (Geocoder.isPresent()) {
-                    val coder = Geocoder(this@MapsActivity) //ブロックするっぽいので本当は良くない
-                    var addresses: List<Address>
-                    try {
-                        addresses = coder.getFromLocation(
-                            mMarker!!.position.latitude,
-                            mMarker!!.position.longitude,
-                            1)!!
-                    } catch (e: IOException) {
-                        addresses = ArrayList()
-                    }
-
-                    if (addresses.size == 1) {
-                        val a = addresses[0]
-                        val featureName = Normalizer.normalize(a.featureName?: "", Normalizer.Form.NFKC)
-                        val address = Normalizer.normalize(a.getAddressLine(0)?: "", Normalizer.Form.NFKC)
-                        Log.d("getAddressLine", address)
-                        if (a.featureName != null) Log.d("getFeatureName", a.featureName)
-                        if (a.adminArea != null) Log.d("getAdminArea", a.adminArea)
-                        if (a.locality != null) Log.d("getLocality", a.locality)
-                        if (a.subAdminArea != null) Log.d("getSubAdminArea", a.subAdminArea)
-                        if (a.subLocality != null) Log.d("getSubLocality", a.subLocality)
-                        if (a.thoroughfare != null) Log.d("getThoroughfare", a.thoroughfare)
-                        Log.d("getMaxAddressLineIndex", Integer.toString(a.maxAddressLineIndex))
-                        if (featureName.matches("^[\\d\\-−－]++$".toRegex()) || featureName.isEmpty()) {
-                            // U+002DとU+2212とU+2015。
-                            // このAPI＋Normalizerの組み合わせだと2212が返るみたいだが
-                            // 警戒してほかにも来そうな奴らをregexに入れてある
-                            if (address.matches("^(日本、).+".toRegex())) { //他国にもこういう余計なものがつくんだろうか？
-                                resultData.putExtra("location", address.replaceFirst("日本、".toRegex(), ""))
-                            } else {
-                                resultData.putExtra("location", address)
-                            }
-                        } else {
-                            resultData.putExtra("location", featureName)
+        setContent {
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MapScreen(
+                        intent = intent,
+                        locationPermissionGranted = locationPermissionGranted.value,
+                        onResult = { resultCode, data ->
+                            setResult(resultCode, data)
+                            finish()
                         }
-                    }
+                    )
                 }
             }
-            setResult(RESULT_OK, resultData)
-            finish()
         }
-        val cb = findViewById<Button>(R.id.btnCancel)
-        cb.setOnClickListener {
-            setResult(RESULT_CANCELED, Intent())
-            finish()
-        }
-        val del = findViewById<Button>(R.id.btnDelete)
-        del.setOnClickListener {
-            setResult(RESULT_DELETE, Intent())
-            finish()
-        }
-    }
-
-    private fun setMyLocationEnabledAndGetLastLocation() {
-        if (mMap == null) return
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestLocationPermissionLauncher.launch(PERMISSIONS)
-            return
-        }
-        mMap!!.isMyLocationEnabled = true
-        val data = intent
-        val lat: Double
-        val lng: Double
-        lat = data.getDoubleExtra("latitude", 999.0)
-        lng = data.getDoubleExtra("longitude", 999.0)
-        if (lat != 999.0 && lng != 999.0) {
-            val latlng = LatLng(lat, lng)
-            mMap!!.moveCamera(CameraUpdateFactory.zoomTo(17f))
-            mMap!!.moveCamera(CameraUpdateFactory.newLatLng(latlng))
-            if (mMarker != null) mMarker!!.remove()
-            mMarker = mMap!!.addMarker(MarkerOptions().position(latlng))
-        } else {
-            mFusedLocationClient!!.lastLocation
-                    .addOnSuccessListener(this) { location ->
-                        // Got last known location. In some rare situations this can be null.
-                        if (location != null) {
-                            val latlng = LatLng(location.latitude, location.longitude)
-                            mMap!!.moveCamera(CameraUpdateFactory.zoomTo(17f))
-                            mMap!!.moveCamera(CameraUpdateFactory.newLatLng(latlng))
-                            if (mMarker != null) mMarker!!.remove()
-                            mMarker = mMap!!.addMarker(MarkerOptions().position(latlng))
-                        }
-                    }
-        }
-    }
-
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
-        setMyLocationEnabledAndGetLastLocation()
-        mMap!!.setOnMapClickListener { latLng ->
-            if (mMarker != null) mMarker!!.remove()
-            mMarker = mMap!!.addMarker(MarkerOptions().position(latLng))
-        }
-        //mMap.setOn
     }
 
     companion object {
-        internal val RESULT_DELETE = 100
+        internal const val RESULT_DELETE = 100
+    }
+}
+
+@Composable
+fun MapScreen(
+    intent: Intent,
+    locationPermissionGranted: Boolean,
+    onResult: (Int, Intent?) -> Unit
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    var markerPosition by remember { mutableStateOf<LatLng?>(null) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(35.6895, 139.6917), 10f)
+    }
+    
+    var mapProperties by remember {
+        mutableStateOf(MapProperties(isMyLocationEnabled = locationPermissionGranted))
+    }
+    
+    LaunchedEffect(locationPermissionGranted) {
+        mapProperties = mapProperties.copy(isMyLocationEnabled = locationPermissionGranted)
     }
 
+    LaunchedEffect(locationPermissionGranted) {
+        val lat = intent.getDoubleExtra("latitude", 999.0)
+        val lng = intent.getDoubleExtra("longitude", 999.0)
+        
+        if (lat != 999.0 && lng != 999.0) {
+            val latlng = LatLng(lat, lng)
+            markerPosition = latlng
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(latlng, 17f)
+        } else if (locationPermissionGranted) {
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        val latlng = LatLng(location.latitude, location.longitude)
+                        markerPosition = latlng
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(latlng, 17f)
+                    }
+                }
+            } catch (_: SecurityException) {
+                // Ignore
+            }
+        }
+    }
 
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(1f)) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                properties = mapProperties,
+                onMapClick = { latLng ->
+                    markerPosition = latLng
+                }
+            ) {
+                markerPosition?.let {
+                    Marker(
+                        state = MarkerState(position = it)
+                    )
+                }
+            }
+        }
+        
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { onResult(MapsActivity.RESULT_DELETE, Intent()) },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.delete))
+            }
+            Button(
+                onClick = { onResult(Activity.RESULT_CANCELED, Intent()) },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(android.R.string.cancel))
+            }
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        val resultData = Intent()
+                        markerPosition?.let { pos ->
+                            resultData.putExtra("latitude", pos.latitude)
+                            resultData.putExtra("longitude", pos.longitude)
+                            
+                            val locationString = withContext(Dispatchers.IO) {
+                                getAddressString(context, pos.latitude, pos.longitude)
+                            }
+                            if (locationString != null) {
+                                resultData.putExtra("location", locationString)
+                            }
+                        }
+                        onResult(Activity.RESULT_OK, resultData)
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        }
+    }
+}
+
+fun getAddressString(context: Context, lat: Double, lng: Double): String? {
+    if (!Geocoder.isPresent()) return null
+    val coder = Geocoder(context)
+    var addresses: List<Address> = emptyList()
+    try {
+        @Suppress("DEPRECATION")
+        addresses = coder.getFromLocation(lat, lng, 1) ?: emptyList()
+    } catch (_: IOException) {
+        // ignore
+    }
+
+    if (addresses.isNotEmpty()) {
+        val a = addresses[0]
+        val featureName = Normalizer.normalize(a.featureName ?: "", Normalizer.Form.NFKC)
+        val address = Normalizer.normalize(a.getAddressLine(0) ?: "", Normalizer.Form.NFKC)
+        Log.d("getAddressLine", address)
+        if (a.featureName != null) Log.d("getFeatureName", a.featureName)
+        if (a.adminArea != null) Log.d("getAdminArea", a.adminArea)
+        if (a.locality != null) Log.d("getLocality", a.locality)
+        if (a.subAdminArea != null) Log.d("getSubAdminArea", a.subAdminArea)
+        if (a.subLocality != null) Log.d("getSubLocality", a.subLocality)
+        if (a.thoroughfare != null) Log.d("getThoroughfare", a.thoroughfare)
+        Log.d("getMaxAddressLineIndex", a.maxAddressLineIndex.toString())
+        // U+002DとU+2212とU+2015。
+        // このAPI＋Normalizerの組み合わせだと2212が返るみたいだが
+        // 警戒してほかにも来そうな奴らをregexに入れてある
+        return if (featureName.matches("^[\\d\\-−－]++$".toRegex()) || featureName.isEmpty()) {
+            if (address.matches("^(日本、).+".toRegex())) { //他国にもこういう余計なものがつくんだろうか？
+                address.replaceFirst("日本、".toRegex(), "")
+            } else {
+                address
+            }
+        } else {
+            featureName
+        }
+    }
+    return null
 }
