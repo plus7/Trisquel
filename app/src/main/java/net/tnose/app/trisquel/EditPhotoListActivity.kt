@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -74,11 +75,6 @@ class EditPhotoListActivity : AppCompatActivity() {
     private var thumbnailEditingPhoto: Photo? = null
     var mPhotoViewModel: PhotoViewModel? = null
     private var mFilmRollViewModel: FilmRollViewModel? = null
-
-    // Compose state variables
-    var showOpDialog by mutableStateOf<Photo?>(null)
-    var showIndexDialog by mutableStateOf<Photo?>(null)
-    var showShiftDialog by mutableStateOf<Photo?>(null)
 
     private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         val granted = permissions.entries.all { it.value }
@@ -238,16 +234,12 @@ class EditPhotoListActivity : AppCompatActivity() {
         }
     }
 
-    fun onListFragmentInteraction(item: Photo, isLong: Boolean) {
-        if (isLong) {
-            showOpDialog = item
-        } else {
-            val intent = Intent(application, EditPhotoActivity::class.java)
-            intent.putExtra("filmroll", mFilmRoll!!.id)
-            intent.putExtra("id", item.id)
-            intent.putExtra("frameIndex", item.frameIndex)
-            startActivityForResult(intent, REQCODE_EDIT_PHOTO)
-        }
+    fun onListFragmentInteraction(item: Photo) {
+        val intent = Intent(application, EditPhotoActivity::class.java)
+        intent.putExtra("filmroll", mFilmRoll!!.id)
+        intent.putExtra("id", item.id)
+        intent.putExtra("frameIndex", item.frameIndex)
+        startActivityForResult(intent, REQCODE_EDIT_PHOTO)
     }
 
     fun editThumbPhoto(){
@@ -296,14 +288,6 @@ class EditPhotoListActivity : AppCompatActivity() {
     fun onFavoriteClick(item: Photo) {
         item.favorite = !item.favorite
         toggleFavPhoto(item)
-    }
-
-    fun onIndexClick(item: Photo) {
-        showIndexDialog = item
-    }
-
-    fun onIndexLongClick(item: Photo) {
-        showShiftDialog = item
     }
 
     fun possibleDownShiftLimit(p: Photo): Int {
@@ -376,6 +360,10 @@ fun EditPhotoListScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current as EditPhotoListActivity
+
+    var showOpDialog by rememberSaveable { mutableStateOf<Photo?>(null) }
+    var showIndexDialog by rememberSaveable { mutableStateOf<Photo?>(null) }
+    var showShiftDialog by rememberSaveable { mutableStateOf<Photo?>(null) }
 
     val titleText = if (filmRoll == null || filmRoll.name.isEmpty()) {
         stringResource(R.string.empty_name)
@@ -467,21 +455,21 @@ fun EditPhotoListScreen(
         androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
             PhotoListScreen(
                 photos = photos,
-                onItemClick = { context.onListFragmentInteraction(it, false) },
-                onItemLongClick = { context.onListFragmentInteraction(it, true) },
-                onIndexClick = { context.onIndexClick(it) },
-                onIndexLongClick = { context.onIndexLongClick(it) },
+                onItemClick = { context.onListFragmentInteraction(it) },
+                onItemLongClick = { showOpDialog = it },
+                onIndexClick = { showIndexDialog = it },
+                onIndexLongClick = { showShiftDialog = it },
                 onThumbnailClick = { context.onThumbnailClick(it) },
                 onFavoriteClick = { context.onFavoriteClick(it) }
             )
         }
     }
 
-    if (context.showOpDialog != null) {
-        val photo = context.showOpDialog!!
+    if (showOpDialog != null) {
+        val photo = showOpDialog!!
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { context.showOpDialog = null },
+            onDismissRequest = { showOpDialog = null },
             title = { Text(stringResource(R.string.app_name)) },
             text = {
                 androidx.compose.foundation.layout.Column {
@@ -494,7 +482,7 @@ fun EditPhotoListScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    context.showOpDialog = null
+                                    showOpDialog = null
                                     val dao = TrisquelDao(context)
                                     dao.connection()
                                     val p = dao.getPhoto(photo.id)
@@ -522,12 +510,12 @@ fun EditPhotoListScreen(
         )
     }
 
-    if (context.showIndexDialog != null) {
-        val photo = context.showIndexDialog!!
+    if (showIndexDialog != null) {
+        val photo = showIndexDialog!!
         var input by remember { mutableStateOf((photo.frameIndex + 1).toString()) }
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { context.showIndexDialog = null },
+            onDismissRequest = { showIndexDialog = null },
             title = { Text(stringResource(R.string.title_dialog_edit_index)) },
             text = {
                 ClassicTextField(
@@ -539,7 +527,7 @@ fun EditPhotoListScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    context.showIndexDialog = null
+                    showIndexDialog = null
                     val newindex = (input.toIntOrNull() ?: 1) - 1
                     if (newindex >= 0) {
                         val dao = TrisquelDao(context)
@@ -556,20 +544,20 @@ fun EditPhotoListScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { context.showIndexDialog = null }) {
+                TextButton(onClick = { showIndexDialog = null }) {
                     Text(stringResource(android.R.string.cancel))
                 }
             }
         )
     }
 
-    if (context.showShiftDialog != null) {
-        val photo = context.showShiftDialog!!
+    if (showShiftDialog != null) {
+        val photo = showShiftDialog!!
         var input by remember { mutableStateOf((photo.frameIndex + 1).toString()) }
         val downshiftLimit = context.possibleDownShiftLimit(photo)
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { context.showShiftDialog = null },
+            onDismissRequest = { showShiftDialog = null },
             title = { Text(stringResource(R.string.title_dialog_shift_index)) },
             text = {
                 androidx.compose.foundation.layout.Column {
@@ -584,7 +572,7 @@ fun EditPhotoListScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    context.showShiftDialog = null
+                    showShiftDialog = null
                     val newindex = (input.toIntOrNull() ?: 1) - 1
                     val dao = TrisquelDao(context)
                     dao.connection()
@@ -601,7 +589,7 @@ fun EditPhotoListScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { context.showShiftDialog = null }) {
+                TextButton(onClick = { showShiftDialog = null }) {
                     Text(stringResource(android.R.string.cancel))
                 }
             }
