@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -244,6 +245,10 @@ class EditAccessoryActivity : AppCompatActivity() {
         setResult(RESULT_OK, data)
         finish()
     }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("created", created)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -258,14 +263,14 @@ fun EditAccessoryScreen(
     onSave: (type: Int, name: String, mount: String, flFactor: Double) -> Unit,
     onCancel: () -> Unit
 ) {
-    var type by remember { mutableIntStateOf(initType) }
-    var name by remember { mutableStateOf(initName) }
-    var mount by remember { mutableStateOf(initMount) }
-    var flFactorStr by remember { mutableStateOf(initFlFactor) }
-    var isDirty by remember { mutableStateOf(false) }
+    var type by rememberSaveable { mutableIntStateOf(initType) }
+    var name by rememberSaveable { mutableStateOf(initName) }
+    var mount by rememberSaveable { mutableStateOf(initMount) }
+    var flFactorStr by rememberSaveable { mutableStateOf(initFlFactor) }
+    var isDirty by rememberSaveable { mutableStateOf(false) }
 
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var showDiscardDialog by remember { mutableStateOf(false) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+    var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
 
     val flFactor = Util.safeStr2Dobule(flFactorStr)
 
@@ -391,7 +396,7 @@ fun EditAccessoryScreen(
                 .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            var expandedType by remember { mutableStateOf(false) }
+            var expandedType by rememberSaveable { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandedType,
                 onExpandedChange = { expandedType = it }
@@ -429,7 +434,7 @@ fun EditAccessoryScreen(
             )
 
             if (type == Accessory.ACCESSORY_TELE_CONVERTER || type == Accessory.ACCESSORY_WIDE_CONVERTER || type == Accessory.ACCESSORY_EXT_TUBE) {
-                var expandedMount by remember { mutableStateOf(false) }
+                var expandedMount by rememberSaveable { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = expandedMount,
                     onExpandedChange = { expandedMount = it }

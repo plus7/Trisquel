@@ -40,6 +40,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -195,6 +196,10 @@ class EditLensActivity : AppCompatActivity() {
         setResult(RESULT_OK, data)
         finish()
     }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("created", created)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -211,15 +216,15 @@ fun EditLensScreen(
     onSave: (String, String, String, String, Set<Double>) -> Unit,
     onCancel: () -> Unit
 ) {
-    var manufacturer by remember { mutableStateOf(initManufacturer) }
-    var mount by remember { mutableStateOf(initMount) }
-    var model by remember { mutableStateOf(initModel) }
-    var focalLength by remember { mutableStateOf(initFocalLength) }
-    var fSteps by remember { mutableStateOf(initFSteps) }
-    var isDirty by remember { mutableStateOf(false) }
+    var manufacturer by rememberSaveable { mutableStateOf(initManufacturer) }
+    var mount by rememberSaveable { mutableStateOf(initMount) }
+    var model by rememberSaveable { mutableStateOf(initModel) }
+    var focalLength by rememberSaveable { mutableStateOf(initFocalLength) }
+    var fSteps by rememberSaveable { mutableStateOf(initFSteps) }
+    var isDirty by rememberSaveable { mutableStateOf(false) }
 
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var showDiscardDialog by remember { mutableStateOf(false) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+    var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
 
     val focalLengthOk = remember(focalLength) {
         if (focalLength.isNotEmpty()) {
@@ -324,7 +329,7 @@ fun EditLensScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Mount
-            var expandedMount by remember { mutableStateOf(false) }
+            var expandedMount by rememberSaveable { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandedMount,
                 onExpandedChange = { expandedMount = it }
@@ -357,7 +362,7 @@ fun EditLensScreen(
             }
 
             // Manufacturer
-            var expandedManufacturer by remember { mutableStateOf(false) }
+            var expandedManufacturer by rememberSaveable { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandedManufacturer,
                 onExpandedChange = { expandedManufacturer = it }

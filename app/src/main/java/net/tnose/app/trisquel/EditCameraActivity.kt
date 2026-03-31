@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -289,6 +290,14 @@ class EditCameraActivity : AppCompatActivity() {
         setResult(RESULT_OK, data)
         finish()
     }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("created", created)
+        outState.putStringArrayList("ss_custom_steps", java.util.ArrayList(ssCustomSteps))
+        outState.putInt("ss_grain_size", ssGrainSize)
+        outState.putInt("previous_checked_ss_steps", previousCheckedSsSteps)
+        outState.putBoolean("isDirty", isDirty)
+    }
 }
 
 @Composable
@@ -299,7 +308,7 @@ fun ShutterSpeedCustomizeDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var text by remember { mutableStateOf(defaultValue) }
+    var text by rememberSaveable { mutableStateOf(defaultValue) }
     
     val regex = Regex("(1/\\d+|\\d+\\.\\d+|\\d+)")
     val lines = text.split("\n")
@@ -382,23 +391,23 @@ fun EditCameraScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current as EditCameraActivity
 
-    var manufacturer by remember { mutableStateOf(initManufacturer) }
-    var mount by remember { mutableStateOf(initMount) }
-    var model by remember { mutableStateOf(initModel) }
-    var format by remember { mutableIntStateOf(initFormat) }
-    var fastestSs by remember { mutableStateOf(initFastestSs) }
-    var slowestSs by remember { mutableStateOf(initSlowestSs) }
-    var bulbAvailable by remember { mutableStateOf(initBulbAvailable) }
-    var evGrainSize by remember { mutableIntStateOf(initEvGrainSize) }
-    var evWidth by remember { mutableIntStateOf(initEvWidth) }
+    var manufacturer by rememberSaveable { mutableStateOf(initManufacturer) }
+    var mount by rememberSaveable { mutableStateOf(initMount) }
+    var model by rememberSaveable { mutableStateOf(initModel) }
+    var format by rememberSaveable { mutableIntStateOf(initFormat) }
+    var fastestSs by rememberSaveable { mutableStateOf(initFastestSs) }
+    var slowestSs by rememberSaveable { mutableStateOf(initSlowestSs) }
+    var bulbAvailable by rememberSaveable { mutableStateOf(initBulbAvailable) }
+    var evGrainSize by rememberSaveable { mutableIntStateOf(initEvGrainSize) }
+    var evWidth by rememberSaveable { mutableIntStateOf(initEvWidth) }
 
-    var lensName by remember { mutableStateOf(initLensName) }
-    var focalLength by remember { mutableStateOf(initFocalLength) }
-    var fSteps by remember { mutableStateOf(initFSteps) }
+    var lensName by rememberSaveable { mutableStateOf(initLensName) }
+    var focalLength by rememberSaveable { mutableStateOf(initFocalLength) }
+    var fSteps by rememberSaveable { mutableStateOf(initFSteps) }
 
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var showDiscardDialog by remember { mutableStateOf(false) }
-    var showCustomSsDialog by remember { mutableStateOf(false) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+    var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
+    var showCustomSsDialog by rememberSaveable { mutableStateOf(false) }
 
     val formatList = stringArrayResource(id = R.array.film_formats).toList()
     val evGrainSizeList = stringArrayResource(id = R.array.ev_grain_size_list).toList()
@@ -554,7 +563,7 @@ fun EditCameraScreen(
         ) {
             // Mount (only interchangeable)
             if (type == 0) {
-                var expandedMount by remember { mutableStateOf(false) }
+                var expandedMount by rememberSaveable { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = expandedMount,
                     onExpandedChange = { expandedMount = it }
@@ -588,7 +597,7 @@ fun EditCameraScreen(
             }
 
             // Manufacturer
-            var expandedManufacturer by remember { mutableStateOf(false) }
+            var expandedManufacturer by rememberSaveable { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandedManufacturer,
                 onExpandedChange = { expandedManufacturer = it }
@@ -635,7 +644,7 @@ fun EditCameraScreen(
             )
 
             // Format
-            var expandedFormat by remember { mutableStateOf(false) }
+            var expandedFormat by rememberSaveable { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandedFormat,
                 onExpandedChange = { expandedFormat = it }
@@ -717,7 +726,7 @@ fun EditCameraScreen(
             )
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Slowest SS
-                var expandedSlowest by remember { mutableStateOf(false) }
+                var expandedSlowest by rememberSaveable { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = expandedSlowest,
                     onExpandedChange = { expandedSlowest = it },
@@ -744,7 +753,7 @@ fun EditCameraScreen(
                 Text(text = stringResource(R.string.label_to))
 
                 // Fastest SS
-                var expandedFastest by remember { mutableStateOf(false) }
+                var expandedFastest by rememberSaveable { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = expandedFastest,
                     onExpandedChange = { expandedFastest = it },
@@ -791,7 +800,7 @@ fun EditCameraScreen(
             Row(modifier = Modifier.fillMaxWidth().padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = stringResource(R.string.label_step))
                 
-                var expandedEvGrain by remember { mutableStateOf(false) }
+                var expandedEvGrain by rememberSaveable { mutableStateOf(false) }
                 ExposedDropdownMenuBox(expanded = expandedEvGrain, onExpandedChange = { expandedEvGrain = it }, modifier = Modifier.weight(1f)) {
                     ClassicTextField(
                         value = evGrainSizeList.getOrNull(evGrainSize - 1) ?: "",
@@ -808,7 +817,7 @@ fun EditCameraScreen(
 
                 Text(text = stringResource(R.string.label_range))
                 
-                var expandedEvWidth by remember { mutableStateOf(false) }
+                var expandedEvWidth by rememberSaveable { mutableStateOf(false) }
                 ExposedDropdownMenuBox(expanded = expandedEvWidth, onExpandedChange = { expandedEvWidth = it }, modifier = Modifier.weight(1f)) {
                     ClassicTextField(
                         value = evWidthList.getOrNull(evWidth - 1) ?: "",

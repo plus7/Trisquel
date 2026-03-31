@@ -68,6 +68,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -620,7 +621,7 @@ fun CheckListDialog(
     onConfirm: (List<Int>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val checkedStates = remember { mutableStateOf(items.indices.map { initialCheckedIndices.contains(it) }) }
+    val checkedStates = rememberSaveable { mutableStateOf(items.indices.map { initialCheckedIndices.contains(it) }) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -685,9 +686,9 @@ fun EditPhotoScreen(
     val context = LocalContext.current as EditPhotoActivity
     val canSave = context.lenslist.any { it.id == context.lensid }
 
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var showDiscardDialog by remember { mutableStateOf(false) }
-    var showAskCreateLensDialog by remember { mutableStateOf(false) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+    var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
+    var showAskCreateLensDialog by rememberSaveable { mutableStateOf(false) }
 
     val onBackPressed = {
         if (!context.isDirty) {
@@ -757,7 +758,7 @@ fun EditPhotoScreen(
         )
     }
     
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     if (showDatePicker) {
         val sdf = SimpleDateFormat("yyyy/MM/dd")
@@ -795,8 +796,8 @@ fun EditPhotoScreen(
         }
     }
 
-    var showMountAdaptersDialog by remember { mutableStateOf(false) }
-    var showAccessoryDialog by remember { mutableStateOf(false) }
+    var showMountAdaptersDialog by rememberSaveable { mutableStateOf(false) }
+    var showAccessoryDialog by rememberSaveable { mutableStateOf(false) }
 
     if (showMountAdaptersDialog) {
         val dao = TrisquelDao(context)
@@ -928,7 +929,7 @@ fun EditPhotoScreen(
             }
 
             // Lens
-            var expandedLens by remember { mutableStateOf(false) }
+            var expandedLens by rememberSaveable { mutableStateOf(false) }
             val selectedLens = context.lenslist.find { it.id == context.lensid }
             val selectedLensText = selectedLens?.let { "${it.manufacturer} ${it.modelName}" } ?: ""
             
@@ -985,7 +986,7 @@ fun EditPhotoScreen(
             }
 
             // Aperture
-            var expandedAperture by remember { mutableStateOf(false) }
+            var expandedAperture by rememberSaveable { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandedAperture,
                 onExpandedChange = { if (context.apertureList.isNotEmpty()) expandedAperture = it }
@@ -1008,7 +1009,7 @@ fun EditPhotoScreen(
             }
 
             // Shutter Speed
-            var expandedSs by remember { mutableStateOf(false) }
+            var expandedSs by rememberSaveable { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandedSs,
                 onExpandedChange = { expandedSs = it }
@@ -1195,7 +1196,7 @@ fun EditPhotoScreen(
 
             // Tags
             Text(text = stringResource(R.string.label_tags), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            var tagInput by remember { mutableStateOf("") }
+            var tagInput by rememberSaveable { mutableStateOf("") }
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 ClassicTextField(
                     value = tagInput,

@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -261,6 +262,11 @@ class EditFilmRollActivity : AppCompatActivity() {
         setResult(RESULT_OK, data)
         finish()
     }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("created", created)
+        outState.putBoolean("isDirty", isDirty)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -280,11 +286,11 @@ fun EditFilmRollScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current as EditFilmRollActivity
 
-    var name by remember { mutableStateOf(initName) }
-    var cameraId by remember { mutableIntStateOf(initCameraId) }
-    var manufacturer by remember { mutableStateOf(initManufacturer) }
-    var brand by remember { mutableStateOf(initBrand) }
-    var iso by remember { mutableStateOf(initIso) }
+    var name by rememberSaveable { mutableStateOf(initName) }
+    var cameraId by rememberSaveable { mutableIntStateOf(initCameraId) }
+    var manufacturer by rememberSaveable { mutableStateOf(initManufacturer) }
+    var brand by rememberSaveable { mutableStateOf(initBrand) }
+    var iso by rememberSaveable { mutableStateOf(initIso) }
 
     // If there is exactly one camera, select it by default.
     // Ensure this only happens once, or when list changes and cameraId is still invalid
@@ -294,9 +300,9 @@ fun EditFilmRollScreen(
         }
     }
 
-    var showSaveDialog by remember { mutableStateOf(false) }
-    var showDiscardDialog by remember { mutableStateOf(false) }
-    var showAskCreateCameraDialog by remember { mutableStateOf(false) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+    var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
+    var showAskCreateCameraDialog by rememberSaveable { mutableStateOf(false) }
 
     val canSave = name.isNotEmpty() && cameraId > 0
 
@@ -420,7 +426,7 @@ fun EditFilmRollScreen(
             )
 
             // Camera
-            var expandedCamera by remember { mutableStateOf(false) }
+            var expandedCamera by rememberSaveable { mutableStateOf(false) }
             val selectedCameraName = cameras.find { it.id == cameraId }?.let { "${it.manufacturer} ${it.modelName}" } ?: ""
             
             ExposedDropdownMenuBox(
@@ -463,7 +469,7 @@ fun EditFilmRollScreen(
             }
 
             // Manufacturer
-            var expandedManufacturer by remember { mutableStateOf(false) }
+            var expandedManufacturer by rememberSaveable { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expandedManufacturer,
                 onExpandedChange = { expandedManufacturer = it }
@@ -496,7 +502,7 @@ fun EditFilmRollScreen(
             }
 
             // Brand
-            var expandedBrand by remember { mutableStateOf(false) }
+            var expandedBrand by rememberSaveable { mutableStateOf(false) }
             val suggestedBrands = remember(manufacturer) { onBrandSuggestionsRequested(manufacturer) }
             ExposedDropdownMenuBox(
                 expanded = expandedBrand,
