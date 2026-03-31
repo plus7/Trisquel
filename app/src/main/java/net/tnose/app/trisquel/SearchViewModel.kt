@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -17,8 +18,15 @@ class SearchViewModel(application: Application?) : AndroidViewModel(
         mRepository = TrisquelRepo(application)
     }
 
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     val photosByAndQuery: LiveData<List<Pair<Pair<String, Int>, PhotoAndRels>>>  = searchTags.switchMap {
+        _isLoading.value = true
         mRepository.getPhotosByAndQuery(it)
+    }.map {
+        _isLoading.value = false
+        it
     }
 /*
     fun shiftFrameIndexFrom(entity: PhotoEntity, amount : Int) = viewModelScope.launch {

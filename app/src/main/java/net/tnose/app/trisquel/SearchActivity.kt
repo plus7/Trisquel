@@ -246,6 +246,7 @@ class SearchActivity : AppCompatActivity() {
             }
         ) { paddingValues ->
             val photos by searchViewModel.photosByAndQuery.observeAsState(emptyList())
+            val isLoading by searchViewModel.isLoading.observeAsState(false)
             Column(modifier = Modifier.padding(paddingValues)) {
                 SearchListScreen(
                     photos = photos,
@@ -254,7 +255,8 @@ class SearchActivity : AppCompatActivity() {
                     onIndexClick = { },
                     onIndexLongClick = { },
                     onThumbnailClick = { onThumbnailClick(it) },
-                    onFavoriteClick = { onFavoriteClick(it) }
+                    onFavoriteClick = { onFavoriteClick(it) },
+                    isLoading = isLoading
                 )
             }
         }

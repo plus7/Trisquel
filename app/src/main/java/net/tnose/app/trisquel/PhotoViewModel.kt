@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -17,14 +18,21 @@ class PhotoViewModel(application: Application?) : AndroidViewModel(
         mRepository = TrisquelRepo(application)
     }
 
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     // どうせIDは変えないのであんまり意味はないのだがほかのViewModelとなんとなく形式をあわせておく
     // 不都合あれば変える
     val photosByFilmRollId: LiveData<List<Pair<String, PhotoAndTagIds>>> = filmRollId.switchMap {
+        _isLoading.value = true
         mRepository.getPhotosByFilmRollId(it)
+    }.map {
+        _isLoading.value = false
+        it
     }
 
     fun shiftFrameIndexFrom(entity: PhotoEntity, amount : Int) = viewModelScope.launch {
-        val list = mRepository.getPhotosByFilmRollId(entity.filmroll!!).value!!
+        mRepository.getPhotosByFilmRollId(entity.filmroll!!).value!!
 
     }
 

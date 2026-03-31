@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,23 +54,33 @@ fun PhotoListScreen(
     onIndexClick: (Photo) -> Unit,
     onIndexLongClick: (Photo) -> Unit,
     onThumbnailClick: (Photo) -> Unit,
-    onFavoriteClick: (Photo) -> Unit
+    onFavoriteClick: (Photo) -> Unit,
+    isLoading: Boolean = false
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(photos, key = { it.second.photo.id }) { item ->
-            val prevDate = item.first
-            val photoEntity = item.second.photo
-            val photo = Photo.fromEntity(photoEntity)
-            PhotoItemCompose(
-                photo = photo,
-                prevDate = prevDate,
-                onItemClick = onItemClick,
-                onItemLongClick = onItemLongClick,
-                onIndexClick = onIndexClick,
-                onIndexLongClick = onIndexLongClick,
-                onThumbnailClick = onThumbnailClick,
-                onFavoriteClick = onFavoriteClick
-            )
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    } else {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(photos, key = { it.second.photo.id }) { item ->
+                val prevDate = item.first
+                val photoEntity = item.second.photo
+                val photo = Photo.fromEntity(photoEntity)
+                PhotoItemCompose(
+                    photo = photo,
+                    prevDate = prevDate,
+                    onItemClick = onItemClick,
+                    onItemLongClick = onItemLongClick,
+                    onIndexClick = onIndexClick,
+                    onIndexLongClick = onIndexLongClick,
+                    onThumbnailClick = onThumbnailClick,
+                    onFavoriteClick = onFavoriteClick
+                )
+            }
         }
     }
 }

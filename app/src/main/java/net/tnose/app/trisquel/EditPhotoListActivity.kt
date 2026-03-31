@@ -452,6 +452,7 @@ fun EditPhotoListScreen(
         }
     ) { paddingValues ->
         val photos by context.mPhotoViewModel!!.photosByFilmRollId.observeAsState(initial = emptyList())
+        val isPhotosLoading by context.mPhotoViewModel!!.isLoading.observeAsState(initial = false)
         androidx.compose.foundation.layout.Box(modifier = Modifier.padding(paddingValues)) {
             PhotoListScreen(
                 photos = photos,
@@ -460,7 +461,8 @@ fun EditPhotoListScreen(
                 onIndexClick = { showIndexDialog = it },
                 onIndexLongClick = { showShiftDialog = it },
                 onThumbnailClick = { context.onThumbnailClick(it) },
-                onFavoriteClick = { context.onFavoriteClick(it) }
+                onFavoriteClick = { context.onFavoriteClick(it) },
+                isLoading = isPhotosLoading
             )
         }
     }
