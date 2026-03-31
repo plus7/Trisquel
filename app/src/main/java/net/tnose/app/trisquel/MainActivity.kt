@@ -322,6 +322,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        // Issue #55 を修正する案としてGeminiが提案してきたがこれでいいのか半信半疑
+        cameraViewModel.load()
+        lensViewModel.load()
+
         val dao = TrisquelDao(this)
         dao.connection()
         val dbConvForAndroid11Done = dao.getConversionState() >= 1
