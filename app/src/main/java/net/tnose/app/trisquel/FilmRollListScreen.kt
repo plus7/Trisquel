@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,9 +55,17 @@ fun FilmRollListScreen(
     filmrolls: List<FilmRollAndRels>,
     onItemClick: (FilmRollAndRels) -> Unit,
     onItemLongClick: (FilmRollAndRels) -> Unit,
-    emptyMessage: String
+    emptyMessage: String,
+    isLoading: Boolean = false
 ) {
-    if (filmrolls.isEmpty()) {
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    } else if (filmrolls.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center

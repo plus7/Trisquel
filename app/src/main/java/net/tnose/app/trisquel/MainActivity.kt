@@ -908,6 +908,7 @@ class MainActivity : AppCompatActivity() {
                         val editPhotoListLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
 
                         val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
+                        val isFilmRollsLoading by filmRollViewModel.isLoading.observeAsState(false)
                         Box(Modifier.fillMaxSize()) {
                             FilmRollListScreen(
                                 filmrolls = filmrolls,
@@ -918,7 +919,8 @@ class MainActivity : AppCompatActivity() {
                                     editPhotoListLauncher.launch(intent)
                                 },
                                 onItemLongClick = { onFilmRollDeleteRequest(FilmRoll.fromEntity(it)) },
-                                emptyMessage = getString(R.string.warning_filmroll_not_registered)
+                                emptyMessage = getString(R.string.warning_filmroll_not_registered),
+                                isLoading = isFilmRollsLoading
                             )
                             FloatingActionButton(
                                 onClick = {
@@ -946,6 +948,7 @@ class MainActivity : AppCompatActivity() {
                             if (result.resultCode == RESULT_OK) cameraViewModel.handleEditResult(result.data)
                         }
                         val cameras by cameraViewModel.cameras.observeAsState(emptyList())
+                        val isCamerasLoading by cameraViewModel.isLoading.observeAsState(false)
                         var isFabExpanded by rememberSaveable { mutableStateOf(false) }
                         val interactionSource = remember { MutableInteractionSource() }
                         
@@ -961,7 +964,8 @@ class MainActivity : AppCompatActivity() {
                                 onItemLongClick = { onCameraDeleteRequest(it) },
                                 emptyMessage = getString(R.string.warning_cam_not_registered),
                                 scrollTargetIndex = null,
-                                onScrollConsumed = {}
+                                onScrollConsumed = {},
+                                isLoading = isCamerasLoading
                             )
 
                             if (isFabExpanded) {
@@ -1045,6 +1049,7 @@ class MainActivity : AppCompatActivity() {
                             if (result.resultCode == RESULT_OK) lensViewModel.handleEditResult(result.data)
                         }
                         val lenses by lensViewModel.lenses.observeAsState(emptyList())
+                        val isLensesLoading by lensViewModel.isLoading.observeAsState(false)
                         Box(Modifier.fillMaxSize()) {
                             LensListScreen(
                                 lenses = lenses,
@@ -1056,7 +1061,8 @@ class MainActivity : AppCompatActivity() {
                                 onItemLongClick = { onLensDeleteRequest(it) },
                                 emptyMessage = getString(R.string.warning_lens_not_registered),
                                 scrollTargetIndex = null,
-                                onScrollConsumed = {}
+                                onScrollConsumed = {},
+                                isLoading = isLensesLoading
                             )
                             FloatingActionButton(
                                 onClick = {
@@ -1078,6 +1084,7 @@ class MainActivity : AppCompatActivity() {
                             if (result.resultCode == RESULT_OK) accessoryViewModel.handleEditResult(result.data)
                         }
                         val accessories by accessoryViewModel.allAccessories.observeAsState(emptyList())
+                        val isAccessoriesLoading by accessoryViewModel.isLoading.observeAsState(false)
                         Box(Modifier.fillMaxSize()) {
                             AccessoryListScreen(
                                 accessories = accessories,
@@ -1088,7 +1095,8 @@ class MainActivity : AppCompatActivity() {
                                     editAccessoryLauncher.launch(intent)
                                 },
                                 onItemLongClick = { onAccessoryDeleteRequest(Accessory.fromEntity(it)) },
-                                emptyMessage = getString(R.string.warning_accessory_not_registered)
+                                emptyMessage = getString(R.string.warning_accessory_not_registered),
+                                isLoading = isAccessoriesLoading
                             )
                             FloatingActionButton(
                                 onClick = {

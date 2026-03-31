@@ -15,18 +15,25 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     private val _cameras = MutableLiveData<List<CameraSpec>>(emptyList())
     val cameras: LiveData<List<CameraSpec>> = _cameras
 
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     private val _sortKey = MutableLiveData<Int>(0)
 
     init {
         load()
     }
 
-    fun load() = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        val list = dao.allCameras
-        dao.close()
-        withContext(Dispatchers.Main) {
-            _cameras.value = sortList(list, _sortKey.value ?: 0)
+    fun load() = viewModelScope.launch {
+        _isLoading.value = true
+        withContext(Dispatchers.IO) {
+            dao.connection()
+            val list = dao.allCameras
+            dao.close()
+            withContext(Dispatchers.Main) {
+                _cameras.value = sortList(list, _sortKey.value ?: 0)
+                _isLoading.value = false
+            }
         }
     }
 

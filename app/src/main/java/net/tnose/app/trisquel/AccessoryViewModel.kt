@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -19,11 +20,17 @@ class AccessoryViewModel(application: Application?) : AndroidViewModel(
         mRepository = TrisquelRepo(application)
     }
 
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     val sortingRule = MutableLiveData<Int>(0)
 
     val allAccessories: LiveData<List<AccessoryEntity>> = sortingRule.switchMap {
-        val x = mRepository.getAllAccessories(it)
-        x
+        _isLoading.value = true
+        mRepository.getAllAccessories(it)
+    }.map {
+        _isLoading.value = false
+        it
     }
 
     fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {

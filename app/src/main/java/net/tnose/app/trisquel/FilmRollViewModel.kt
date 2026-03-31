@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -19,13 +20,20 @@ class FilmRollViewModel(application: Application?) : AndroidViewModel(
         mRepository = TrisquelRepo(application)
     }
 
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     val viewRule = MutableLiveData<Pair<Int, Pair<Int, String>>>(Pair(0, Pair(0, "")))
 
     val allFilmRollAndRels: LiveData<List<FilmRollAndRels>> = viewRule.switchMap {
         val sortBy = it.first
         val filterByKind = it.second.first
         val filterByValue = it.second.second
+        _isLoading.value = true
         mRepository.getAllFilmRolls(sortBy, filterByKind, filterByValue)
+    }.map {
+        _isLoading.value = false
+        it
     }
 
     fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
