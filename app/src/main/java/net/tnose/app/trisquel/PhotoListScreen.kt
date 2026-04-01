@@ -68,10 +68,12 @@ fun PhotoListScreen(
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(photos, key = { it.second.photo.id }) { item ->
                 val prevDate = item.first
-                val photoEntity = item.second.photo
+                val photoAndTagIds = item.second
+                val photoEntity = photoAndTagIds.photo
                 val photo = Photo.fromEntity(photoEntity)
                 PhotoItemCompose(
                     photo = photo,
+                    tagIds = photoAndTagIds.tagIds,
                     prevDate = prevDate,
                     onItemClick = onItemClick,
                     onItemLongClick = onItemLongClick,
@@ -89,6 +91,7 @@ fun PhotoListScreen(
 @Composable
 fun PhotoItemCompose(
     photo: Photo,
+    tagIds: List<Int>,
     prevDate: String,
     onItemClick: (Photo) -> Unit,
     onItemLongClick: (Photo) -> Unit,
@@ -101,7 +104,7 @@ fun PhotoItemCompose(
     var lens by remember { mutableStateOf<LensSpec?>(null) }
     var tags by remember { mutableStateOf<List<Tag>>(emptyList()) }
 
-    LaunchedEffect(photo.id) {
+    LaunchedEffect(photo, tagIds) {
         withContext(Dispatchers.IO) {
             val dao = TrisquelDao(context)
             dao.connection()
