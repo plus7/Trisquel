@@ -994,14 +994,14 @@ fun EditPhotoScreen(
                 ClassicTextField(
                     value = context.apertureStr,
                     onValueChange = { context.apertureStr = it; context.isDirty = true; expandedAperture = true },
+                    readOnly = true,
                     label = stringResource(R.string.label_aperture),
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedAperture) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
-                val filteredAperture = context.apertureList.filter { it.contains(context.apertureStr, ignoreCase = true) }
-                if (filteredAperture.isNotEmpty()) {
+                if (context.apertureList.isNotEmpty()) {
                     ExposedDropdownMenu(expanded = expandedAperture, onDismissRequest = { expandedAperture = false }) {
-                        filteredAperture.forEach { suggestion ->
+                        context.apertureList.forEach { suggestion ->
                             DropdownMenuItem(text = { Text(suggestion) }, onClick = { context.apertureStr = suggestion; context.isDirty = true; expandedAperture = false })
                         }
                     }
@@ -1017,14 +1017,14 @@ fun EditPhotoScreen(
                 ClassicTextField(
                     value = context.ssStr,
                     onValueChange = { context.ssStr = it; context.isDirty = true; expandedSs = true },
+                    readOnly = true,
                     label = stringResource(R.string.label_shutter_speed),
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSs) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
-                val filteredSs = context.ssList.filter { it.contains(context.ssStr, ignoreCase = true) }
-                if (filteredSs.isNotEmpty()) {
+                if (context.ssList.isNotEmpty()) {
                     ExposedDropdownMenu(expanded = expandedSs, onDismissRequest = { expandedSs = false }) {
-                        filteredSs.forEach { suggestion ->
+                        context.ssList.forEach { suggestion ->
                             DropdownMenuItem(text = { Text(suggestion) }, onClick = { context.ssStr = suggestion; context.isDirty = true; expandedSs = false })
                         }
                     }

@@ -735,6 +735,7 @@ fun EditCameraScreen(
                     ClassicTextField(
                         value = slowestSs,
                         onValueChange = { slowestSs = it; context.isDirty = true; expandedSlowest = true },
+                        readOnly = true,
                         label = stringResource(R.string.label_shutter_speed_slowest),
                         isError = ssInconsistent,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSlowest) },
@@ -762,6 +763,7 @@ fun EditCameraScreen(
                     ClassicTextField(
                         value = fastestSs,
                         onValueChange = { fastestSs = it; context.isDirty = true; expandedFastest = true },
+                        readOnly = true,
                         label = stringResource(R.string.label_shutter_speed_fastest),
                         isError = ssInconsistent,
                         supportingText = if (ssInconsistent) { { Text(stringResource(R.string.error_ss_inconsistent)) } } else null,
