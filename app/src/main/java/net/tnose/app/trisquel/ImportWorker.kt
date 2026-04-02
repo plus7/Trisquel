@@ -108,11 +108,13 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                         Pair(PARAM_STATUS, "Import from $uri completed")))
             }
         } catch (error: CancellationException) {
+            Log.e("TrisquelImport", "Worker cancelled by WorkManager or System.", error)
             Result.failure(
                 workDataOf(
                     Pair(PARAM_PERCENTAGE, 100.0),
                     Pair(PARAM_STATUS, "Backup canceled.")))
-        } catch (e: Exception){
+        } catch (e: Throwable){ // ★変更: Exception -> Throwable にしてOOM等もキャッチ
+            Log.e("TrisquelImport", "Fatal error in Worker: ${e.message}", e)
             Result.failure(
                 workDataOf(
                     Pair(PARAM_PERCENTAGE, 100.0),
@@ -251,7 +253,10 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             if(cursor == null){
                 break
             }else{
-                if(!cursor.moveToNext()) break
+                if(!cursor.moveToNext()){
+                    cursor.close()
+                    break
+                }
                 currentCandidate = appendSuffix(displayName, suffixNumber)
                 cursor.close()
             }
@@ -351,11 +356,9 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     }
 
     private fun isMd5sumMatch(uri: Uri, md5sum: String): Boolean{
-        val ist = applicationContext.contentResolver.openInputStream(uri)
-        if(ist != null)
-            return MD5Util.digestAsStr(ist) == md5sum
-        else
-            return false
+        return applicationContext.contentResolver.openInputStream(uri)?.use {
+            ist -> MD5Util.digestAsStr(ist) == md5sum
+        } ?: false
     }
 
     private fun getRealPathFromURI(contentUri: Uri): String {
@@ -434,8 +437,9 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                                 "fileName:" + fileName
                                         + " Candidate URI:" + c
                                         + " Path:" +getRealPathFromURI(Uri.parse(c)))
-                            val ist = CompatibilityUtil.pathToInputStream(applicationContext.contentResolver, c, true)
-                            if(ist!=null) {
+                            CompatibilityUtil.pathToInputStream(
+                                applicationContext.contentResolver,
+                                c, true)?.use { ist ->
                                 val md5sumToCompare = MD5Util.digestAsStr(ist)
                                 if(md5sum == md5sumToCompare){
                                     result.add(c)
@@ -557,13 +561,27 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             result = SUCCESS
         } catch (e: VersionUnmatchException) {
             result = VERSION_UNMATCH
-        } catch (e: Exception){
-            Log.d("Import", e.toString())
+        } catch (e: Throwable){ // ★変更: Exception -> Throwable にしてOOM等もキャッチ
+            Log.e("TrisquelImport", "Error during import loop: ${e.message}", e)
             result = UNKNOWN
         } finally {
-            CloseWrappedZipFile(zipfile)
-            dao.endTransaction()
-            dao.close()
+            try {
+                CloseWrappedZipFile(zipfile)
+            } catch (e: Throwable) {
+                Log.e("TrisquelImport", "Error closing zip: ${e.message}", e)
+            }
+            try {
+                // ★追加: endTransaction 自体が例外を投げる可能性を考慮
+                dao.endTransaction()
+            } catch (e: Throwable) {
+                Log.e("TrisquelImport", "Error ending transaction: ${e.message}", e)
+            }
+
+            try {
+                dao.close()
+            } catch (e: Throwable) {
+                Log.e("TrisquelImport", "Error closing DAO: ${e.message}", e)
+            }
             //zipfile.close()
             //tmpFile.delete()
         }
