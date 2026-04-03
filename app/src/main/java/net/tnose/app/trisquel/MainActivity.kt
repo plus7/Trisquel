@@ -2,11 +2,8 @@ package net.tnose.app.trisquel
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.DialogInterface
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -14,79 +11,48 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.setContent
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
-import androidx.core.os.BundleCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.preference.PreferenceManager
@@ -101,7 +67,6 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 
 class MainActivity : AppCompatActivity() {
@@ -902,246 +867,23 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
             ) { paddingValues ->
-                NavHost(navController, startDestination = initialRoute, modifier = Modifier.padding(paddingValues)) {
-                    composable(ROUTE_FILMROLLS) {
-                        val addFilmRollLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == RESULT_OK) filmRollViewModel.handleAddResult(result.data)
-                        }
-                        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == RESULT_OK) filmRollViewModel.handleEditResult(result.data)
-                        }
-                        val editPhotoListLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
-
-                        val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
-                        val isFilmRollsLoading by filmRollViewModel.isLoading.observeAsState(false)
-                        Box(Modifier.fillMaxSize()) {
-                            FilmRollListScreen(
-                                filmrolls = filmrolls,
-                                onItemClick = { item ->
-                                    val f = FilmRoll.fromEntity(item)
-                                    val intent = Intent(application, EditPhotoListActivity::class.java)
-                                    intent.putExtra("id", f.id)
-                                    editPhotoListLauncher.launch(intent)
-                                },
-                                onItemLongClick = { onFilmRollDeleteRequest(FilmRoll.fromEntity(it)) },
-                                emptyMessage = getString(R.string.warning_filmroll_not_registered),
-                                isLoading = isFilmRollsLoading
-                            )
-                            FloatingActionButton(
-                                onClick = {
-                                    val intent = Intent(application, EditFilmRollActivity::class.java)
-                                    if (mainViewModel.currentFilter.first == 1) {
-                                        intent.putExtra("default_camera", mainViewModel.currentFilter.second[0].toInt())
-                                    } else if (mainViewModel.currentFilter.first == 2) {
-                                        intent.putExtra("default_manufacturer", mainViewModel.currentFilter.second[0])
-                                        intent.putExtra("default_brand", mainViewModel.currentFilter.second[1])
-                                    }
-                                    addFilmRollLauncher.launch(intent)
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                            ) {
-                                Icon(painterResource(R.drawable.ic_filmroll_vector_white), null, tint = Color.White)
-                            }
-                        }
-                    }
-                    composable(ROUTE_CAMERAS) {
-                        val addCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == RESULT_OK) cameraViewModel.handleAddResult(result.data)
-                        }
-                        val editCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == RESULT_OK) cameraViewModel.handleEditResult(result.data)
-                        }
-                        val cameras by cameraViewModel.cameras.observeAsState(emptyList())
-                        val isCamerasLoading by cameraViewModel.isLoading.observeAsState(false)
-                        var isFabExpanded by rememberSaveable { mutableStateOf(false) }
-                        val interactionSource = remember { MutableInteractionSource() }
-                        
-                        Box(Modifier.fillMaxSize()) {
-                            CameraListScreen(
-                                cameras = cameras,
-                                onItemClick = { item ->
-                                    val intent = Intent(application, EditCameraActivity::class.java)
-                                    intent.putExtra("id", item.id)
-                                    intent.putExtra("type", item.type)
-                                    editCameraLauncher.launch(intent)
-                                },
-                                onItemLongClick = { onCameraDeleteRequest(it) },
-                                emptyMessage = getString(R.string.warning_cam_not_registered),
-                                scrollTargetIndex = null,
-                                onScrollConsumed = {},
-                                isLoading = isCamerasLoading
-                            )
-
-                            if (isFabExpanded) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color.Black.copy(alpha = 0.5f))
-                                        .clickable(
-                                            interactionSource = interactionSource,
-                                            indication = null
-                                        ) { isFabExpanded = false }
-                                )
-                            }
-
-                            Column(
-                                horizontalAlignment = Alignment.End,
-                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                            ) {
-                                AnimatedVisibility(visible = isFabExpanded) {
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
-                                            Text(
-                                                text = getString(R.string.register_flc),
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.labelLarge,
-                                                modifier = Modifier.padding(end = 16.dp)
-                                            )
-                                            SmallFloatingActionButton(
-                                                onClick = {
-                                                    isFabExpanded = false
-                                                    val intent = Intent(application, EditCameraActivity::class.java)
-                                                    intent.putExtra("type", 1)
-                                                    addCameraLauncher.launch(intent)
-                                                },
-                                                containerColor = MaterialTheme.colorScheme.secondary
-                                            ) {
-                                                Icon(painterResource(R.drawable.ic_menu_camera_white), contentDescription = null, tint = Color.White)
-                                            }
-                                        }
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
-                                            Text(
-                                                text = getString(R.string.register_ilc),
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.labelLarge,
-                                                modifier = Modifier.padding(end = 16.dp)
-                                            )
-                                            SmallFloatingActionButton(
-                                                onClick = {
-                                                    isFabExpanded = false
-                                                    val intent = Intent(application, EditCameraActivity::class.java)
-                                                    intent.putExtra("type", 0)
-                                                    addCameraLauncher.launch(intent)
-                                                },
-                                                containerColor = MaterialTheme.colorScheme.secondary
-                                            ) {
-                                                Icon(painterResource(R.drawable.ic_menu_camera_white), contentDescription = null, tint = Color.White)
-                                            }
-                                        }
-                                    }
-                                }
-                                FloatingActionButton(
-                                    onClick = { isFabExpanded = !isFabExpanded },
-                                    containerColor = MaterialTheme.colorScheme.secondary,
-                                ) {
-                                    val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
-                                    Icon(
-                                        Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.graphicsLayer(rotationZ = rotation)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    composable(ROUTE_LENSES) {
-                        val addLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == RESULT_OK) lensViewModel.handleAddResult(result.data)
-                        }
-                        val editLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == RESULT_OK) lensViewModel.handleEditResult(result.data)
-                        }
-                        val lenses by lensViewModel.lenses.observeAsState(emptyList())
-                        val isLensesLoading by lensViewModel.isLoading.observeAsState(false)
-                        Box(Modifier.fillMaxSize()) {
-                            LensListScreen(
-                                lenses = lenses,
-                                onItemClick = { item ->
-                                    val intent = Intent(application, EditLensActivity::class.java)
-                                    intent.putExtra("id", item.id)
-                                    editLensLauncher.launch(intent)
-                                },
-                                onItemLongClick = { onLensDeleteRequest(it) },
-                                emptyMessage = getString(R.string.warning_lens_not_registered),
-                                scrollTargetIndex = null,
-                                onScrollConsumed = {},
-                                isLoading = isLensesLoading
-                            )
-                            FloatingActionButton(
-                                onClick = {
-                                    val intent = Intent(application, EditLensActivity::class.java)
-                                    addLensLauncher.launch(intent)
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                            ) {
-                                Icon(painterResource(R.drawable.ic_lens_white), null, tint = Color.White)
-                            }
-                        }
-                    }
-                    composable(ROUTE_ACCESSORIES) {
-                        val addAccessoryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == RESULT_OK) accessoryViewModel.handleAddResult(result.data)
-                        }
-                        val editAccessoryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                            if (result.resultCode == RESULT_OK) accessoryViewModel.handleEditResult(result.data)
-                        }
-                        val accessories by accessoryViewModel.allAccessories.observeAsState(emptyList())
-                        val isAccessoriesLoading by accessoryViewModel.isLoading.observeAsState(false)
-                        Box(Modifier.fillMaxSize()) {
-                            AccessoryListScreen(
-                                accessories = accessories,
-                                onItemClick = { item ->
-                                    val a = Accessory.fromEntity(item)
-                                    val intent = Intent(application, EditAccessoryActivity::class.java)
-                                    intent.putExtra("id", a.id)
-                                    editAccessoryLauncher.launch(intent)
-                                },
-                                onItemLongClick = { onAccessoryDeleteRequest(Accessory.fromEntity(it)) },
-                                emptyMessage = getString(R.string.warning_accessory_not_registered),
-                                isLoading = isAccessoriesLoading
-                            )
-                            FloatingActionButton(
-                                onClick = {
-                                    val intent = Intent(application, EditAccessoryActivity::class.java)
-                                    addAccessoryLauncher.launch(intent)
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                            ) {
-                                Icon(painterResource(R.drawable.ic_extension_white), null, tint = Color.White)
-                            }
-                        }
-                    }
-                    composable(ROUTE_FAVORITES) {
-                        val context = LocalContext.current
-                        val groupedPhotos = remember { mutableStateOf<List<Pair<String, List<Photo>>>>(emptyList()) }
-                        LaunchedEffect(Unit) {
-                            withContext(Dispatchers.IO) {
-                                val dao = TrisquelDao(context)
-                                dao.connection()
-                                val list = dao.getAllFavedPhotos()
-                                val map = list.groupBy { it.filmrollid }
-                                val list2 = map.values.sortedByDescending { it[0].date }
-                                val result = list2.map { l ->
-                                    val sortedList = l.sortedBy { it.frameIndex }
-                                    val filmrollName = dao.getFilmRoll(l[0].filmrollid)?.name ?: ""
-                                    Pair(filmrollName, sortedList)
-                                }
-                                dao.close()
-                                withContext(Dispatchers.Main) { groupedPhotos.value = result }
-                            }
-                        }
-                        FavoritePhotoScreen(
-                            groupedPhotos = groupedPhotos.value,
-                            columnCount = 3,
-                            onItemClick = { photo, list -> onPhotoInteraction(photo, list) }
-                        )
-                    }
-                }
+                TrisquelNavHost(
+                    navController = navController,
+                    initialRoute = initialRoute,
+                    modifier = Modifier.padding(paddingValues),
+                    mainViewModel = mainViewModel,
+                    filmRollViewModel = filmRollViewModel,
+                    cameraViewModel = cameraViewModel,
+                    lensViewModel = lensViewModel,
+                    accessoryViewModel = accessoryViewModel,
+                    onFilmRollDeleteRequest = { onFilmRollDeleteRequest(it) },
+                    onCameraDeleteRequest = { onCameraDeleteRequest(it) },
+                    onLensDeleteRequest = { onLensDeleteRequest(it) },
+                    onAccessoryDeleteRequest = { onAccessoryDeleteRequest(it) },
+                    onPhotoInteraction = { photo, list -> onPhotoInteraction(photo, list) }
+                )
             }
+
         }
     }
 }
