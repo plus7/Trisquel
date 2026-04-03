@@ -14,31 +14,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -557,8 +538,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    data class DrawerItem(val route: String, val title: String, val iconRes: Int)
-
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainAppScreen(initialRoute: String) {
@@ -573,119 +552,43 @@ class MainActivity : AppCompatActivity() {
             currentRoute = observedRoute
         }
 
-        val drawerItems = listOf(
-            DrawerItem(ROUTE_FILMROLLS, getString(R.string.title_activity_filmroll_list), R.drawable.ic_filmroll_vector),
-            DrawerItem(ROUTE_FAVORITES, getString(R.string.title_activity_favorites), R.drawable.ic_fav_border_black)
-        )
-        val gearItems = listOf(
-            DrawerItem(ROUTE_CAMERAS, getString(R.string.title_activity_cam_list), R.drawable.ic_menu_camera),
-            DrawerItem(ROUTE_LENSES, getString(R.string.title_activity_lens_list), R.drawable.ic_lens),
-            DrawerItem(ROUTE_ACCESSORIES, getString(R.string.title_activity_accessory_list), R.drawable.ic_extension_black_24dp)
-        )
-        val infoItems = listOf(
-            DrawerItem("settings", getString(R.string.action_settings), R.drawable.ic_settings_black_24dp),
-            DrawerItem("backup", getString(R.string.title_backup), R.drawable.ic_export),
-            DrawerItem("import", getString(R.string.title_import), R.drawable.ic_import)
-        )
-        val otherItems = listOf(
-            DrawerItem("release_notes", getString(R.string.action_releasenotes), 0),
-            DrawerItem("license", getString(R.string.action_license), 0)
-        )
-
         TrisquelDialogManager(
             activeDialog = mainViewModel.activeDialog,
             onDismiss = { mainViewModel.dismissDialog() }
         )
 
-        ModalNavigationDrawer(
+        TrisquelNavigationDrawer(
             drawerState = drawerState,
-            drawerContent = {
-                ModalDrawerSheet {
-                    Spacer(Modifier.height(12.dp))
-                    LazyColumn {
-                        items(drawerItems) { item ->
-                            NavigationDrawerItem(
-                                label = { Text(item.title) },
-                                selected = observedRoute == item.route,
-                                icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
-                                onClick = {
-                                    navController.navigate(item.route) { launchSingleTop = true }
-                                    scope.launch { drawerState.close() }
-                                },
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-                        }
-                        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-                        item { Text(getString(R.string.menu_category_gears), Modifier.padding(16.dp, 8.dp)) }
-                        items(gearItems) { item ->
-                            NavigationDrawerItem(
-                                label = { Text(item.title) },
-                                selected = observedRoute == item.route,
-                                icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
-                                onClick = {
-                                    navController.navigate(item.route) { launchSingleTop = true }
-                                    scope.launch { drawerState.close() }
-                                },
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-                        }
-                        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-                        items(infoItems) { item ->
-                            NavigationDrawerItem(
-                                label = { Text(item.title) },
-                                selected = false,
-                                icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
-                                onClick = {
-                                    scope.launch { drawerState.close() }
-                                    when (item.route) {
-                                        "settings" -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
-                                        "backup" -> {
-                                            mainViewModel.showDialog(ActiveDialog.RichSelection(
-                                                title = getString(R.string.title_backup_mode_selection),
-                                                icons = listOf(R.drawable.ic_export, R.drawable.ic_export_img, R.drawable.ic_help),
-                                                titles = arrayOf(getString(R.string.title_slim_backup), getString(R.string.title_whole_backup), getString(R.string.title_backup_help)),
-                                                descs = arrayOf(getString(R.string.description_slim_backup), getString(R.string.description_whole_backup), getString(R.string.description_backup_help)),
-                                                onSelected = { mode ->
-                                                    if (mode < 2) checkPermAndExportDB(mode)
-                                                    else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
-                                                }
-                                            ))
-                                        }
-                                        "import" -> {
-                                            mainViewModel.showDialog(ActiveDialog.RichSelection(
-                                                title = getString(R.string.title_import_mode_selection),
-                                                icons = listOf(R.drawable.ic_merge, R.drawable.ic_restore, R.drawable.ic_help),
-                                                titles = arrayOf(getString(R.string.title_merge_zip), getString(R.string.title_import_zip), getString(R.string.title_backup_help)),
-                                                descs = arrayOf(getString(R.string.description_merge_zip), getString(R.string.description_import_zip), getString(R.string.description_backup_help)),
-                                                onSelected = { mode ->
-                                                    if (mode < 2) checkPermAndImportDB(mode)
-                                                    else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
-                                                }
-                                            ))
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-                        }
-                        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-                        items(otherItems) { item ->
-                            NavigationDrawerItem(
-                                label = { Text(item.title) },
-                                selected = false,
-                                onClick = {
-                                    scope.launch { drawerState.close() }
-                                    when (item.route) {
-                                        "release_notes" -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RELEASE_NOTES_URL)))
-                                        "license" -> startActivity(Intent(this@MainActivity, LicenseActivity::class.java))
-                                    }
-                                },
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-                        }
+            navController = navController,
+            observedRoute = observedRoute,
+            scope = scope,
+            onSettingsClick = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) },
+            onBackupClick = {
+                mainViewModel.showDialog(ActiveDialog.RichSelection(
+                    title = getString(R.string.title_backup_mode_selection),
+                    icons = listOf(R.drawable.ic_export, R.drawable.ic_export_img, R.drawable.ic_help),
+                    titles = arrayOf(getString(R.string.title_slim_backup), getString(R.string.title_whole_backup), getString(R.string.title_backup_help)),
+                    descs = arrayOf(getString(R.string.description_slim_backup), getString(R.string.description_whole_backup), getString(R.string.description_backup_help)),
+                    onSelected = { mode ->
+                        if (mode < 2) checkPermAndExportDB(mode)
+                        else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
                     }
-                }
-            }
+                ))
+            },
+            onImportClick = {
+                mainViewModel.showDialog(ActiveDialog.RichSelection(
+                    title = getString(R.string.title_import_mode_selection),
+                    icons = listOf(R.drawable.ic_merge, R.drawable.ic_restore, R.drawable.ic_help),
+                    titles = arrayOf(getString(R.string.title_merge_zip), getString(R.string.title_import_zip), getString(R.string.title_backup_help)),
+                    descs = arrayOf(getString(R.string.description_merge_zip), getString(R.string.description_import_zip), getString(R.string.description_backup_help)),
+                    onSelected = { mode ->
+                        if (mode < 2) checkPermAndImportDB(mode)
+                        else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
+                    }
+                ))
+            },
+            onReleaseNotesClick = { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RELEASE_NOTES_URL))) },
+            onLicenseClick = { startActivity(Intent(this@MainActivity, LicenseActivity::class.java)) }
         ) {
             Scaffold(
                 topBar = {
