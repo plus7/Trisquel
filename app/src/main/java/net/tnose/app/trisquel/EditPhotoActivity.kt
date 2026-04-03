@@ -90,6 +90,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.TimeZone
@@ -167,18 +168,18 @@ class EditPhotoActivity : AppCompatActivity() {
     val expCompensation: Double
         get() {
             val bd = BigDecimal((expCompProgress - evGrainSize * evWidth).toDouble() / evGrainSize.toDouble())
-            return bd.setScale(1, BigDecimal.ROUND_DOWN).toDouble()
+            return bd.setScale(1, RoundingMode.DOWN).toDouble()
         }
 
     val ttlLightMeter: Double
         get() {
             val bd = BigDecimal((ttlProgress - evGrainSize * evWidth).toDouble() / evGrainSize.toDouble())
-            return bd.setScale(1, BigDecimal.ROUND_DOWN).toDouble()
+            return bd.setScale(1, RoundingMode.DOWN).toDouble()
         }
 
     fun toHumanReadableCompensationAmount(progress: Int): String {
         val bd = BigDecimal((progress - evGrainSize * evWidth).toDouble() / evGrainSize.toDouble())
-        val bd2 = bd.setScale(1, BigDecimal.ROUND_DOWN)
+        val bd2 = bd.setScale(1, RoundingMode.DOWN)
         return (if (bd2.signum() > 0) "+" else "") + bd2.toPlainString() + "EV"
     }
 
