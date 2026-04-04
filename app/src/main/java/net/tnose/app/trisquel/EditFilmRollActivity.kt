@@ -61,16 +61,7 @@ class EditFilmRollActivity : AppCompatActivity() {
 
     val addCameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val data = result.data
-            if (data != null) {
-                val bundle = data.extras
-                val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
-                val dao = TrisquelDao(this)
-                dao.connection()
-                c.id = dao.addCamera(c).toInt()
-                updateCameraList(dao)
-                dao.close()
-            }
+            handleAddCameraResult(result.data)
         }
     }
 
@@ -149,6 +140,18 @@ class EditFilmRollActivity : AppCompatActivity() {
 
     private fun updateCameraList(dao: TrisquelDao) {
         cameralist = dao.allCameras
+    }
+
+    fun handleAddCameraResult(data: Intent?) {
+        if (data != null) {
+            val bundle = data.extras
+            val c = BundleCompat.getParcelable(bundle!!, "cameraspec", CameraSpec::class.java)!!
+            val dao = TrisquelDao(this)
+            dao.connection()
+            c.id = dao.addCamera(c).toInt()
+            updateCameraList(dao)
+            dao.close()
+        }
     }
 
     private fun saveAndFinish(name: String, cameraId: Int, manufacturer: String, brand: String, isoStr: String) {

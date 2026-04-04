@@ -76,47 +76,19 @@ class EditPhotoListActivity : AppCompatActivity() {
 
     internal val addPhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val data = result.data
-            val bundle = data?.extras
-            val p: Photo? = bundle?.getParcelable("photo")
-            val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
-            if (p != null) insertPhoto(p, tags)
+            handleAddPhotoResult(result.data)
         }
     }
 
     internal val editPhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val data = result.data
-            val bundle = data?.extras
-            val p: Photo? = bundle?.getParcelable("photo")
-            val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
-            if (p != null) updatePhoto(p, tags)
+            handleEditPhotoResult(result.data)
         }
     }
 
     internal val editFilmRollLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val data = result.data
-            val bundle = data?.extras
-            if (bundle != null) {
-                val dao = TrisquelDao(this.applicationContext)
-                dao.connection()
-                val c = dao.getCamera(bundle.getInt("camera"))
-                dao.close()
-                val f = FilmRoll(
-                    bundle.getInt("id"),
-                    bundle.getString("name")!!,
-                    bundle.getString("created")!!,
-                    Util.dateToStringUTC(Date()),
-                    c!!,
-                    bundle.getString("manufacturer")!!,
-                    bundle.getString("brand")!!,
-                    bundle.getInt("iso"),
-                    36
-                )
-                mFilmRoll = f
-                mFilmRollViewModel!!.update(f.toEntity())
-            }
+            handleEditFilmRollResult(result.data)
         }
     }
 
@@ -263,12 +235,53 @@ class EditPhotoListActivity : AppCompatActivity() {
     }
 
     private val pickImageLauncher = registerForActivityResult(PickImageUriContract()) {
-        if(it.isEmpty()){
+        handlePickImageResult(it)
+    }
+
+    fun handleAddPhotoResult(data: Intent?) {
+        val bundle = data?.extras
+        val p: Photo? = bundle?.getParcelable("photo")
+        val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
+        if (p != null) insertPhoto(p, tags)
+    }
+
+    fun handleEditPhotoResult(data: Intent?) {
+        val bundle = data?.extras
+        val p: Photo? = bundle?.getParcelable("photo")
+        val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
+        if (p != null) updatePhoto(p, tags)
+    }
+
+    fun handleEditFilmRollResult(data: Intent?) {
+        val bundle = data?.extras
+        if (bundle != null) {
+            val dao = TrisquelDao(this.applicationContext)
+            dao.connection()
+            val c = dao.getCamera(bundle.getInt("camera"))
+            dao.close()
+            val f = FilmRoll(
+                bundle.getInt("id"),
+                bundle.getString("name")!!,
+                bundle.getString("created")!!,
+                Util.dateToStringUTC(Date()),
+                c!!,
+                bundle.getString("manufacturer")!!,
+                bundle.getString("brand")!!,
+                bundle.getInt("iso"),
+                36
+            )
+            mFilmRoll = f
+            mFilmRollViewModel!!.update(f.toEntity())
+        }
+    }
+
+    fun handlePickImageResult(uris: List<Uri>) {
+        if (uris.isEmpty()) {
             thumbnailEditingPhoto = null
         } else {
             val p = thumbnailEditingPhoto
             if (p != null) {
-                p.supplementalImages.add(it[0].toString())
+                p.supplementalImages.add(uris[0].toString())
                 updatePhoto(p, null)
                 thumbnailEditingPhoto = null
             }

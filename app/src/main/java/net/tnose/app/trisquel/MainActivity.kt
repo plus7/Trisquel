@@ -71,81 +71,86 @@ class MainActivity : AppCompatActivity() {
 
     private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uri = result.data?.data ?: return@registerForActivityResult
-            mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() })
-            mExportViewModel?.doExport(uri.toString(), 0)
+            handleBackupDirChosen(result.data, 0)
         }
     }
 
     private val backupDirChosenForFullExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uri = result.data?.data ?: return@registerForActivityResult
-            mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() })
-            mExportViewModel?.doExport(uri.toString(), 1)
+            handleBackupDirChosen(result.data, 1)
         }
     }
 
     private val zipFileChosenForMergeIpLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uri = result.data?.data ?: return@registerForActivityResult
-            Log.d("ZipFile", uri.toString())
-            mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() })
-            mImportViewModel?.doImport(uri.toString(), 0)
+            handleZipFileChosen(result.data, 0)
         }
     }
 
     private val zipFileChosenForReplIpLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uri = result.data?.data ?: return@registerForActivityResult
-            Log.d("ZipFile", uri.toString())
-            mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() })
-            mImportViewModel?.doImport(uri.toString(), 1)
+            handleZipFileChosen(result.data, 1)
         }
     }
 
     @SuppressLint("SimpleDateFormat")
     private val dbFileChosenForReplDbLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uri = result.data?.data ?: return@registerForActivityResult
-            Log.d("DBFile", uri.toString())
-            lifecycleScope.launch {
-                withContext(Dispatchers.IO) {
-                    val dbpath = getDatabasePath("trisquel.db")
-                    val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException(uri.toString())
-                    if (!checkSQLiteFileFormat(pfd)) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@MainActivity, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
-                        }
-                        return@withContext
+            handleDbFileChosen(result.data)
+        }
+    }
+
+    fun handleBackupDirChosen(data: Intent?, mode: Int) {
+        val uri = data?.data ?: return
+        mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() })
+        mExportViewModel?.doExport(uri.toString(), mode)
+    }
+
+    fun handleZipFileChosen(data: Intent?, mode: Int) {
+        val uri = data?.data ?: return
+        Log.d("ZipFile", uri.toString())
+        mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() })
+        mImportViewModel?.doImport(uri.toString(), mode)
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    fun handleDbFileChosen(data: Intent?) {
+        val uri = data?.data ?: return
+        Log.d("DBFile", uri.toString())
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val dbpath = getDatabasePath("trisquel.db")
+                val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException(uri.toString())
+                if (!checkSQLiteFileFormat(pfd)) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
                     }
-                    val calendar = Calendar.getInstance()
-                    val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-                    val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
-                    
-                    if (dbpath.exists()) {
-                        FileInputStream(dbpath).use { fis ->
-                            FileOutputStream(backupPath).use { fos ->
-                                fis.copyTo(fos)
-                            }
-                        }
-                    }
-                    
-                    FileInputStream(pfd.fileDescriptor).use { fis ->
-                        FileOutputStream(dbpath).use { fos ->
+                    return@withContext
+                }
+                val calendar = Calendar.getInstance()
+                val sdf = SimpleDateFormat("yyyyMMddHHmmss")
+                val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+
+                if (dbpath.exists()) {
+                    FileInputStream(dbpath).use { fis ->
+                        FileOutputStream(backupPath).use { fos ->
                             fis.copyTo(fos)
                         }
                     }
                 }
-                val intent = RestartActivity.createIntent(applicationContext)
-                startActivity(intent)
+
+                FileInputStream(pfd.fileDescriptor).use { fis ->
+                    FileOutputStream(dbpath).use { fos ->
+                        fis.copyTo(fos)
+                    }
+                }
             }
+            val intent = RestartActivity.createIntent(applicationContext)
+            startActivity(intent)
         }
     }
 
-    private val searchLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
-
-    private var pendingExportMode: Int? = null
-    private val requestExportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+    fun handleExportPermissionsResult(permissions: Map<String, Boolean>) {
         val granted = permissions.entries.all { it.value }
         if (granted) {
             pendingExportMode?.let { exportDBDialog(it) }
@@ -155,8 +160,7 @@ class MainActivity : AppCompatActivity() {
         pendingExportMode = null
     }
 
-    private var pendingImportMode: Int? = null
-    private val requestImportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+    fun handleImportPermissionsResult(permissions: Map<String, Boolean>) {
         val granted = permissions.entries.all { it.value }
         if (granted) {
             pendingImportMode?.let { importDBDialog(it) }
@@ -164,6 +168,18 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
         }
         pendingImportMode = null
+    }
+
+    private val searchLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
+
+    private var pendingExportMode: Int? = null
+    private val requestExportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        handleExportPermissionsResult(permissions)
+    }
+
+    private var pendingImportMode: Int? = null
+    private val requestImportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+        handleImportPermissionsResult(permissions)
     }
 
     internal val PERMISSIONS =

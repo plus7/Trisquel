@@ -147,56 +147,20 @@ class EditPhotoActivity : AppCompatActivity() {
     var isDirty by mutableStateOf(false)
 
     private val requestPermissionPickerLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        val granted = permissions.entries.all { it.value }
-        if (granted) {
-            openImagePicker()
-        } else {
-            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
-            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
-        }
+        handlePickerPermissionsResult(permissions)
     }
 
     private val requestPermissionLoadLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        val granted = permissions.entries.all { it.value }
-        if (granted) {
-            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
-        } else {
-            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
-            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
-        }
+        handleLoadPermissionsResult(permissions)
     }
 
     internal val getLocationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val data = result.data
-            val bundle = data?.extras
-            if (bundle != null) {
-                val newlat = bundle.getDouble("latitude")
-                val newlog = bundle.getDouble("longitude")
-                if (newlat != latitude || newlog != longitude) isDirty = true
-                setLatLng(newlat, newlog)
-                locationStr = bundle.getString("location") ?: ""
-            }
-        } else if (result.resultCode == MapsActivity.RESULT_DELETE) {
-            if (999.0 != latitude || 999.0 != longitude) isDirty = true
-            setLatLng(999.0, 999.0)
-        }
+        handleGetLocationResult(result.resultCode, result.data)
     }
 
     internal val addLensLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val data = result.data
-            val bundle = data?.extras
-            val l = bundle?.getParcelable<LensSpec>("lensspec")
-            if (l != null) {
-                val dao = TrisquelDao(this)
-                dao.connection()
-                l.id = dao.addLens(l).toInt()
-                updateLensList(l, dao)
-                dao.close()
-                refreshApertureAdapter(l)
-                refreshFocalLength(l)
-            }
+            handleAddLensResult(result.data)
         }
     }
 
@@ -563,9 +527,63 @@ class EditPhotoActivity : AppCompatActivity() {
     }
 
     private val pickImageLauncher = registerForActivityResult(PickImageUriContract()) {
-        val newPaths = it.filterNotNull().map { it.toString() }
+        handlePickImageResult(it)
+    }
+
+    fun handleGetLocationResult(resultCode: Int, data: Intent?) {
+        if (resultCode == RESULT_OK) {
+            val bundle = data?.extras
+            if (bundle != null) {
+                val newlat = bundle.getDouble("latitude")
+                val newlog = bundle.getDouble("longitude")
+                if (newlat != latitude || newlog != longitude) isDirty = true
+                setLatLng(newlat, newlog)
+                locationStr = bundle.getString("location") ?: ""
+            }
+        } else if (resultCode == MapsActivity.RESULT_DELETE) {
+            if (999.0 != latitude || 999.0 != longitude) isDirty = true
+            setLatLng(999.0, 999.0)
+        }
+    }
+
+    fun handleAddLensResult(data: Intent?) {
+        val bundle = data?.extras
+        val l = bundle?.getParcelable<LensSpec>("lensspec")
+        if (l != null) {
+            val dao = TrisquelDao(this)
+            dao.connection()
+            l.id = dao.addLens(l).toInt()
+            updateLensList(l, dao)
+            dao.close()
+            refreshApertureAdapter(l)
+            refreshFocalLength(l)
+        }
+    }
+
+    fun handlePickImageResult(uris: List<Uri>) {
+        val newPaths = uris.filterNotNull().map { it.toString() }
         supplementalImages = (supplementalImages + newPaths).distinct()
         isDirty = true
+    }
+
+    fun handlePickerPermissionsResult(permissions: Map<String, Boolean>) {
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            openImagePicker()
+        } else {
+            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun handleLoadPermissionsResult(permissions: Map<String, Boolean>) {
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
+        } else {
+            supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
     }
 
     fun openImagePicker() {

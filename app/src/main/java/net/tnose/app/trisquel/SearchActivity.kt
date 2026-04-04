@@ -63,26 +63,12 @@ class SearchActivity : AppCompatActivity() {
 
     private val editPhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val bundle = result.data?.extras ?: return@registerForActivityResult
-            val p = BundleCompat.getParcelable(bundle, "photo", Photo::class.java)
-            val tags: ArrayList<String>? = bundle.getStringArrayList("tags")
-            if(p != null){
-                searchViewModel.tagPhoto(p.id, p.filmrollid, tags ?: arrayListOf())
-                searchViewModel.update(p.toEntity())
-                if (!dirtyFilmRolls.contains(p.filmrollid)) dirtyFilmRolls.add(p.filmrollid)
-                isDirty = true
-            }
+            handleEditPhotoResult(result.data)
         }
     }
 
     private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        val granted = permissions.entries.all { it.value }
-        if (granted) {
-            editThumbPhoto()
-        } else {
-            thumbnailEditingPhoto = null
-            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
-        }
+        handlePermissionsResult(permissions)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -160,16 +146,42 @@ class SearchActivity : AppCompatActivity() {
     }
 
     private val pickImageLauncher = registerForActivityResult(PickImageUriContract()) {
-        if (it.isEmpty()) {
+        handlePickImageResult(it)
+    }
+
+    fun handleEditPhotoResult(data: Intent?) {
+        val bundle = data?.extras ?: return
+        val p = BundleCompat.getParcelable(bundle, "photo", Photo::class.java)
+        val tags: ArrayList<String>? = bundle.getStringArrayList("tags")
+        if (p != null) {
+            searchViewModel.tagPhoto(p.id, p.filmrollid, tags ?: arrayListOf())
+            searchViewModel.update(p.toEntity())
+            if (!dirtyFilmRolls.contains(p.filmrollid)) dirtyFilmRolls.add(p.filmrollid)
+            isDirty = true
+        }
+    }
+
+    fun handlePickImageResult(uris: List<Uri>) {
+        if (uris.isEmpty()) {
             thumbnailEditingPhoto = null
         } else {
             val p = thumbnailEditingPhoto
             if (p != null) {
-                p.supplementalImages.add(it[0].toString())
+                p.supplementalImages.add(uris[0].toString())
                 searchViewModel.update(p.toEntity())
                 thumbnailEditingPhoto = null
                 isDirty = true
             }
+        }
+    }
+
+    fun handlePermissionsResult(permissions: Map<String, Boolean>) {
+        val granted = permissions.entries.all { it.value }
+        if (granted) {
+            editThumbPhoto()
+        } else {
+            thumbnailEditingPhoto = null
+            Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
         }
     }
 
