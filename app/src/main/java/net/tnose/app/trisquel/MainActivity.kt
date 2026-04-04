@@ -117,37 +117,7 @@ class MainActivity : AppCompatActivity() {
     fun handleDbFileChosen(data: Intent?) {
         val uri = data?.data ?: return
         Log.d("DBFile", uri.toString())
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                val dbpath = getDatabasePath("trisquel.db")
-                val pfd = contentResolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException(uri.toString())
-                if (!checkSQLiteFileFormat(pfd)) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
-                    }
-                    return@withContext
-                }
-                val calendar = Calendar.getInstance()
-                val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-                val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
-
-                if (dbpath.exists()) {
-                    FileInputStream(dbpath).use { fis ->
-                        FileOutputStream(backupPath).use { fos ->
-                            fis.copyTo(fos)
-                        }
-                    }
-                }
-
-                FileInputStream(pfd.fileDescriptor).use { fis ->
-                    FileOutputStream(dbpath).use { fos ->
-                        fis.copyTo(fos)
-                    }
-                }
-            }
-            val intent = RestartActivity.createIntent(applicationContext)
-            startActivity(intent)
-        }
+        mainViewModel.requestRestoreDatabase(uri, contentResolver)
     }
 
     fun handleExportPermissionsResult(permissions: Map<String, Boolean>) {
@@ -200,6 +170,69 @@ class MainActivity : AppCompatActivity() {
         lensViewModel = ViewModelProvider(this)[LensViewModel::class.java]
         accessoryViewModel = ViewModelProvider(this)[AccessoryViewModel::class.java]
         filmRollViewModel = ViewModelProvider(this)[FilmRollViewModel::class.java]
+
+        lifecycleScope.launch {
+            mainViewModel.events.collect { event ->
+                when (event) {
+                    is MainEvent.RestoreDatabaseResult -> {
+                        if (event.success) {
+                            val intent = RestartActivity.createIntent(applicationContext)
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this@MainActivity, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    is MainEvent.RequireDbConvAction -> {
+                        val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/")
+                        startActivity(Intent(Intent.ACTION_VIEW, uri))
+                    }
+                    is MainEvent.ShowReleaseNotesConfirm -> {
+                        mainViewModel.showDialog(ActiveDialog.Confirm(
+                            title = "Trisquel",
+                            message = getString(R.string.warning_newversion),
+                            positive = getString(R.string.show_release_notes),
+                            negative = getString(R.string.close),
+                            onConfirm = {
+                                val uri = Uri.parse(RELEASE_NOTES_URL)
+                                val i = Intent(Intent.ACTION_VIEW, uri)
+                                startActivity(i)
+                            }
+                        ))
+                    }
+                }
+            }
+        }
+        lifecycleScope.launch {
+            cameraViewModel.events.collect { event ->
+                when (event) {
+                    is CameraEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
+                    is CameraEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { cameraViewModel.deleteCamera(event.id) }))
+                }
+            }
+        }
+        lifecycleScope.launch {
+            lensViewModel.events.collect { event ->
+                when (event) {
+                    is LensEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
+                    is LensEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { lensViewModel.deleteLens(event.id) }))
+                }
+            }
+        }
+        lifecycleScope.launch {
+            accessoryViewModel.events.collect { event ->
+                when (event) {
+                    is AccessoryEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.name)))
+                    is AccessoryEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { accessoryViewModel.delete(event.id) }))
+                }
+            }
+        }
+        lifecycleScope.launch {
+            filmRollViewModel.events.collect { event ->
+                when (event) {
+                    is FilmRollEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { filmRollViewModel.delete(event.id) }))
+                }
+            }
+        }
 
         mExportViewModel = ViewModelProvider(this)[ExportProgressViewModel::class.java]
         mExportViewModel!!.workInfos.observe(this, Observer { listOfWorkInfo ->
@@ -261,7 +294,7 @@ class MainActivity : AppCompatActivity() {
         val filtervalue = savedInstanceState?.getStringArrayList("filmroll_filtervalue") ?: arrayListOf("")
         mainViewModel.currentFilter = Pair(filtertype, filtervalue)
         if (filtertype != 0) {
-            mainViewModel.currentSubtitle = getFilterLabel(mainViewModel.currentFilter)
+            mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
         }
         
         val routeMap = mapOf(ID_FILMROLL to ROUTE_FILMROLLS, ID_CAMERA to ROUTE_CAMERAS, ID_LENS to ROUTE_LENSES, ID_ACCESSORY to ROUTE_ACCESSORIES, ID_FAVORITES to ROUTE_FAVORITES)
@@ -281,33 +314,8 @@ class MainActivity : AppCompatActivity() {
         cameraViewModel.load()
         lensViewModel.load()
 
-        val dao = TrisquelDao(this)
-        dao.connection()
-        val dbConvForAndroid11Done = dao.getConversionState() >= 1
-        dao.close()
-
         val isDbConvActive = mDbConvViewModel?.workInfos?.value?.firstOrNull()?.state?.isFinished == false
-        if(!dbConvForAndroid11Done && !isDbConvActive) {
-            val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/")
-            startActivity(Intent(Intent.ACTION_VIEW, uri))
-            return
-        }
-
-        val lastVersion = userPreferencesRepository.getLastVersion()
-        if (0 < lastVersion && lastVersion < Util.TRISQUEL_VERSION) {
-            mainViewModel.showDialog(ActiveDialog.Confirm(
-                title = "Trisquel",
-                message = getString(R.string.warning_newversion),
-                positive = getString(R.string.show_release_notes),
-                negative = getString(R.string.close),
-                onConfirm = {
-                    val uri = Uri.parse(RELEASE_NOTES_URL)
-                    val i = Intent(Intent.ACTION_VIEW, uri)
-                    startActivity(i)
-                }
-            ))
-        }
-        userPreferencesRepository.setLastVersion(Util.TRISQUEL_VERSION)
+        mainViewModel.checkAppStartupState(isDbConvActive, Util.TRISQUEL_VERSION)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -327,47 +335,9 @@ class MainActivity : AppCompatActivity() {
         pendingImportMode?.let { outState.putInt("pending_import_mode", it) }
     }
 
-    fun getPinnedFilters(): ArrayList<Pair<Int, ArrayList<String>>>{
-        return userPreferencesRepository.getPinnedFilters()
-    }
 
-    fun addPinnedFilter(newfilter: Pair<Int, ArrayList<String>>){
-        userPreferencesRepository.addPinnedFilter(newfilter)
-    }
 
-    fun removePinnedFilter(filter: Pair<Int, ArrayList<String>>){
-        userPreferencesRepository.removePinnedFilter(filter)
-    }
 
-    fun getFilterLabel(f: Pair<Int, ArrayList<String>>): String {
-        return when(f.first) {
-            1 -> {
-                val dao = TrisquelDao(this)
-                dao.connection()
-                val c = dao.getCamera(f.second[0].toInt())
-                dao.close()
-                if (c != null) "📷 " + c.manufacturer + " " + c.modelName else ""
-            }
-            2 -> "🎞 " + f.second.joinToString(" ")
-            else -> ""
-        }
-    }
-
-    fun checkSQLiteFileFormat(pfd: ParcelFileDescriptor): Boolean{
-        val header = byteArrayOf(
-                0x53, 0x51, 0x4c, 0x69,
-                0x74, 0x65, 0x20, 0x66,
-                0x6f, 0x72, 0x6d, 0x61,
-                0x74, 0x20, 0x33, 0x00)
-        try {
-            val fis = FileInputStream(pfd.fileDescriptor)
-            val buffer = ByteArray(16)
-            val readsize = fis.read(buffer)
-            return readsize == 16 && header.contentEquals(buffer)
-        }catch (e: Exception){
-            return false
-        }
-    }
 
     private fun checkPermAndExportDB(mode: Int) {
         val readDenied = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -430,55 +400,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onCameraDeleteRequest(item: CameraSpec) {
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        val used = dao.getCameraUsage(item.id)
-        dao.close()
-        if (used) {
-            mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName)))
-        } else {
-            mainViewModel.showDialog(ActiveDialog.Confirm(
-                message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
-                onConfirm = { cameraViewModel.deleteCamera(item.id) }
-            ))
-        }
+        cameraViewModel.requestDeleteCamera(item)
     }
 
     fun onLensDeleteRequest(item: LensSpec) {
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        val used = dao.getLensUsage(item.id)
-        dao.close()
-        if (used) {
-            mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(item.modelName)))
-        } else {
-            mainViewModel.showDialog(ActiveDialog.Confirm(
-                message = getString(R.string.msg_confirm_remove_item).format(item.modelName),
-                onConfirm = { lensViewModel.deleteLens(item.id) }
-            ))
-        }
+        lensViewModel.requestDeleteLens(item)
     }
 
     fun onFilmRollDeleteRequest(item: FilmRoll) {
-        mainViewModel.showDialog(ActiveDialog.Confirm(
-            message = getString(R.string.msg_confirm_remove_item).format(item.name),
-            onConfirm = { filmRollViewModel.delete(item.id) }
-        ))
+        filmRollViewModel.requestDelete(item)
     }
 
     fun onAccessoryDeleteRequest(accessory: Accessory) {
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        val accessoryUsed = dao.getAccessoryUsed(accessory.id)
-        dao.close()
-        if (accessoryUsed) {
-            mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(accessory.name)))
-        } else {
-            mainViewModel.showDialog(ActiveDialog.Confirm(
-                message = getString(R.string.msg_confirm_remove_item).format(accessory.name),
-                onConfirm = { accessoryViewModel.delete(accessory.id) }
-            ))
-        }
+        accessoryViewModel.requestDeleteAccessory(accessory)
     }
 
     fun onPhotoInteraction(item: Photo?, list: List<Photo?>) {
@@ -584,64 +518,41 @@ class MainActivity : AppCompatActivity() {
                             filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(0, ""))
                         },
                         onFilterByCameraClick = {
-                            val dao = TrisquelDao(this@MainActivity)
-                            dao.connection()
-                            val cs = dao.allCameras
-                            dao.close()
-                            cs.sortBy { it.manufacturer + " " + it.modelName }
-                            mainViewModel.showDialog(ActiveDialog.Select(
-                                items = cs.map { it.manufacturer + " " + it.modelName }.toTypedArray(),
-                                ids = cs.map { it.id },
-                                onSelected = { _, id ->
-                                    if (id != null) {
-                                        mainViewModel.currentFilter = Pair(1, arrayListOf(id.toString()))
-                                        mainViewModel.currentSubtitle = getFilterLabel(mainViewModel.currentFilter)
-                                        filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(1, id.toString()))
-                                    }
+                            mainViewModel.requestFilterByCamera { _, id ->
+                                if (id != null) {
+                                    mainViewModel.currentFilter = Pair(1, arrayListOf(id.toString()))
+                                    mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
+                                    filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(1, id.toString()))
                                 }
-                            ))
+                            }
                         },
                         onFilterByFilmBrandClick = {
-                            val dao = TrisquelDao(this@MainActivity)
-                            dao.connection()
-                            val fbs = dao.availableFilmBrandList
-                            dao.close()
-                            mainViewModel.showDialog(ActiveDialog.Select(
-                                items = fbs.map { it.first + " " + it.second }.toTypedArray(),
-                                onSelected = { which, _ ->
-                                    mainViewModel.currentFilter = Pair(2, arrayListOf(fbs[which].first, fbs[which].second))
-                                    mainViewModel.currentSubtitle = getFilterLabel(mainViewModel.currentFilter)
-                                    filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(2, fbs[which].second))
-                                }
-                            ))
+                            mainViewModel.requestFilterByFilmBrand { fb ->
+                                mainViewModel.currentFilter = Pair(2, arrayListOf(fb.first, fb.second))
+                                mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
+                                filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(2, fb.second))
+                            }
                         },
                         onPinnedFilterClick = { f ->
                             mainViewModel.currentFilter = f
-                            mainViewModel.currentSubtitle = getFilterLabel(f)
+                            mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(f)
                             val searchStr = if(f.first == 1) f.second[0].toInt().toString() else f.second[1]
                             filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(f.first, searchStr))
                         },
                         onSearchClick = {
-                            val dao = TrisquelDao(this@MainActivity)
-                            dao.connection()
-                            val tags = dao.allTags
-                            dao.close()
-                            mainViewModel.showDialog(ActiveDialog.SearchCond(
-                                title = getString(R.string.title_dialog_search_by_tags),
-                                labels = tags.sortedBy { it.label }.map { it.label }.toTypedArray(),
-                                onSearch = { checkedLabels ->
-                                    if (checkedLabels.isNotEmpty()) {
-                                        val intent = Intent(application, SearchActivity::class.java)
-                                        intent.putExtra("tags", checkedLabels)
-                                        searchLauncher.launch(intent)
-                                    }
+                            val title = getString(R.string.title_dialog_search_by_tags)
+                            mainViewModel.requestSearch(title) { checkedLabels ->
+                                if (checkedLabels.isNotEmpty()) {
+                                    val intent = Intent(application, SearchActivity::class.java)
+                                    intent.putExtra("tags", checkedLabels)
+                                    searchLauncher.launch(intent)
                                 }
-                            ))
+                            }
                         },
-                        onPinFilterClick = { addPinnedFilter(mainViewModel.currentFilter) },
-                        onUnpinFilterClick = { removePinnedFilter(mainViewModel.currentFilter) },
-                        getPinnedFilters = { getPinnedFilters() },
-                        getFilterLabel = { getFilterLabel(it) }
+                        onPinFilterClick = { mainViewModel.addPinnedFilter(mainViewModel.currentFilter) },
+                        onUnpinFilterClick = { mainViewModel.removePinnedFilter(mainViewModel.currentFilter) },
+                        getPinnedFilters = { mainViewModel.getPinnedFilters() },
+                        getFilterLabel = { mainViewModel.getFilterLabel(it) }
                     )
                 }
             ) { paddingValues ->

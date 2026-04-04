@@ -9,12 +9,21 @@ import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.util.Date
+
+sealed class FilmRollEvent {
+    data class ShowDeleteConfirm(val id: Int, val name: String) : FilmRollEvent()
+}
 
 class FilmRollViewModel(application: Application?) : AndroidViewModel(
     application!!
 ) {
     private val mRepository: TrisquelRepo
+
+    private val _events = MutableSharedFlow<FilmRollEvent>()
+    val events = _events.asSharedFlow()
 
     init {
         mRepository = TrisquelRepo(application)
@@ -68,6 +77,10 @@ class FilmRollViewModel(application: Application?) : AndroidViewModel(
     fun refresh(id: Int) = viewModelScope.launch {
         val entity = mRepository.getFilmRoll(id)
         mRepository.upsertFilmRoll(entity.value!!)
+    }
+
+    fun requestDelete(filmRoll: FilmRoll) = viewModelScope.launch {
+        _events.emit(FilmRollEvent.ShowDeleteConfirm(filmRoll.id, filmRoll.name))
     }
 
     fun delete(id : Int)  = viewModelScope.launch {

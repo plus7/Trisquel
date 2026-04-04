@@ -9,12 +9,22 @@ import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.util.Date
+
+sealed class AccessoryEvent {
+    data class ShowCannotDeleteAlert(val name: String) : AccessoryEvent()
+    data class ShowDeleteConfirm(val id: Int, val name: String) : AccessoryEvent()
+}
 
 class AccessoryViewModel(application: Application?) : AndroidViewModel(
     application!!
 ) {
     private val mRepository: TrisquelRepo
+
+    private val _events = MutableSharedFlow<AccessoryEvent>()
+    val events = _events.asSharedFlow()
 
     init {
         mRepository = TrisquelRepo(application)
@@ -56,5 +66,17 @@ class AccessoryViewModel(application: Application?) : AndroidViewModel(
 
     fun delete(id : Int)  = viewModelScope.launch {
         mRepository.deleteAccessory(id)
+    }
+
+    fun requestDeleteAccessory(accessory: Accessory) = viewModelScope.launch(Dispatchers.IO) {
+        val dao = TrisquelDao(getApplication())
+        dao.connection()
+        val used = dao.getAccessoryUsed(accessory.id)
+        dao.close()
+        if (used) {
+            _events.emit(AccessoryEvent.ShowCannotDeleteAlert(accessory.name))
+        } else {
+            _events.emit(AccessoryEvent.ShowDeleteConfirm(accessory.id, accessory.name))
+        }
     }
 }

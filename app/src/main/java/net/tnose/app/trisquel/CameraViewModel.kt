@@ -9,9 +9,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
+sealed class CameraEvent {
+    data class ShowCannotDeleteAlert(val modelName: String) : CameraEvent()
+    data class ShowDeleteConfirm(val id: Int, val modelName: String) : CameraEvent()
+}
+
 class CameraViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = TrisquelDao(application)
     
+    private val _events = MutableSharedFlow<CameraEvent>()
+    val events = _events.asSharedFlow()
+
     private val _cameras = MutableLiveData<List<CameraSpec>>(emptyList())
     val cameras: LiveData<List<CameraSpec>> = _cameras
 
@@ -109,5 +120,16 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         dao.deleteCamera(id)
         dao.close()
         load()
+    }
+
+    fun requestDeleteCamera(item: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
+        dao.connection()
+        val used = dao.getCameraUsage(item.id)
+        dao.close()
+        if (used) {
+            _events.emit(CameraEvent.ShowCannotDeleteAlert(item.modelName))
+        } else {
+            _events.emit(CameraEvent.ShowDeleteConfirm(item.id, item.modelName))
+        }
     }
 }

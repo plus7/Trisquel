@@ -9,9 +9,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
+sealed class LensEvent {
+    data class ShowCannotDeleteAlert(val modelName: String) : LensEvent()
+    data class ShowDeleteConfirm(val id: Int, val modelName: String) : LensEvent()
+}
+
 class LensViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = TrisquelDao(application)
     
+    private val _events = MutableSharedFlow<LensEvent>()
+    val events = _events.asSharedFlow()
+
     private val _lenses = MutableLiveData<List<LensSpec>>(emptyList())
     val lenses: LiveData<List<LensSpec>> = _lenses
 
@@ -91,5 +102,16 @@ class LensViewModel(application: Application) : AndroidViewModel(application) {
         dao.deleteLens(id)
         dao.close()
         load()
+    }
+
+    fun requestDeleteLens(item: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
+        dao.connection()
+        val used = dao.getLensUsage(item.id)
+        dao.close()
+        if (used) {
+            _events.emit(LensEvent.ShowCannotDeleteAlert(item.modelName))
+        } else {
+            _events.emit(LensEvent.ShowDeleteConfirm(item.id, item.modelName))
+        }
     }
 }
