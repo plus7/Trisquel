@@ -17,32 +17,22 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.preference.PreferenceManager
 import androidx.work.WorkInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -75,6 +65,7 @@ class MainActivity : AppCompatActivity() {
     private var mImportViewModel: ImportProgressViewModel? = null
     private var mDbConvViewModel: DbConvProgressViewModel? = null
     private val mainViewModel: MainViewModel by viewModels()
+    private lateinit var userPreferencesRepository: UserPreferencesRepository
 
     internal var currentRoute = ROUTE_FILMROLLS
 
@@ -187,6 +178,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        userPreferencesRepository = UserPreferencesRepository(this)
         
         cameraViewModel = ViewModelProvider(this)[CameraViewModel::class.java]
         lensViewModel = ViewModelProvider(this)[LensViewModel::class.java]
@@ -285,8 +277,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val lastVersion = pref.getInt("last_version", 0)
+        val lastVersion = userPreferencesRepository.getLastVersion()
         if (0 < lastVersion && lastVersion < Util.TRISQUEL_VERSION) {
             mainViewModel.showDialog(ActiveDialog.Confirm(
                 title = "Trisquel",
@@ -300,7 +291,7 @@ class MainActivity : AppCompatActivity() {
                 }
             ))
         }
-        pref.edit().putInt("last_version", Util.TRISQUEL_VERSION).apply()
+        userPreferencesRepository.setLastVersion(Util.TRISQUEL_VERSION)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -321,53 +312,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun getPinnedFilters(): ArrayList<Pair<Int, ArrayList<String>>>{
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString("pinned_filters", "[]")
-        val array = JSONArray(prefstr)
-        val arrayOfFilter = ArrayList<Pair<Int, ArrayList<String>>>()
-        for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            val filtertype = obj.getInt("type")
-            val jsonfiltervalues = obj.getJSONArray("values")
-            val filtervalues = ArrayList<String>()
-            for (j in 0 until jsonfiltervalues.length()){
-                filtervalues.add(jsonfiltervalues.getString(j))
-            }
-            arrayOfFilter.add(Pair(filtertype, filtervalues))
-        }
-        return arrayOfFilter
+        return userPreferencesRepository.getPinnedFilters()
     }
 
     fun addPinnedFilter(newfilter: Pair<Int, ArrayList<String>>){
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString("pinned_filters", "[]")
-        val array = JSONArray(prefstr)
-        val jsonfilter = JSONObject()
-        jsonfilter.put("type", newfilter.first)
-        jsonfilter.put("values", JSONArray(newfilter.second))
-        array.put(jsonfilter)
-        pref.edit().putString("pinned_filters", array.toString()).apply()
+        userPreferencesRepository.addPinnedFilter(newfilter)
     }
 
     fun removePinnedFilter(filter: Pair<Int, ArrayList<String>>){
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString("pinned_filters", "[]")
-        val array = JSONArray(prefstr)
-
-        for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            val filtertype = obj.getInt("type")
-            val jsonfiltervalues = obj.getJSONArray("values")
-            val filtervalues = ArrayList<String>()
-            for (j in 0 until jsonfiltervalues.length()){
-                filtervalues.add(jsonfiltervalues.getString(j))
-            }
-            if(filtertype == filter.first && filtervalues.containsAll(filter.second)){
-                array.remove(i)
-                break
-            }
-        }
-        pref.edit().putString("pinned_filters", array.toString()).apply()
+        userPreferencesRepository.removePinnedFilter(filter)
     }
 
     fun getFilterLabel(f: Pair<Int, ArrayList<String>>): String {
@@ -520,15 +473,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleSort(route: String, which: Int) {
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val key = when (route) {
-            ROUTE_FILMROLLS -> "filmroll_sortkey"
-            ROUTE_CAMERAS -> "camera_sortkey"
-            ROUTE_LENSES -> "lens_sortkey"
-            ROUTE_ACCESSORIES -> "accessory_sortkey"
-            else -> ""
-        }
-        if (key.isNotEmpty()) pref.edit().putInt(key, which).apply()
+        userPreferencesRepository.setSortKey(route, which)
 
         when (route) {
             ROUTE_FILMROLLS -> filmRollViewModel.viewRule.value = Pair(which, filmRollViewModel.viewRule.value?.second ?: Pair(0, ""))
@@ -609,14 +554,7 @@ class MainActivity : AppCompatActivity() {
                                 ROUTE_ACCESSORIES -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_accessory_type))
                                 else -> arrayOf()
                             }
-                            val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-                            val key = when(observedRoute){
-                                ROUTE_FILMROLLS -> pref.getInt("filmroll_sortkey", 0)
-                                ROUTE_CAMERAS -> pref.getInt("camera_sortkey", 0)
-                                ROUTE_LENSES -> pref.getInt("lens_sortkey", 0)
-                                ROUTE_ACCESSORIES -> pref.getInt("accessory_sortkey", 0)
-                                else -> 0
-                            }
+                            val key = userPreferencesRepository.getSortKey(observedRoute)
                             mainViewModel.showDialog(ActiveDialog.SingleChoice(
                                 title = getString(R.string.label_sort_by),
                                 items = arr,
@@ -627,7 +565,7 @@ class MainActivity : AppCompatActivity() {
                         onFilterNoFilterClick = {
                             mainViewModel.currentFilter = Pair(0, arrayListOf())
                             mainViewModel.currentSubtitle = ""
-                            filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(0, ""))
+                            filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(0, ""))
                         },
                         onFilterByCameraClick = {
                             val dao = TrisquelDao(this@MainActivity)
@@ -642,7 +580,7 @@ class MainActivity : AppCompatActivity() {
                                     if (id != null) {
                                         mainViewModel.currentFilter = Pair(1, arrayListOf(id.toString()))
                                         mainViewModel.currentSubtitle = getFilterLabel(mainViewModel.currentFilter)
-                                        filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(1, id.toString()))
+                                        filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(1, id.toString()))
                                     }
                                 }
                             ))
@@ -657,7 +595,7 @@ class MainActivity : AppCompatActivity() {
                                 onSelected = { which, _ ->
                                     mainViewModel.currentFilter = Pair(2, arrayListOf(fbs[which].first, fbs[which].second))
                                     mainViewModel.currentSubtitle = getFilterLabel(mainViewModel.currentFilter)
-                                    filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(2, fbs[which].second))
+                                    filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(2, fbs[which].second))
                                 }
                             ))
                         },
@@ -665,7 +603,7 @@ class MainActivity : AppCompatActivity() {
                             mainViewModel.currentFilter = f
                             mainViewModel.currentSubtitle = getFilterLabel(f)
                             val searchStr = if(f.first == 1) f.second[0].toInt().toString() else f.second[1]
-                            filmRollViewModel.viewRule.value = Pair(PreferenceManager.getDefaultSharedPreferences(this@MainActivity).getInt("filmroll_sortkey", 0), Pair(f.first, searchStr))
+                            filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(f.first, searchStr))
                         },
                         onSearchClick = {
                             val dao = TrisquelDao(this@MainActivity)
