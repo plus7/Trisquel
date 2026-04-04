@@ -1,8 +1,10 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -13,6 +15,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
@@ -503,17 +506,39 @@ class EditPhotoActivity : AppCompatActivity() {
         return true
     }
 
+    private inner class PickImageUriContract : ActivityResultContract<Any, List<Uri>>() {
+        override fun createIntent(context: Context, input: Any): Intent {
+            val intent =
+                Matisse.from(this@EditPhotoActivity)
+                .choose(MimeType.ofImage())
+                .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
+                .capture(true)
+                .countable(true)
+                .maxSelectable(40)
+                .thumbnailScale(0.85f)
+                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                .imageEngine(Glide4Engine())
+                .createIntent()
+            return intent!!
+        }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): List<Uri> {
+            if (resultCode == Activity.RESULT_OK) {
+                val uris = Matisse.obtainResult(intent)
+                return uris
+            }
+            return emptyList()
+        }
+    }
+
+    private val pickImageLauncher = registerForActivityResult(PickImageUriContract()) {
+        val newPaths = it.filterNotNull().map { it.toString() }
+        supplementalImages = (supplementalImages + newPaths).distinct()
+        isDirty = true
+    }
+
     fun openImagePicker() {
-        Matisse.from(this)
-            .choose(MimeType.ofImage())
-            .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
-            .capture(true)
-            .countable(true)
-            .maxSelectable(40)
-            .thumbnailScale(0.85f)
-            .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-            .imageEngine(Glide4Engine())
-            .forResult(REQCODE_IMAGES)
+        pickImageLauncher.launch(42)
     }
 
     fun checkPermAndOpenImagePicker() {
@@ -557,12 +582,6 @@ class EditPhotoActivity : AppCompatActivity() {
             } else if (resultCode == MapsActivity.RESULT_DELETE) {
                 if (999.0 != latitude || 999.0 != longitude) isDirty = true
                 setLatLng(999.0, 999.0)
-            }
-            REQCODE_IMAGES -> if (resultCode == RESULT_OK && data != null) {
-                val uris = Matisse.obtainResult(data)
-                val newPaths = uris.filterNotNull().map { it.toString() }
-                supplementalImages = (supplementalImages + newPaths).distinct()
-                isDirty = true
             }
             REQCODE_ADD_LENS -> if (resultCode == RESULT_OK && data != null) {
                 val bundle = data.extras

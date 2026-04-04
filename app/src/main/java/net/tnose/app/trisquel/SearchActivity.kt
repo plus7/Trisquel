@@ -1,14 +1,18 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -130,17 +134,47 @@ class SearchActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun editThumbPhoto() {
-        Matisse.from(this)
-            .choose(MimeType.ofImage())
-            .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
-            .capture(true)
-            .countable(true)
-            .maxSelectable(1)
-            .thumbnailScale(0.85f)
-            .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-            .imageEngine(Glide4Engine())
-            .forResult(REQCODE_SELECT_THUMBNAIL)
+    private inner class PickImageUriContract : ActivityResultContract<Any, List<Uri>>() {
+        override fun createIntent(context: Context, input: Any): Intent {
+            val intent =
+                Matisse.from(this@SearchActivity)
+                    .choose(MimeType.ofImage())
+                    .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
+                    .capture(true)
+                    .countable(true)
+                    .maxSelectable(1)
+                    .thumbnailScale(0.85f)
+                    .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                    .imageEngine(Glide4Engine())
+                    .createIntent()
+            return intent!!
+        }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): List<Uri> {
+            if (resultCode == Activity.RESULT_OK) {
+                val uris = Matisse.obtainResult(intent)
+                return uris
+            }
+            return emptyList()
+        }
+    }
+
+    private val pickImageLauncher = registerForActivityResult(PickImageUriContract()) {
+        if (it.isEmpty()) {
+            thumbnailEditingPhoto = null
+        } else {
+            val p = thumbnailEditingPhoto
+            if (p != null) {
+                p.supplementalImages.add(it[0].toString())
+                searchViewModel.update(p.toEntity())
+                thumbnailEditingPhoto = null
+                isDirty = true
+            }
+        }
+    }
+
+    fun editThumbPhoto(){
+        pickImageLauncher.launch(42)
     }
 
     private fun checkPermAndEditThumbPhoto() {
@@ -194,25 +228,6 @@ class SearchActivity : AppCompatActivity() {
     fun onFavoriteClick(item: Photo) {
         item.favorite = !item.favorite
         searchViewModel.update(item.toEntity())
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode != RESULT_OK || data == null) {
-            if (requestCode == REQCODE_SELECT_THUMBNAIL) thumbnailEditingPhoto = null
-            return
-        }
-
-        if (requestCode == REQCODE_SELECT_THUMBNAIL) {
-            val uris = Matisse.obtainResult(data)
-            val p = thumbnailEditingPhoto
-            if (uris != null && uris.isNotEmpty() && p != null) {
-                p.supplementalImages.add(uris[0].toString())
-                searchViewModel.update(p.toEntity())
-                thumbnailEditingPhoto = null
-                isDirty = true
-            }
-        }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

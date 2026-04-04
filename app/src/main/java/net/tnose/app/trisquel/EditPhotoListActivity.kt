@@ -1,20 +1,23 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -187,11 +190,7 @@ class EditPhotoListActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if(data == null){
-            thumbnailEditingPhoto = null
-            return
-        }
-
+        if (data == null) return
         val bundle = data.extras
         val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
         when (requestCode) {
@@ -222,15 +221,6 @@ class EditPhotoListActivity : AppCompatActivity() {
                 mFilmRoll = f
                 mFilmRollViewModel!!.update(f.toEntity())
             }
-            REQCODE_SELECT_THUMBNAIL -> if (resultCode == RESULT_OK) {
-                val uris = Matisse.obtainResult(data)
-                val p = thumbnailEditingPhoto
-                if(uris.size > 0 && p != null){
-                    p.supplementalImages.add(uris[0].toString())
-                    updatePhoto(p, null)
-                    thumbnailEditingPhoto = null
-                }
-            }
         }
     }
 
@@ -242,17 +232,46 @@ class EditPhotoListActivity : AppCompatActivity() {
         startActivityForResult(intent, REQCODE_EDIT_PHOTO)
     }
 
+    private inner class PickImageUriContract : ActivityResultContract<Any, List<Uri>>() {
+        override fun createIntent(context: Context, input: Any): Intent {
+            val intent =
+                Matisse.from(this@EditPhotoListActivity)
+                    .choose(MimeType.ofImage())
+                    .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
+                    .capture(true)
+                    .countable(true)
+                    .maxSelectable(1)
+                    .thumbnailScale(0.85f)
+                    .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+                    .imageEngine(Glide4Engine())
+                    .createIntent()
+            return intent!!
+        }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): List<Uri> {
+            if (resultCode == Activity.RESULT_OK) {
+                val uris = Matisse.obtainResult(intent)
+                return uris
+            }
+            return emptyList()
+        }
+    }
+
+    private val pickImageLauncher = registerForActivityResult(PickImageUriContract()) {
+        if(it.isEmpty()){
+            thumbnailEditingPhoto = null
+        } else {
+            val p = thumbnailEditingPhoto
+            if (p != null) {
+                p.supplementalImages.add(it[0].toString())
+                updatePhoto(p, null)
+                thumbnailEditingPhoto = null
+            }
+        }
+    }
+
     fun editThumbPhoto(){
-        Matisse.from(this)
-                .choose(MimeType.ofImage())
-                .captureStrategy(CaptureStrategy(true, "net.tnose.app.trisquel.provider", "Camera"))
-                .capture(true)
-                .countable(true)
-                .maxSelectable(1)
-                .thumbnailScale(0.85f)
-                .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-                .imageEngine(Glide4Engine())
-                .forResult(REQCODE_SELECT_THUMBNAIL)
+        pickImageLauncher.launch(42)
     }
 
     fun checkPermAndEditThumbPhoto(){
