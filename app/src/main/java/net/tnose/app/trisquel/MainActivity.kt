@@ -61,9 +61,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var accessoryViewModel: AccessoryViewModel
     private lateinit var filmRollViewModel: FilmRollViewModel
 
-    private var mExportViewModel: ExportProgressViewModel? = null
-    private var mImportViewModel: ImportProgressViewModel? = null
-    private var mDbConvViewModel: DbConvProgressViewModel? = null
     private val mainViewModel: MainViewModel by viewModels()
     private lateinit var userPreferencesRepository: UserPreferencesRepository
 
@@ -71,59 +68,38 @@ class MainActivity : AppCompatActivity() {
 
     private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            handleBackupDirChosen(result.data, 0)
+            mainViewModel.onBackupDirChosen(result.data?.data, 0)
         }
     }
 
     private val backupDirChosenForFullExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            handleBackupDirChosen(result.data, 1)
+            mainViewModel.onBackupDirChosen(result.data?.data, 1)
         }
     }
 
     private val zipFileChosenForMergeIpLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            handleZipFileChosen(result.data, 0)
+            mainViewModel.onImportFileChosen(result.data?.data, 0)
         }
     }
 
     private val zipFileChosenForReplIpLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            handleZipFileChosen(result.data, 1)
+            mainViewModel.onImportFileChosen(result.data?.data, 1)
         }
     }
 
-    @SuppressLint("SimpleDateFormat")
     private val dbFileChosenForReplDbLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            handleDbFileChosen(result.data)
+            mainViewModel.onDbFileChosen(result.data?.data, contentResolver)
         }
-    }
-
-    fun handleBackupDirChosen(data: Intent?, mode: Int) {
-        val uri = data?.data ?: return
-        mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_backup), 0.0, "") { mExportViewModel?.cancelExport() })
-        mExportViewModel?.doExport(uri.toString(), mode)
-    }
-
-    fun handleZipFileChosen(data: Intent?, mode: Int) {
-        val uri = data?.data ?: return
-        Log.d("ZipFile", uri.toString())
-        mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_import), 0.0, "") { mImportViewModel?.cancelExport() })
-        mImportViewModel?.doImport(uri.toString(), mode)
-    }
-
-    @SuppressLint("SimpleDateFormat")
-    fun handleDbFileChosen(data: Intent?) {
-        val uri = data?.data ?: return
-        Log.d("DBFile", uri.toString())
-        mainViewModel.requestRestoreDatabase(uri, contentResolver)
     }
 
     fun handleExportPermissionsResult(permissions: Map<String, Boolean>) {
         val granted = permissions.entries.all { it.value }
         if (granted) {
-            pendingExportMode?.let { exportDBDialog(it) }
+            pendingExportMode?.let { mainViewModel.requestBackup(it, true) }
         } else {
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
         }
@@ -133,7 +109,7 @@ class MainActivity : AppCompatActivity() {
     fun handleImportPermissionsResult(permissions: Map<String, Boolean>) {
         val granted = permissions.entries.all { it.value }
         if (granted) {
-            pendingImportMode?.let { importDBDialog(it) }
+            pendingImportMode?.let { mainViewModel.requestImport(it, true) }
         } else {
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
         }
@@ -199,6 +175,39 @@ class MainActivity : AppCompatActivity() {
                             }
                         ))
                     }
+                    is MainEvent.ShowToast -> {
+                        Toast.makeText(this@MainActivity, event.message, Toast.LENGTH_LONG).show()
+                    }
+                    is MainEvent.RequestExportPermissions -> {
+                        pendingExportMode = event.mode
+                        requestExportPermissionsLauncher.launch(PERMISSIONS)
+                    }
+                    is MainEvent.RequestImportPermissions -> {
+                        pendingImportMode = event.mode
+                        requestImportPermissionsLauncher.launch(PERMISSIONS)
+                    }
+                    is MainEvent.LaunchExportDocumentTree -> {
+                        val chooserIntent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+                        chooserIntent.addCategory(Intent.CATEGORY_OPENABLE)
+                        chooserIntent.type = "application/zip"
+                        chooserIntent.putExtra(Intent.EXTRA_TITLE, event.fileName)
+                        if(event.mode == 0) backupDirChosenForSlimExLauncher.launch(chooserIntent)
+                        else backupDirChosenForFullExLauncher.launch(chooserIntent)
+                    }
+                    is MainEvent.LaunchImportDocumentPicker -> {
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                        intent.addCategory(Intent.CATEGORY_OPENABLE)
+                        if(event.mode == 2){
+                            intent.type = "*/*"
+                        }else {
+                            intent.type = "application/zip"
+                        }
+                        when(event.mode){
+                            0 -> zipFileChosenForMergeIpLauncher.launch(intent)
+                            1 -> zipFileChosenForReplIpLauncher.launch(intent)
+                            else -> dbFileChosenForReplDbLauncher.launch(intent)
+                        }
+                    }
                 }
             }
         }
@@ -234,59 +243,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        mExportViewModel = ViewModelProvider(this)[ExportProgressViewModel::class.java]
-        mExportViewModel!!.workInfos.observe(this, Observer { listOfWorkInfo ->
-            if (listOfWorkInfo.isNullOrEmpty()) return@Observer
-            val workInfo = listOfWorkInfo[0]
-            if (workInfo.state.isFinished) {
-                var status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
-                if (status == "") {
-                    if (workInfo.state == WorkInfo.State.CANCELLED) status = "Backup cancelled."
-                    else if (workInfo.state == WorkInfo.State.FAILED) status = "Backup failed."
-                }
-                mainViewModel.dismissDialog()
-                Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
-            } else {
-                val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
-                val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
-                mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_backup), progress, status) { mExportViewModel?.cancelExport() })
-            }
-        })
-        
-        mImportViewModel = ViewModelProvider(this)[ImportProgressViewModel::class.java]
-        mImportViewModel!!.workInfos.observe(this, Observer { listOfWorkInfo ->
-            if (listOfWorkInfo.isNullOrEmpty()) return@Observer
-            val workInfo = listOfWorkInfo[0]
-            if (workInfo.state.isFinished) {
-                var status = workInfo.outputData.getString(ImportWorker.PARAM_STATUS) ?: ""
-                if (status == "") {
-                    if (workInfo.state == WorkInfo.State.CANCELLED) status = "Import cancelled."
-                    else if (workInfo.state == WorkInfo.State.FAILED) status = "Import failed."
-                }
-                mainViewModel.dismissDialog()
-                Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
-            } else {
-                val status = workInfo.progress.getString(ImportWorker.PARAM_STATUS) ?: ""
-                val progress = workInfo.progress.getDouble(ImportWorker.PARAM_PERCENTAGE, 0.0)
-                mainViewModel.showDialog(ActiveDialog.Progress(getString(R.string.title_import), progress, status) { mImportViewModel?.cancelExport() })
-            }
-        })
-        
-        mDbConvViewModel = ViewModelProvider(this)[DbConvProgressViewModel::class.java]
-        mDbConvViewModel!!.workInfos.observe(this, Observer { listOfWorkInfo ->
-            if (listOfWorkInfo.isNullOrEmpty()) return@Observer
-            val workInfo = listOfWorkInfo[0]
-            if (workInfo.state.isFinished) {
-                val status = workInfo.outputData.getString(DbConvWorker.PARAM_STATUS) ?: ""
-                mainViewModel.dismissDialog()
-                Toast.makeText(applicationContext, status, Toast.LENGTH_LONG).show()
-            } else {
-                val status = workInfo.progress.getString(DbConvWorker.PARAM_STATUS) ?: ""
-                val progress = workInfo.progress.getDouble(DbConvWorker.PARAM_PERCENTAGE, 0.0)
-                mainViewModel.showDialog(ActiveDialog.Progress("DB Conversion", progress, status, {}))
-            }
-        })
-
         pendingExportMode = if (savedInstanceState?.containsKey("pending_export_mode") == true) savedInstanceState.getInt("pending_export_mode") else null
         pendingImportMode = if (savedInstanceState?.containsKey("pending_import_mode") == true) savedInstanceState.getInt("pending_import_mode") else null
 
@@ -314,8 +270,7 @@ class MainActivity : AppCompatActivity() {
         cameraViewModel.load()
         lensViewModel.load()
 
-        val isDbConvActive = mDbConvViewModel?.workInfos?.value?.firstOrNull()?.state?.isFinished == false
-        mainViewModel.checkAppStartupState(isDbConvActive, Util.TRISQUEL_VERSION)
+        mainViewModel.checkAppStartupState(Util.TRISQUEL_VERSION)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -339,64 +294,14 @@ class MainActivity : AppCompatActivity() {
 
 
 
-    private fun checkPermAndExportDB(mode: Int) {
+    private fun checkPermissions(): Boolean {
         val readDenied = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
         else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         val mediaLocDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
         val notificationDenied = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) false
         else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-
-        if (readDenied || mediaLocDenied || notificationDenied){
-            pendingExportMode = mode
-            requestExportPermissionsLauncher.launch(PERMISSIONS)
-            return
-        }
-        exportDBDialog(mode)
-    }
-
-    private fun checkPermAndImportDB(mode: Int) {
-        val readDenied = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED
-        else ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-        val mediaLocDenied = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION) != PackageManager.PERMISSION_GRANTED
-        val notificationDenied = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) false
-        else ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-
-        if (readDenied || mediaLocDenied || notificationDenied){
-            pendingImportMode = mode
-            requestImportPermissionsLauncher.launch(PERMISSIONS)
-            return
-        }
-        importDBDialog(mode)
-    }
-
-    @SuppressLint("SimpleDateFormat")
-    private fun exportDBDialog(mode: Int) {
-        val chooserIntent = Intent(Intent.ACTION_CREATE_DOCUMENT)
-        chooserIntent.addCategory(Intent.CATEGORY_OPENABLE)
-        chooserIntent.type = "application/zip"
-        val calendar = Calendar.getInstance()
-        val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-        val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
-        chooserIntent.putExtra(Intent.EXTRA_TITLE, backupZipFileName)
-        if(mode==0) backupDirChosenForSlimExLauncher.launch(chooserIntent)
-        else        backupDirChosenForFullExLauncher.launch(chooserIntent)
-    }
-
-    private fun importDBDialog(mode: Int) {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-        intent.addCategory(Intent.CATEGORY_OPENABLE)
-        if(mode == 2){
-            intent.type = "*/*"
-        }else {
-            intent.type = "application/zip"
-        }
-        when(mode){
-            0 -> zipFileChosenForMergeIpLauncher.launch(intent)
-            1 -> zipFileChosenForReplIpLauncher.launch(intent)
-            else -> dbFileChosenForReplDbLauncher.launch(intent)
-        }
+        return !(readDenied || mediaLocDenied || notificationDenied)
     }
 
     fun onCameraDeleteRequest(item: CameraSpec) {
@@ -465,7 +370,7 @@ class MainActivity : AppCompatActivity() {
                     titles = arrayOf(getString(R.string.title_slim_backup), getString(R.string.title_whole_backup), getString(R.string.title_backup_help)),
                     descs = arrayOf(getString(R.string.description_slim_backup), getString(R.string.description_whole_backup), getString(R.string.description_backup_help)),
                     onSelected = { mode ->
-                        if (mode < 2) checkPermAndExportDB(mode)
+                        if (mode < 2) mainViewModel.requestBackup(mode, checkPermissions())
                         else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
                     }
                 ))
@@ -477,7 +382,7 @@ class MainActivity : AppCompatActivity() {
                     titles = arrayOf(getString(R.string.title_merge_zip), getString(R.string.title_import_zip), getString(R.string.title_backup_help)),
                     descs = arrayOf(getString(R.string.description_merge_zip), getString(R.string.description_import_zip), getString(R.string.description_backup_help)),
                     onSelected = { mode ->
-                        if (mode < 2) checkPermAndImportDB(mode)
+                        if (mode < 2) mainViewModel.requestImport(mode, checkPermissions())
                         else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
                     }
                 ))

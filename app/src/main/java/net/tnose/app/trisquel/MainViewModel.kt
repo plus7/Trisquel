@@ -11,11 +11,18 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 
 sealed class MainEvent {
     data class RestoreDatabaseResult(val success: Boolean) : MainEvent()
     object RequireDbConvAction : MainEvent()
     object ShowReleaseNotesConfirm : MainEvent()
+    data class ShowToast(val message: String) : MainEvent()
+    data class RequestExportPermissions(val mode: Int) : MainEvent()
+    data class RequestImportPermissions(val mode: Int) : MainEvent()
+    data class LaunchExportDocumentTree(val mode: Int, val fileName: String) : MainEvent()
+    data class LaunchImportDocumentPicker(val mode: Int) : MainEvent()
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -36,6 +43,113 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var currentSubtitle by mutableStateOf("")
 
     private val userPreferencesRepository = UserPreferencesRepository(application)
+    private val workManager = WorkManager.getInstance(application)
+
+    init {
+        viewModelScope.launch {
+            workManager.getWorkInfosByTagFlow(Util.WORKER_TAG_EXPORT).collect { listOfWorkInfo ->
+                if (listOfWorkInfo.isNullOrEmpty()) return@collect
+                val workInfo = listOfWorkInfo[0]
+                if (workInfo.state.isFinished) {
+                    var status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
+                    if (status == "") {
+                        if (workInfo.state == WorkInfo.State.CANCELLED) status = "Backup cancelled."
+                        else if (workInfo.state == WorkInfo.State.FAILED) status = "Backup failed."
+                    }
+                    dismissDialog()
+                    _events.emit(MainEvent.ShowToast(status))
+                } else {
+                    val status = workInfo.progress.getString(ExportWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.progress.getDouble(ExportWorker.PARAM_PERCENTAGE, 0.0)
+                    showDialog(ActiveDialog.Progress(
+                        getApplication<Application>().getString(R.string.title_backup), progress, status
+                    ) { workManager.cancelAllWorkByTag(Util.WORKER_TAG_EXPORT) })
+                }
+            }
+        }
+        
+        viewModelScope.launch {
+            workManager.getWorkInfosByTagFlow(Util.WORKER_TAG_IMPORT).collect { listOfWorkInfo ->
+                if (listOfWorkInfo.isNullOrEmpty()) return@collect
+                val workInfo = listOfWorkInfo[0]
+                if (workInfo.state.isFinished) {
+                    var status = workInfo.outputData.getString(ImportWorker.PARAM_STATUS) ?: ""
+                    if (status == "") {
+                        if (workInfo.state == WorkInfo.State.CANCELLED) status = "Import cancelled."
+                        else if (workInfo.state == WorkInfo.State.FAILED) status = "Import failed."
+                    }
+                    dismissDialog()
+                    _events.emit(MainEvent.ShowToast(status))
+                } else {
+                    val status = workInfo.progress.getString(ImportWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.progress.getDouble(ImportWorker.PARAM_PERCENTAGE, 0.0)
+                    showDialog(ActiveDialog.Progress(
+                        getApplication<Application>().getString(R.string.title_import), progress, status
+                    ) { workManager.cancelAllWorkByTag(Util.WORKER_TAG_IMPORT) })
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            workManager.getWorkInfosByTagFlow(Util.WORKER_TAG_DBCONV).collect { listOfWorkInfo ->
+                if (listOfWorkInfo.isNullOrEmpty()) return@collect
+                val workInfo = listOfWorkInfo[0]
+                if (workInfo.state.isFinished) {
+                    val status = workInfo.outputData.getString(DbConvWorker.PARAM_STATUS) ?: ""
+                    dismissDialog()
+                    if (status.isNotEmpty()) _events.emit(MainEvent.ShowToast(status))
+                } else {
+                    val status = workInfo.progress.getString(DbConvWorker.PARAM_STATUS) ?: ""
+                    val progress = workInfo.progress.getDouble(DbConvWorker.PARAM_PERCENTAGE, 0.0)
+                    showDialog(ActiveDialog.Progress("DB Conversion", progress, status, {}))
+                }
+            }
+        }
+    }
+
+    fun requestBackup(mode: Int, hasPermissions: Boolean) {
+        if (!hasPermissions) {
+            viewModelScope.launch { _events.emit(MainEvent.RequestExportPermissions(mode)) }
+            return
+        }
+        val calendar = java.util.Calendar.getInstance()
+        val sdf = java.text.SimpleDateFormat("yyyyMMddHHmmss", java.util.Locale.US)
+        val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
+        viewModelScope.launch { _events.emit(MainEvent.LaunchExportDocumentTree(mode, backupZipFileName)) }
+    }
+
+    fun requestImport(mode: Int, hasPermissions: Boolean) {
+        if (!hasPermissions) {
+            viewModelScope.launch { _events.emit(MainEvent.RequestImportPermissions(mode)) }
+            return
+        }
+        viewModelScope.launch { _events.emit(MainEvent.LaunchImportDocumentPicker(mode)) }
+    }
+
+    fun onBackupDirChosen(uri: android.net.Uri?, mode: Int) {
+        if (uri == null) return
+        workManager.pruneWork()
+        val req = ExportWorker.createExportRequest(uri.toString(), mode)
+        workManager.enqueue(req)
+        showDialog(ActiveDialog.Progress(
+            getApplication<Application>().getString(R.string.title_backup), 0.0, ""
+        ) { workManager.cancelAllWorkByTag(Util.WORKER_TAG_EXPORT) })
+    }
+
+    fun onImportFileChosen(uri: android.net.Uri?, mode: Int) {
+        if (uri == null) return
+        workManager.pruneWork()
+        val req = ImportWorker.createImportRequest(uri.toString(), mode)
+        workManager.enqueue(req)
+        showDialog(ActiveDialog.Progress(
+            getApplication<Application>().getString(R.string.title_import), 0.0, ""
+        ) { workManager.cancelAllWorkByTag(Util.WORKER_TAG_IMPORT) })
+    }
+
+    fun onDbFileChosen(uri: android.net.Uri?, contentResolver: android.content.ContentResolver) {
+        if (uri == null) return
+        requestRestoreDatabase(uri, contentResolver)
+    }
 
     fun getPinnedFilters(): ArrayList<Pair<Int, ArrayList<String>>> {
         return userPreferencesRepository.getPinnedFilters()
@@ -124,8 +238,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         state >= 1
     }
 
-    fun checkAppStartupState(isDbConvActive: Boolean, currentVersion: Int) = viewModelScope.launch {
+    fun checkAppStartupState(currentVersion: Int) = viewModelScope.launch {
         val dbConvForAndroid11Done = isDbConvForAndroid11Done()
+        val isDbConvActive = workManager.getWorkInfosByTag(Util.WORKER_TAG_DBCONV).get().firstOrNull()?.state?.isFinished == false
         if(!dbConvForAndroid11Done && !isDbConvActive) {
             _events.emit(MainEvent.RequireDbConvAction)
             return@launch
