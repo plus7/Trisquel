@@ -60,11 +60,6 @@ import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 import java.util.Date
 
 class EditPhotoListActivity : AppCompatActivity() {
-    internal val REQCODE_ADD_PHOTO = 100
-    internal val REQCODE_EDIT_PHOTO = 101
-    internal val REQCODE_EDIT_FILMROLL = 102
-    internal val REQCODE_SELECT_THUMBNAIL = 103
-
     private val PERMISSIONS =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
@@ -78,6 +73,52 @@ class EditPhotoListActivity : AppCompatActivity() {
     private var thumbnailEditingPhoto: Photo? = null
     var mPhotoViewModel: PhotoViewModel? = null
     private var mFilmRollViewModel: FilmRollViewModel? = null
+
+    internal val addPhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val bundle = data?.extras
+            val p: Photo? = bundle?.getParcelable("photo")
+            val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
+            if (p != null) insertPhoto(p, tags)
+        }
+    }
+
+    internal val editPhotoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val bundle = data?.extras
+            val p: Photo? = bundle?.getParcelable("photo")
+            val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
+            if (p != null) updatePhoto(p, tags)
+        }
+    }
+
+    internal val editFilmRollLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val bundle = data?.extras
+            if (bundle != null) {
+                val dao = TrisquelDao(this.applicationContext)
+                dao.connection()
+                val c = dao.getCamera(bundle.getInt("camera"))
+                dao.close()
+                val f = FilmRoll(
+                    bundle.getInt("id"),
+                    bundle.getString("name")!!,
+                    bundle.getString("created")!!,
+                    Util.dateToStringUTC(Date()),
+                    c!!,
+                    bundle.getString("manufacturer")!!,
+                    bundle.getString("brand")!!,
+                    bundle.getInt("iso"),
+                    36
+                )
+                mFilmRoll = f
+                mFilmRollViewModel!!.update(f.toEntity())
+            }
+        }
+    }
 
     private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         val granted = permissions.entries.all { it.value }
@@ -188,48 +229,12 @@ class EditPhotoListActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (data == null) return
-        val bundle = data.extras
-        val tags: ArrayList<String>? = bundle?.getStringArrayList("tags")
-        when (requestCode) {
-            REQCODE_ADD_PHOTO -> if (resultCode == RESULT_OK) {
-                val p: Photo? = bundle!!.getParcelable("photo")
-                if(p != null) insertPhoto(p, tags)
-            }
-            REQCODE_EDIT_PHOTO -> if (resultCode == RESULT_OK) {
-                val p: Photo? = bundle!!.getParcelable("photo")
-                if(p != null) updatePhoto(p, tags)
-            }
-            REQCODE_EDIT_FILMROLL -> if (resultCode == RESULT_OK) {
-                val dao = TrisquelDao(this.applicationContext)
-                dao.connection()
-                val c = dao.getCamera(bundle!!.getInt("camera"))
-                dao.close()
-                val f = FilmRoll(
-                        bundle.getInt("id"),
-                        bundle.getString("name")!!,
-                        bundle.getString("created")!!,
-                        Util.dateToStringUTC(Date()),
-                        c!!,
-                        bundle.getString("manufacturer")!!,
-                        bundle.getString("brand")!!,
-                        bundle.getInt("iso"),
-                        36
-                )
-                mFilmRoll = f
-                mFilmRollViewModel!!.update(f.toEntity())
-            }
-        }
-    }
-
     fun onListFragmentInteraction(item: Photo) {
         val intent = Intent(application, EditPhotoActivity::class.java)
         intent.putExtra("filmroll", mFilmRoll!!.id)
         intent.putExtra("id", item.id)
         intent.putExtra("frameIndex", item.frameIndex)
-        startActivityForResult(intent, REQCODE_EDIT_PHOTO)
+        editPhotoLauncher.launch(intent)
     }
 
     private inner class PickImageUriContract : ActivityResultContract<Any, List<Uri>>() {
@@ -425,7 +430,7 @@ fun EditPhotoListScreen(
                                 menuExpanded = false
                                 val intent = Intent(context, EditFilmRollActivity::class.java)
                                 intent.putExtra("id", filmRoll?.id ?: 0)
-                                context.startActivityForResult(intent, context.REQCODE_EDIT_FILMROLL)
+                                context.editFilmRollLauncher.launch(intent)
                             }
                         )
                         DropdownMenuItem(
@@ -461,7 +466,7 @@ fun EditPhotoListScreen(
                 onClick = {
                     val intent = Intent(context, EditPhotoActivity::class.java)
                     intent.putExtra("filmroll", filmRoll?.id ?: 0)
-                    context.startActivityForResult(intent, context.REQCODE_ADD_PHOTO)
+                    context.addPhotoLauncher.launch(intent)
                 },
                 containerColor = MaterialTheme.colorScheme.secondary,
                 contentColor = MaterialTheme.colorScheme.onSecondary
@@ -515,7 +520,7 @@ fun EditPhotoListScreen(
                                                 val intent = Intent(context, EditPhotoActivity::class.java)
                                                 intent.putExtra("filmroll", context.mFilmRoll!!.id)
                                                 intent.putExtra("frameIndex", p.frameIndex)
-                                                context.startActivityForResult(intent, context.REQCODE_ADD_PHOTO)
+                                                context.addPhotoLauncher.launch(intent)
                                             }
                                         }
                                     }

@@ -99,9 +99,6 @@ import java.util.Calendar
 import java.util.TimeZone
 
 class EditPhotoActivity : AppCompatActivity() {
-    internal val REQCODE_GET_LOCATION = 100
-    internal val REQCODE_ADD_LENS = 110
-    internal val REQCODE_IMAGES = 106
     internal lateinit var userPreferencesRepository: UserPreferencesRepository
 
     private val PERMISSIONS =
@@ -166,6 +163,40 @@ class EditPhotoActivity : AppCompatActivity() {
         } else {
             supplementalImages = (supplementalImages + supplementalImagesToLoad).distinct()
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    internal val getLocationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val bundle = data?.extras
+            if (bundle != null) {
+                val newlat = bundle.getDouble("latitude")
+                val newlog = bundle.getDouble("longitude")
+                if (newlat != latitude || newlog != longitude) isDirty = true
+                setLatLng(newlat, newlog)
+                locationStr = bundle.getString("location") ?: ""
+            }
+        } else if (result.resultCode == MapsActivity.RESULT_DELETE) {
+            if (999.0 != latitude || 999.0 != longitude) isDirty = true
+            setLatLng(999.0, 999.0)
+        }
+    }
+
+    internal val addLensLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val bundle = data?.extras
+            val l = bundle?.getParcelable<LensSpec>("lensspec")
+            if (l != null) {
+                val dao = TrisquelDao(this)
+                dao.connection()
+                l.id = dao.addLens(l).toInt()
+                updateLensList(l, dao)
+                dao.close()
+                refreshApertureAdapter(l)
+                refreshFocalLength(l)
+            }
         }
     }
 
@@ -568,34 +599,6 @@ class EditPhotoActivity : AppCompatActivity() {
         }
         supplementalImages = (supplementalImages + paths).distinct()
     }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        when (requestCode) {
-            REQCODE_GET_LOCATION -> if (resultCode == RESULT_OK && data != null) {
-                val bundle = data.extras
-                val newlat = bundle!!.getDouble("latitude")
-                val newlog = bundle.getDouble("longitude")
-                if (newlat != latitude || newlog != longitude) isDirty = true
-                setLatLng(newlat, newlog)
-                locationStr = bundle.getString("location") ?: ""
-            } else if (resultCode == MapsActivity.RESULT_DELETE) {
-                if (999.0 != latitude || 999.0 != longitude) isDirty = true
-                setLatLng(999.0, 999.0)
-            }
-            REQCODE_ADD_LENS -> if (resultCode == RESULT_OK && data != null) {
-                val bundle = data.extras
-                val l = bundle!!.getParcelable<LensSpec>("lensspec")!!
-                val dao = TrisquelDao(this)
-                dao.connection()
-                l.id = dao.addLens(l).toInt()
-                updateLensList(l, dao)
-                dao.close()
-                refreshApertureAdapter(l)
-                refreshFocalLength(l)
-            }
-        }
-    }
 }
 
 @Composable
@@ -730,7 +733,7 @@ fun EditPhotoScreen(
                 TextButton(onClick = {
                     showAskCreateLensDialog = false
                     val intent = Intent(context, EditLensActivity::class.java)
-                    context.startActivityForResult(intent, context.REQCODE_ADD_LENS)
+                    context.addLensLauncher.launch(intent)
                 }) {
                     Text(stringResource(android.R.string.yes))
                 }
@@ -1093,7 +1096,7 @@ fun EditPhotoScreen(
                             intent.putExtra("latitude", context.latitude)
                             intent.putExtra("longitude", context.longitude)
                         }
-                        context.startActivityForResult(intent, context.REQCODE_GET_LOCATION)
+                        context.getLocationLauncher.launch(intent)
                     },
                     modifier = Modifier.size(60.dp)
                 ) {
