@@ -47,16 +47,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.os.BundleCompat
-import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
 import java.util.regex.Pattern
 
 class EditFilmRollActivity : AppCompatActivity() {
     private var id: Int = 0
     private var created: String? = null
+    private lateinit var userPreferencesRepository: UserPreferencesRepository
     
     // UI state
     var cameralist by mutableStateOf<List<CameraSpec>>(emptyList())
@@ -79,6 +76,7 @@ class EditFilmRollActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        userPreferencesRepository = UserPreferencesRepository(this)
 
         val dao = TrisquelDao(applicationContext)
         dao.connection()
@@ -133,9 +131,9 @@ class EditFilmRollActivity : AppCompatActivity() {
                     initBrand = initBrand,
                     initIso = initIso,
                     cameras = cameralist,
-                    suggestedManufacturers = getSuggestListPref("film_manufacturer", R.array.film_manufacturer),
+                    suggestedManufacturers = userPreferencesRepository.getSuggestList("film_manufacturer", R.array.film_manufacturer),
                     onBrandSuggestionsRequested = { manufacturer ->
-                        getSuggestListSubPref("film_brand", manufacturer)
+                        userPreferencesRepository.getSuggestListSub("film_brand", manufacturer)
                     },
                     onSave = { name, cameraId, manufacturer, brand, isoStr ->
                         saveAndFinish(name, cameraId, manufacturer, brand, isoStr)
@@ -153,98 +151,6 @@ class EditFilmRollActivity : AppCompatActivity() {
         cameralist = dao.allCameras
     }
 
-    private fun getSuggestListPref(prefkey: String, defRscId: Int): List<String> {
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(prefkey, "[]")
-        val strArray = ArrayList<String>()
-        val defRsc = resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
-        }
-        strArray.addAll(defRsc)
-        return strArray.distinct()
-    }
-
-    private fun saveSuggestListPref(prefkey: String, defRscId: Int, newValue: String) {
-        if (newValue.isEmpty()) return
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(prefkey, "[]")
-        val strArray = ArrayList<String>()
-        val defRsc = resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
-        }
-
-        if (strArray.indexOf(newValue) >= 0) {
-            strArray.removeAt(strArray.indexOf(newValue))
-        }
-        strArray.add(0, newValue)
-        strArray.addAll(defRsc)
-        
-        val result = JSONArray(strArray.distinct())
-        val e = pref.edit()
-        e.putString(prefkey, result.toString())
-        e.apply()
-    }
-
-    private fun getSuggestListSubPref(parentkey: String, subkey: String): List<String> {
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(parentkey, "{}")
-        val strArray = ArrayList<String>()
-        try {
-            val obj = JSONObject(prefstr)
-            if (!obj.isNull(subkey)) {
-                val array = obj.getJSONArray(subkey)
-                for (i in 0 until array.length()) {
-                    strArray.add(array.getString(i))
-                }
-            }
-        } catch (e: JSONException) {
-        }
-        return strArray
-    }
-
-    private fun saveSuggestListSubPref(parentkey: String, subkey: String, newValue: String) {
-        if (newValue.isEmpty() || subkey.isEmpty()) return
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(parentkey, "{}")
-        val strArray = ArrayList<String>()
-        var obj: JSONObject? = null
-        try {
-            obj = JSONObject(prefstr)
-            if (!obj.isNull(subkey)) {
-                val array = obj.getJSONArray(subkey)
-                for (i in 0 until array.length()) {
-                    strArray.add(array.getString(i))
-                }
-            }
-        } catch (e: JSONException) {
-            obj = JSONObject()
-        }
-
-        if (strArray.indexOf(newValue) >= 0) {
-            strArray.removeAt(strArray.indexOf(newValue))
-        }
-        strArray.add(0, newValue)
-        
-        val result = JSONArray(strArray)
-        val e = pref.edit()
-        try {
-            obj!!.put(subkey, result)
-            e.putString(parentkey, obj.toString())
-            e.apply()
-        } catch (e1: JSONException) {
-        }
-    }
-
     private fun saveAndFinish(name: String, cameraId: Int, manufacturer: String, brand: String, isoStr: String) {
         val data = Intent()
         data.putExtra("id", id)
@@ -256,8 +162,8 @@ class EditFilmRollActivity : AppCompatActivity() {
         val iso = isoStr.toIntOrNull() ?: 0
         data.putExtra("iso", iso)
 
-        saveSuggestListPref("film_manufacturer", R.array.film_manufacturer, manufacturer)
-        saveSuggestListSubPref("film_brand", manufacturer, brand)
+        userPreferencesRepository.saveSuggestList("film_manufacturer", R.array.film_manufacturer, manufacturer)
+        userPreferencesRepository.saveSuggestListSub("film_brand", manufacturer, brand)
 
         setResult(RESULT_OK, data)
         finish()

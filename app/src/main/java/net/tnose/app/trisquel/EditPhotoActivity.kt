@@ -99,6 +99,7 @@ class EditPhotoActivity : AppCompatActivity() {
     internal val REQCODE_GET_LOCATION = 100
     internal val REQCODE_ADD_LENS = 110
     internal val REQCODE_IMAGES = 106
+    internal lateinit var userPreferencesRepository: UserPreferencesRepository
 
     private val PERMISSIONS =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
@@ -253,7 +254,7 @@ class EditPhotoActivity : AppCompatActivity() {
             }
         } else {
             val newLensList = dao.getLensesByMount(f.camera.mount)
-            for (s in getSuggestListSubPref("mount_adapters", f.camera.mount)) {
+            for (s in userPreferencesRepository.getSuggestListSub("mount_adapters", f.camera.mount)) {
                 newLensList.addAll(dao.getLensesByMount(s))
             }
             if (lens != null && f.camera.mount != lens.mount && !newLensList.any { it.id == lens.id }) {
@@ -317,6 +318,7 @@ class EditPhotoActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        userPreferencesRepository = UserPreferencesRepository(this)
         val dao = TrisquelDao(applicationContext)
         dao.connection()
 
@@ -411,8 +413,7 @@ class EditPhotoActivity : AppCompatActivity() {
                 if (loadedFilmroll.camera.type == 1) {
                     lensid = dao.getFixedLensIdByBody(loadedFilmroll.camera.id)
                 } else {
-                    val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-                    val autocomplete = pref.getBoolean("autocomplete_from_previous_shot", false)
+                    val autocomplete = userPreferencesRepository.isAutocompleteFromPreviousShotEnabled()
                     if (autocomplete) {
                         val ps = dao.getPhotosByFilmRollId(filmrollid)
                         var pos = -1
@@ -500,42 +501,6 @@ class EditPhotoActivity : AppCompatActivity() {
             if (list1[i] != list2[i]) return false
         }
         return true
-    }
-
-    fun getSuggestListSubPref(parentkey: String, subkey: String): ArrayList<String> {
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(parentkey, "{}")
-        val strArray = ArrayList<String>()
-        try {
-            val obj = JSONObject(prefstr)
-            if (!obj.isNull(subkey)) {
-                val array = obj.getJSONArray(subkey)
-                for (i in 0 until array.length()) {
-                    strArray.add(array.getString(i))
-                }
-            }
-        } catch (e: JSONException) {}
-        return strArray
-    }
-
-    fun saveSuggestListSubPref(parentkey: String, subkey: String, values: ArrayList<String>?) {
-        if (values == null) return
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(parentkey, "{}")
-        var obj: JSONObject? = null
-        try {
-            obj = JSONObject(prefstr)
-        } catch (e: JSONException) {
-            obj = JSONObject()
-        }
-
-        val result = JSONArray(values)
-        val e = pref.edit()
-        try {
-            obj!!.put(subkey, result)
-            e.putString(parentkey, obj.toString())
-            e.apply()
-        } catch (e1: JSONException) {}
     }
 
     fun openImagePicker() {
@@ -810,7 +775,7 @@ fun EditPhotoScreen(
             availableLensMounts.remove(mount)
         }
         
-        val checkedMounts = if (mount != null) context.getSuggestListSubPref("mount_adapters", mount) else ArrayList()
+        val checkedMounts = if (mount != null) context.userPreferencesRepository.getSuggestListSub("mount_adapters", mount) else ArrayList()
         val checkedIndices = ArrayList<Int>()
         for (i in checkedMounts.indices) {
             if (availableLensMounts.indexOf(checkedMounts[i]) >= 0) {
@@ -826,7 +791,7 @@ fun EditPhotoScreen(
                 showMountAdaptersDialog = false
                 if (mount != null) {
                     val checkedItems = checkedIndicesOutput.map { availableLensMounts[it] }.toCollection(ArrayList())
-                    context.saveSuggestListSubPref("mount_adapters", mount, checkedItems)
+                    context.userPreferencesRepository.saveSuggestListSub("mount_adapters", mount, checkedItems)
                     val daoUpdate = TrisquelDao(context)
                     daoUpdate.connection()
                     val l = context.lenslist.find { it.id == context.lensid }

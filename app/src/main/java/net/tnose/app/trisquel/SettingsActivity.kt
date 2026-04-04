@@ -1,6 +1,5 @@
 package net.tnose.app.trisquel
 
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -32,31 +31,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.core.content.edit
-import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 
 class SettingsActivity : AppCompatActivity() {
+    private lateinit var userPreferencesRepository: UserPreferencesRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        
-        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        userPreferencesRepository = UserPreferencesRepository(this)
 
         setContent {
             TrisquelTheme {
-                SettingsScreen(sharedPreferences)
+                SettingsScreen()
             }
         }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun SettingsScreen(sharedPreferences: SharedPreferences) {
+    fun SettingsScreen() {
         var showResetDialog by remember { mutableStateOf(false) }
         var autocompleteEnabled by remember {
-            mutableStateOf(sharedPreferences.getBoolean("autocomplete_from_previous_shot", false))
+            mutableStateOf(userPreferencesRepository.isAutocompleteFromPreviousShotEnabled())
         }
 
         if (showResetDialog) {
@@ -66,13 +63,7 @@ class SettingsActivity : AppCompatActivity() {
                 text = { Text(stringResource(R.string.msg_reset_autocomplete)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        sharedPreferences.edit {
-                            putString("lens_manufacturer", "[]")
-                            putString("camera_manufacturer", "[]")
-                            putString("camera_mounts", "[]")
-                            putString("film_manufacturer", "[]")
-                            putString("film_brand", "{}")
-                        }
+                        userPreferencesRepository.resetAutocompleteHistory()
                         Toast.makeText(this@SettingsActivity, getString(R.string.msg_reset_autocomplete_done), Toast.LENGTH_LONG).show()
                         showResetDialog = false
                     }) {
@@ -117,14 +108,14 @@ class SettingsActivity : AppCompatActivity() {
                             checked = autocompleteEnabled,
                             onCheckedChange = { checked ->
                                 autocompleteEnabled = checked
-                                sharedPreferences.edit { putBoolean("autocomplete_from_previous_shot", checked) }
+                                userPreferencesRepository.setAutocompleteFromPreviousShotEnabled(checked)
                             }
                         )
                     },
                     modifier = Modifier.clickable {
                         val newValue = !autocompleteEnabled
                         autocompleteEnabled = newValue
-                        sharedPreferences.edit { putBoolean("autocomplete_from_previous_shot", newValue) }
+                        userPreferencesRepository.setAutocompleteFromPreviousShotEnabled(newValue)
                     }
                 )
                 HorizontalDivider()

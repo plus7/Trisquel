@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 class UserPreferencesRepository(private val context: Context) {
@@ -90,5 +91,147 @@ class UserPreferencesRepository(private val context: Context) {
 
     fun setLastVersion(version: Int) {
         sharedPreferences.edit { putInt("last_version", version) }
+    }
+
+    fun isAutocompleteFromPreviousShotEnabled(): Boolean {
+        return sharedPreferences.getBoolean("autocomplete_from_previous_shot", false)
+    }
+
+    fun setAutocompleteFromPreviousShotEnabled(enabled: Boolean) {
+        sharedPreferences.edit { putBoolean("autocomplete_from_previous_shot", enabled) }
+    }
+
+    fun resetAutocompleteHistory() {
+        sharedPreferences.edit {
+            putString("lens_manufacturer", "[]")
+            putString("camera_manufacturer", "[]")
+            putString("camera_mounts", "[]")
+            putString("film_manufacturer", "[]")
+            putString("film_brand", "{}")
+        }
+    }
+
+    fun getSuggestList(prefKey: String, defRscId: Int): List<String> {
+        val prefstr = sharedPreferences.getString(prefKey, "[]") ?: "[]"
+        val strArray = mutableListOf<String>()
+        val defRsc = context.resources.getStringArray(defRscId)
+        try {
+            val array = JSONArray(prefstr)
+            for (i in 0 until array.length()) {
+                strArray.add(array.getString(i))
+            }
+        } catch (e: JSONException) {
+        }
+        strArray.addAll(defRsc)
+        return strArray.distinct()
+    }
+
+    fun saveSuggestList(prefKey: String, defRscId: Int, newValue: String) {
+        if (newValue.isEmpty()) return
+        val prefstr = sharedPreferences.getString(prefKey, "[]") ?: "[]"
+        val strArray = mutableListOf<String>()
+        val defRsc = context.resources.getStringArray(defRscId)
+        try {
+            val array = JSONArray(prefstr)
+            for (i in 0 until array.length()) {
+                strArray.add(array.getString(i))
+            }
+        } catch (e: JSONException) {
+        }
+
+        if (strArray.contains(newValue)) {
+            strArray.remove(newValue)
+        }
+        strArray.add(0, newValue)
+        strArray.addAll(defRsc)
+
+        val result = JSONArray(strArray.distinct())
+        sharedPreferences.edit { putString(prefKey, result.toString()) }
+    }
+
+    fun saveSuggestList(prefKey: String, defRscId: Int, newValues: Array<String>) {
+        val prefstr = sharedPreferences.getString(prefKey, "[]") ?: "[]"
+        val strArray = mutableListOf<String>()
+        val defRsc = context.resources.getStringArray(defRscId)
+        try {
+            val array = JSONArray(prefstr)
+            for (i in 0 until array.length()) {
+                strArray.add(array.getString(i))
+            }
+        } catch (e: JSONException) {
+        }
+
+        for (item in newValues) {
+            if (item.isEmpty()) continue
+            if (strArray.contains(item)) {
+                strArray.remove(item)
+            }
+            strArray.add(0, item)
+        }
+        strArray.addAll(defRsc)
+
+        val result = JSONArray(strArray.distinct())
+        sharedPreferences.edit { putString(prefKey, result.toString()) }
+    }
+
+    fun getSuggestListSub(parentKey: String, subKey: String): List<String> {
+        val prefstr = sharedPreferences.getString(parentKey, "{}") ?: "{}"
+        val strArray = mutableListOf<String>()
+        try {
+            val obj = JSONObject(prefstr)
+            if (!obj.isNull(subKey)) {
+                val array = obj.getJSONArray(subKey)
+                for (i in 0 until array.length()) {
+                    strArray.add(array.getString(i))
+                }
+            }
+        } catch (e: JSONException) {
+        }
+        return strArray
+    }
+
+    fun saveSuggestListSub(parentKey: String, subKey: String, newValue: String) {
+        if (newValue.isEmpty() || subKey.isEmpty()) return
+        val prefstr = sharedPreferences.getString(parentKey, "{}") ?: "{}"
+        val strArray = mutableListOf<String>()
+        var obj: JSONObject
+        try {
+            obj = JSONObject(prefstr)
+            if (!obj.isNull(subKey)) {
+                val array = obj.getJSONArray(subKey)
+                for (i in 0 until array.length()) {
+                    strArray.add(array.getString(i))
+                }
+            }
+        } catch (e: JSONException) {
+            obj = JSONObject()
+        }
+
+        if (strArray.contains(newValue)) {
+            strArray.remove(newValue)
+        }
+        strArray.add(0, newValue)
+
+        try {
+            obj.put(subKey, JSONArray(strArray.distinct()))
+            sharedPreferences.edit { putString(parentKey, obj.toString()) }
+        } catch (e: JSONException) {
+        }
+    }
+
+    fun saveSuggestListSub(parentKey: String, subKey: String, values: List<String>) {
+        val prefstr = sharedPreferences.getString(parentKey, "{}") ?: "{}"
+        var obj: JSONObject
+        try {
+            obj = JSONObject(prefstr)
+        } catch (e: JSONException) {
+            obj = JSONObject()
+        }
+
+        try {
+            obj.put(subKey, JSONArray(values))
+            sharedPreferences.edit { putString(parentKey, obj.toString()) }
+        } catch (e: JSONException) {
+        }
     }
 }

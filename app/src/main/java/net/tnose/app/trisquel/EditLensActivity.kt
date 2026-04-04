@@ -48,10 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.preference.PreferenceManager
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
-import org.json.JSONArray
-import org.json.JSONException
 import java.util.Date
 import java.util.regex.Pattern
 
@@ -60,9 +57,11 @@ private val mFArray = listOf(0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 
 class EditLensActivity : AppCompatActivity() {
     private var id: Int = -1
     private var created: String = ""
+    private lateinit var userPreferencesRepository: UserPreferencesRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        userPreferencesRepository = UserPreferencesRepository(this)
 
         val dao = TrisquelDao(applicationContext)
         dao.connection()
@@ -108,8 +107,8 @@ class EditLensActivity : AppCompatActivity() {
                     initModel = initModel,
                     initFocalLength = initFocalLength,
                     initFSteps = initFSteps,
-                    suggestedManufacturers = getSuggestListPref("lens_manufacturer", R.array.lens_manufacturer),
-                    suggestedMounts = getSuggestListPref("camera_mounts", R.array.camera_mounts),
+                    suggestedManufacturers = userPreferencesRepository.getSuggestList("lens_manufacturer", R.array.lens_manufacturer),
+                    suggestedMounts = userPreferencesRepository.getSuggestList("camera_mounts", R.array.camera_mounts),
                     onSave = { manufacturer, mount, model, focalLength, fSteps ->
                         saveAndFinish(manufacturer, mount, model, focalLength, fSteps)
                     },
@@ -132,50 +131,6 @@ class EditLensActivity : AppCompatActivity() {
         return list
     }
 
-    private fun getSuggestListPref(prefkey: String, defRscId: Int): List<String> {
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(prefkey, "[]")
-        val strArray = ArrayList<String>()
-        val defRsc = resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
-        }
-        strArray.addAll(defRsc)
-        return strArray.distinct()
-    }
-
-    private fun saveSuggestListPref(prefkey: String, defRscId: Int, newValues: Array<String>) {
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(prefkey, "[]")
-        val strArray = ArrayList<String>()
-        val defRsc = resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
-        }
-
-        for (item in newValues) {
-            if (item.isEmpty()) continue
-            if (strArray.indexOf(item) >= 0) {
-                strArray.removeAt(strArray.indexOf(item))
-                strArray.add(0, item)
-            }
-        }
-        strArray.addAll(defRsc)
-
-        val result = JSONArray(strArray.distinct())
-        val e = pref.edit()
-        e.putString(prefkey, result.toString())
-        e.apply()
-    }
-
     private fun saveAndFinish(manufacturer: String, mount: String, model: String, focalLength: String, fSteps: Set<Double>) {
         val fStepsString = mFArray.filter { fSteps.contains(it) }.joinToString(", ")
 
@@ -190,8 +145,8 @@ class EditLensActivity : AppCompatActivity() {
             fStepsString)
         data.putExtra("lensspec", l)
         
-        saveSuggestListPref("lens_manufacturer", R.array.lens_manufacturer, arrayOf(manufacturer))
-        saveSuggestListPref("camera_mounts", R.array.camera_mounts, arrayOf(mount))
+        userPreferencesRepository.saveSuggestList("lens_manufacturer", R.array.lens_manufacturer, arrayOf(manufacturer))
+        userPreferencesRepository.saveSuggestList("camera_mounts", R.array.camera_mounts, arrayOf(mount))
 
         setResult(RESULT_OK, data)
         finish()

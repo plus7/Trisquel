@@ -108,9 +108,11 @@ fun ClassicTextField(
 class EditAccessoryActivity : AppCompatActivity() {
     private var id: Int = -1
     private var created: String = ""
+    private lateinit var userPreferencesRepository: UserPreferencesRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        userPreferencesRepository = UserPreferencesRepository(this)
         
         val dao = TrisquelDao(applicationContext)
         dao.connection()
@@ -166,7 +168,7 @@ class EditAccessoryActivity : AppCompatActivity() {
                     initName = initName,
                     initMount = initMount,
                     initFlFactor = initFlFactor,
-                    suggestedMounts = getSuggestListPref("camera_mounts", R.array.camera_mounts),
+                    suggestedMounts = userPreferencesRepository.getSuggestList("camera_mounts", R.array.camera_mounts),
                     onSave = { type, name, mount, flFactor ->
                         saveAndFinish(type, name, mount, flFactor)
                     },
@@ -177,50 +179,6 @@ class EditAccessoryActivity : AppCompatActivity() {
                 )
             }
         }
-    }
-
-    private fun getSuggestListPref(prefkey: String, defRscId: Int): List<String> {
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(prefkey, "[]")
-        val strArray = ArrayList<String>()
-        val defRsc = resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
-        }
-        strArray.addAll(defRsc)
-        return strArray.distinct()
-    }
-
-    private fun saveSuggestListPref(prefkey: String, defRscId: Int, newValues: Array<String>) {
-        val pref = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val prefstr = pref.getString(prefkey, "[]")
-        val strArray = ArrayList<String>()
-        val defRsc = resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
-        }
-
-        for (item in newValues) {
-            if (item.isEmpty()) continue
-            if (strArray.indexOf(item) >= 0) {
-                strArray.removeAt(strArray.indexOf(item))
-                strArray.add(0, item)
-            }
-        }
-        strArray.addAll(defRsc)
-
-        val result = JSONArray(strArray.distinct())
-        val e = pref.edit()
-        e.putString(prefkey, result.toString())
-        e.apply()
     }
 
     private fun saveAndFinish(type: Int, name: String, mount: String, flFactor: Double) {
@@ -235,11 +193,11 @@ class EditAccessoryActivity : AppCompatActivity() {
             Accessory.ACCESSORY_WIDE_CONVERTER -> {
                 data.putExtra("mount", mount)
                 data.putExtra("focal_length_factor", flFactor)
-                saveSuggestListPref("camera_mounts", R.array.camera_mounts, arrayOf(mount))
+                userPreferencesRepository.saveSuggestList("camera_mounts", R.array.camera_mounts, arrayOf(mount))
             }
             Accessory.ACCESSORY_EXT_TUBE -> {
                 data.putExtra("mount", mount)
-                saveSuggestListPref("camera_mounts", R.array.camera_mounts, arrayOf(mount))
+                userPreferencesRepository.saveSuggestList("camera_mounts", R.array.camera_mounts, arrayOf(mount))
             }
         }
         setResult(RESULT_OK, data)
