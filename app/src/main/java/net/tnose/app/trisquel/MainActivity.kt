@@ -53,6 +53,8 @@ class MainActivity : AppCompatActivity() {
         const val ROUTE_LENSES = "lenses"
         const val ROUTE_ACCESSORIES = "accessories"
         const val ROUTE_FAVORITES = "favorites"
+        const val ROUTE_SETTINGS = "settings"
+        const val ROUTE_LICENSE = "license"
         const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
     }
 
@@ -363,7 +365,7 @@ class MainActivity : AppCompatActivity() {
             observedRoute = observedRoute,
             scope = scope,
             gesturesEnabled = currentRoute in listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES, ROUTE_FAVORITES),
-            onSettingsClick = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) },
+            onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
             onBackupClick = {
                 mainViewModel.showDialog(ActiveDialog.RichSelection(
                     title = getString(R.string.title_backup_mode_selection),
@@ -389,7 +391,7 @@ class MainActivity : AppCompatActivity() {
                 ))
             },
             onReleaseNotesClick = { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RELEASE_NOTES_URL))) },
-            onLicenseClick = { startActivity(Intent(this@MainActivity, LicenseActivity::class.java)) }
+            onLicenseClick = { navController.navigate(ROUTE_LICENSE) }
         ) {
             val mainTopBar: @Composable (String) -> Unit = { route ->
                 TrisquelTopAppBar(

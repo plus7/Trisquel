@@ -319,5 +319,11 @@ fun TrisquelNavHost(
                 }
             }
         }
+        composable(MainActivity.ROUTE_SETTINGS) {
+            SettingsScreen(onBack = { navController.popBackStack() })
+        }
+        composable(MainActivity.ROUTE_LICENSE) {
+            LicenseScreen(onBack = { navController.popBackStack() })
+        }
     }
 }

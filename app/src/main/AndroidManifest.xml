@@ -68,10 +68,6 @@
             android:label="@string/title_activity_edit_photo_list"
             android:theme="@style/AppTheme.NoActionBar"
             android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings"
-            android:theme="@style/AppTheme.NoActionBar" />
         <!--
              The API key for Google Maps-based APIs is defined as a string resource.
              (See the file "res/values/google_maps_api.xml").
@@ -95,10 +91,6 @@
             android:label="@string/title_activity_gallery"
             android:theme="@style/AppTheme.NoActionBar" />
 
-        <activity
-            android:name=".LicenseActivity"
-            android:label="@string/title_activity_license"
-            android:theme="@style/AppTheme.NoActionBar" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
