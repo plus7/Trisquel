@@ -80,8 +80,7 @@
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps" />
 
-        <activity android:name=".EditAccessoryActivity"
-            android:theme="@style/AppTheme.NoActionBar" />
+
         <activity
             android:name=".PrintPreviewActivity"
             android:label="@string/title_activity_print_preview"

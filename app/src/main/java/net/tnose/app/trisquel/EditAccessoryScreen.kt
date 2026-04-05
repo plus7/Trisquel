@@ -1,10 +1,7 @@
 package net.tnose.app.trisquel
 
-import android.content.Intent
-import android.os.Bundle
+import android.app.Application
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,6 +34,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,14 +44,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.preference.PreferenceManager
-import net.tnose.app.trisquel.ui.theme.TrisquelTheme
-import org.json.JSONArray
-import org.json.JSONException
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,108 +110,125 @@ fun ClassicTextField(
     )
 }
 
-class EditAccessoryActivity : AppCompatActivity() {
-    private var id: Int = -1
-    private var created: String = ""
-    private lateinit var userPreferencesRepository: UserPreferencesRepository
+class EditAccessoryViewModel(
+    application: Application,
+    savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
+    private val mRepository: TrisquelRepo = TrisquelRepo(application)
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        userPreferencesRepository = UserPreferencesRepository(this)
-        
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        val data = intent
-        id = data.getIntExtra("id", -1)
-        
-        var initType = Accessory.ACCESSORY_FILTER
-        var initName = ""
-        var initMount = ""
-        var initFlFactor = ""
+    val id: Int = savedStateHandle.get<Int>("id") ?: -1
 
-        if (id > 0 && savedInstanceState == null) {
-            val a = dao.getAccessory(id)
-            if (a != null) {
-                created = Util.dateToStringUTC(a.created)
-                initName = a.name
-                initType = a.type
-                when (a.type) {
-                    Accessory.ACCESSORY_TELE_CONVERTER,
-                    Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                        initMount = a.mount
-                        initFlFactor = a.focal_length_factor.toString()
-                    }
-                    Accessory.ACCESSORY_EXT_TUBE -> {
-                        initMount = a.mount
-                    }
+    private val _uiState = MutableStateFlow(EditAccessoryUiState())
+    val uiState: StateFlow<EditAccessoryUiState> = _uiState.asStateFlow()
+
+    private val _isSaved = MutableStateFlow(false)
+    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
+
+    init {
+        if (id > 0) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val dao = TrisquelDao(getApplication())
+                dao.connection()
+                val a = dao.getAccessory(id)
+                dao.close()
+
+                if (a != null) {
+                    val flFactorStr = if (a.type == Accessory.ACCESSORY_TELE_CONVERTER || a.type == Accessory.ACCESSORY_WIDE_CONVERTER) {
+                        a.focal_length_factor.toString()
+                    } else ""
+                    val mount = if (a.type != Accessory.ACCESSORY_FILTER && a.type != Accessory.ACCESSORY_UNKNOWN) a.mount else ""
+                    
+                    _uiState.value = _uiState.value.copy(
+                        created = Util.dateToStringUTC(a.created),
+                        type = a.type,
+                        name = a.name,
+                        mount = mount,
+                        flFactor = flFactorStr,
+                        isLoaded = true
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(isLoaded = true)
                 }
             }
-        } else if (savedInstanceState != null) {
-            created = savedInstanceState.getString("created") ?: ""
-            initName = savedInstanceState.getString("name") ?: ""
-            initType = savedInstanceState.getInt("type")
-            when (initType) {
-                Accessory.ACCESSORY_TELE_CONVERTER,
-                Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                    initMount = savedInstanceState.getString("mount") ?: ""
-                    initFlFactor = savedInstanceState.getDouble("focal_length_factor").toString()
-                }
-                Accessory.ACCESSORY_EXT_TUBE -> {
-                    initMount = savedInstanceState.getString("mount") ?: ""
-                }
-            }
-        }
-        dao.close()
-
-        val titleRes = if (id < 0) R.string.title_activity_add_accessory else R.string.title_activity_edit_accessory
-        
-        setContent {
-            TrisquelTheme {
-                EditAccessoryScreen(
-                    title = stringResource(id = titleRes),
-                    initType = initType,
-                    initName = initName,
-                    initMount = initMount,
-                    initFlFactor = initFlFactor,
-                    suggestedMounts = userPreferencesRepository.getSuggestList("camera_mounts", R.array.camera_mounts),
-                    onSave = { type, name, mount, flFactor ->
-                        saveAndFinish(type, name, mount, flFactor)
-                    },
-                    onCancel = {
-                        setResult(RESULT_CANCELED, Intent())
-                        finish()
-                    }
-                )
-            }
+        } else {
+            _uiState.value = _uiState.value.copy(isLoaded = true)
         }
     }
 
-    private fun saveAndFinish(type: Int, name: String, mount: String, flFactor: Double) {
-        val data = Intent()
-        data.putExtra("id", id)
-        data.putExtra("type", type)
-        data.putExtra("created", created)
-        data.putExtra("name", name)
-        
-        when (type) {
-            Accessory.ACCESSORY_TELE_CONVERTER,
-            Accessory.ACCESSORY_WIDE_CONVERTER -> {
-                data.putExtra("mount", mount)
-                data.putExtra("focal_length_factor", flFactor)
+    fun save(type: Int, name: String, mount: String, flFactor: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val created = if (_uiState.value.created.isNotEmpty()) _uiState.value.created else Util.dateToStringUTC(Date())
+            val updated = Util.dateToStringUTC(Date())
+            
+            val m = if (type != Accessory.ACCESSORY_FILTER && type != Accessory.ACCESSORY_UNKNOWN) mount else null
+            val f = if (type == Accessory.ACCESSORY_TELE_CONVERTER || type == Accessory.ACCESSORY_WIDE_CONVERTER) flFactor else 0.0
+            
+            val a = Accessory(
+                id = if (id > 0) id else 0,
+                created = created,
+                last_modified = updated,
+                type = type,
+                name = name,
+                mount = m,
+                focal_length_factor = f
+            )
+            mRepository.upsertAccessory(a.toEntity())
+            
+            _isSaved.value = true
+        }
+    }
+}
+
+data class EditAccessoryUiState(
+    val isLoaded: Boolean = false,
+    val created: String = "",
+    val type: Int = Accessory.ACCESSORY_FILTER,
+    val name: String = "",
+    val mount: String = "",
+    val flFactor: String = ""
+)
+
+@Composable
+fun EditAccessoryRoute(
+    id: Int,
+    onCancel: () -> Unit,
+    viewModel: EditAccessoryViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val isSaved by viewModel.isSaved.collectAsState()
+    
+    LaunchedEffect(isSaved) {
+        if (isSaved) {
+            onCancel() // go back
+        }
+    }
+
+    if (!uiState.isLoaded) {
+        // Loading state, empty box
+        return
+    }
+
+    val context = LocalContext.current
+    val userPreferencesRepository = remember { UserPreferencesRepository(context) }
+    val suggestedMounts = remember { userPreferencesRepository.getSuggestList("camera_mounts", R.array.camera_mounts) }
+
+    val titleRes = if (id < 0) R.string.title_activity_add_accessory else R.string.title_activity_edit_accessory
+    
+    EditAccessoryScreen(
+        title = stringResource(id = titleRes),
+        initType = uiState.type,
+        initName = uiState.name,
+        initMount = uiState.mount,
+        initFlFactor = uiState.flFactor,
+        suggestedMounts = suggestedMounts,
+        onSave = { type, name, mount, flFactor ->
+            if (type == Accessory.ACCESSORY_TELE_CONVERTER || type == Accessory.ACCESSORY_WIDE_CONVERTER || type == Accessory.ACCESSORY_EXT_TUBE) {
                 userPreferencesRepository.saveSuggestList("camera_mounts", R.array.camera_mounts, arrayOf(mount))
             }
-            Accessory.ACCESSORY_EXT_TUBE -> {
-                data.putExtra("mount", mount)
-                userPreferencesRepository.saveSuggestList("camera_mounts", R.array.camera_mounts, arrayOf(mount))
-            }
-        }
-        setResult(RESULT_OK, data)
-        finish()
-    }
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putString("created", created)
-    }
+            viewModel.save(type, name, mount, flFactor)
+        },
+        onCancel = onCancel
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -255,12 +255,6 @@ fun TrisquelNavHost(
             }
         }
         composable(MainActivity.ROUTE_ACCESSORIES) {
-            val addAccessoryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == AppCompatActivity.RESULT_OK) accessoryViewModel.handleAddResult(result.data)
-            }
-            val editAccessoryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == AppCompatActivity.RESULT_OK) accessoryViewModel.handleEditResult(result.data)
-            }
             val accessories by accessoryViewModel.allAccessories.observeAsState(emptyList())
             val isAccessoriesLoading by accessoryViewModel.isLoading.observeAsState(false)
             
@@ -270,9 +264,7 @@ fun TrisquelNavHost(
                         accessories = accessories,
                         onItemClick = { item ->
                             val a = Accessory.fromEntity(item)
-                            val intent = Intent(context, EditAccessoryActivity::class.java)
-                            intent.putExtra("id", a.id)
-                            editAccessoryLauncher.launch(intent)
+                            navController.navigate("edit_accessory?id=${a.id}")
                         },
                         onItemLongClick = { onAccessoryDeleteRequest(Accessory.fromEntity(it)) },
                         emptyMessage = stringResource(R.string.warning_accessory_not_registered),
@@ -280,8 +272,7 @@ fun TrisquelNavHost(
                     )
                     FloatingActionButton(
                         onClick = {
-                            val intent = Intent(context, EditAccessoryActivity::class.java)
-                            addAccessoryLauncher.launch(intent)
+                            navController.navigate("edit_accessory?id=-1")
                         },
                         containerColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
@@ -290,6 +281,13 @@ fun TrisquelNavHost(
                     }
                 }
             }
+        }
+        composable(
+            route = "edit_accessory?id={id}",
+            arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("id") ?: -1
+            EditAccessoryRoute(id = id, onCancel = { navController.popBackStack() })
         }
         composable(MainActivity.ROUTE_FAVORITES) {
             val groupedPhotos = remember { mutableStateOf<List<Pair<String, List<Photo>>>>(emptyList()) }
