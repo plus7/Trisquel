@@ -362,6 +362,7 @@ class MainActivity : AppCompatActivity() {
             navController = navController,
             observedRoute = observedRoute,
             scope = scope,
+            gesturesEnabled = currentRoute in listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES, ROUTE_FAVORITES),
             onSettingsClick = { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) },
             onBackupClick = {
                 mainViewModel.showDialog(ActiveDialog.RichSelection(
@@ -390,94 +391,89 @@ class MainActivity : AppCompatActivity() {
             onReleaseNotesClick = { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RELEASE_NOTES_URL))) },
             onLicenseClick = { startActivity(Intent(this@MainActivity, LicenseActivity::class.java)) }
         ) {
-            Scaffold(
-                topBar = {
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val observedRoute = navBackStackEntry?.destination?.route ?: initialRoute
-
-                    TrisquelTopAppBar(
-                        observedRoute = observedRoute,
-                        currentSubtitle = mainViewModel.currentSubtitle,
-                        currentFilter = mainViewModel.currentFilter,
-                        drawerState = drawerState,
-                        scope = scope,
-                        onSortClick = {
-                            val arr = when(observedRoute){
-                                ROUTE_FILMROLLS -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_camera), getString(R.string.label_brand))
-                                ROUTE_CAMERAS -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_mount), getString(R.string.label_format))
-                                ROUTE_LENSES -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_mount), getString(R.string.label_focal_length))
-                                ROUTE_ACCESSORIES -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_accessory_type))
-                                else -> arrayOf()
-                            }
-                            val key = userPreferencesRepository.getSortKey(observedRoute)
-                            mainViewModel.showDialog(ActiveDialog.SingleChoice(
-                                title = getString(R.string.label_sort_by),
-                                items = arr,
-                                selected = key,
-                                onConfirm = { handleSort(observedRoute, it) }
-                            ))
-                        },
-                        onFilterNoFilterClick = {
-                            mainViewModel.currentFilter = Pair(0, arrayListOf())
-                            mainViewModel.currentSubtitle = ""
-                            filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(0, ""))
-                        },
-                        onFilterByCameraClick = {
-                            mainViewModel.requestFilterByCamera { _, id ->
-                                if (id != null) {
-                                    mainViewModel.currentFilter = Pair(1, arrayListOf(id.toString()))
-                                    mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
-                                    filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(1, id.toString()))
-                                }
-                            }
-                        },
-                        onFilterByFilmBrandClick = {
-                            mainViewModel.requestFilterByFilmBrand { fb ->
-                                mainViewModel.currentFilter = Pair(2, arrayListOf(fb.first, fb.second))
+            val mainTopBar: @Composable (String) -> Unit = { route ->
+                TrisquelTopAppBar(
+                    observedRoute = route,
+                    currentSubtitle = mainViewModel.currentSubtitle,
+                    currentFilter = mainViewModel.currentFilter,
+                    drawerState = drawerState,
+                    scope = scope,
+                    onSortClick = {
+                        val arr = when(route){
+                            ROUTE_FILMROLLS -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_camera), getString(R.string.label_brand))
+                            ROUTE_CAMERAS -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_mount), getString(R.string.label_format))
+                            ROUTE_LENSES -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_mount), getString(R.string.label_focal_length))
+                            ROUTE_ACCESSORIES -> arrayOf(getString(R.string.label_created_date), getString(R.string.label_name), getString(R.string.label_accessory_type))
+                            else -> arrayOf()
+                        }
+                        val key = userPreferencesRepository.getSortKey(route)
+                        mainViewModel.showDialog(ActiveDialog.SingleChoice(
+                            title = getString(R.string.label_sort_by),
+                            items = arr,
+                            selected = key,
+                            onConfirm = { handleSort(route, it) }
+                        ))
+                    },
+                    onFilterNoFilterClick = {
+                        mainViewModel.currentFilter = Pair(0, arrayListOf())
+                        mainViewModel.currentSubtitle = ""
+                        filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(0, ""))
+                    },
+                    onFilterByCameraClick = {
+                        mainViewModel.requestFilterByCamera { _, id ->
+                            if (id != null) {
+                                mainViewModel.currentFilter = Pair(1, arrayListOf(id.toString()))
                                 mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
-                                filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(2, fb.second))
+                                filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(1, id.toString()))
                             }
-                        },
-                        onPinnedFilterClick = { f ->
-                            mainViewModel.currentFilter = f
-                            mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(f)
-                            val searchStr = if(f.first == 1) f.second[0].toInt().toString() else f.second[1]
-                            filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(f.first, searchStr))
-                        },
-                        onSearchClick = {
-                            val title = getString(R.string.title_dialog_search_by_tags)
-                            mainViewModel.requestSearch(title) { checkedLabels ->
-                                if (checkedLabels.isNotEmpty()) {
-                                    val intent = Intent(application, SearchActivity::class.java)
-                                    intent.putExtra("tags", checkedLabels)
-                                    searchLauncher.launch(intent)
-                                }
+                        }
+                    },
+                    onFilterByFilmBrandClick = {
+                        mainViewModel.requestFilterByFilmBrand { fb ->
+                            mainViewModel.currentFilter = Pair(2, arrayListOf(fb.first, fb.second))
+                            mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
+                            filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(2, fb.second))
+                        }
+                    },
+                    onPinnedFilterClick = { f ->
+                        mainViewModel.currentFilter = f
+                        mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(f)
+                        val searchStr = if(f.first == 1) f.second[0].toInt().toString() else f.second[1]
+                        filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(f.first, searchStr))
+                    },
+                    onSearchClick = {
+                        val title = getString(R.string.title_dialog_search_by_tags)
+                        mainViewModel.requestSearch(title) { checkedLabels ->
+                            if (checkedLabels.isNotEmpty()) {
+                                val intent = Intent(application, SearchActivity::class.java)
+                                intent.putExtra("tags", checkedLabels)
+                                searchLauncher.launch(intent)
                             }
-                        },
-                        onPinFilterClick = { mainViewModel.addPinnedFilter(mainViewModel.currentFilter) },
-                        onUnpinFilterClick = { mainViewModel.removePinnedFilter(mainViewModel.currentFilter) },
-                        getPinnedFilters = { mainViewModel.getPinnedFilters() },
-                        getFilterLabel = { mainViewModel.getFilterLabel(it) }
-                    )
-                }
-            ) { paddingValues ->
-                TrisquelNavHost(
-                    navController = navController,
-                    initialRoute = initialRoute,
-                    modifier = Modifier.padding(paddingValues),
-                    mainViewModel = mainViewModel,
-                    filmRollViewModel = filmRollViewModel,
-                    cameraViewModel = cameraViewModel,
-                    lensViewModel = lensViewModel,
-                    accessoryViewModel = accessoryViewModel,
-                    onFilmRollDeleteRequest = { onFilmRollDeleteRequest(it) },
-                    onCameraDeleteRequest = { onCameraDeleteRequest(it) },
-                    onLensDeleteRequest = { onLensDeleteRequest(it) },
-                    onAccessoryDeleteRequest = { onAccessoryDeleteRequest(it) },
-                    onPhotoInteraction = { photo, list -> onPhotoInteraction(photo, list) }
+                        }
+                    },
+                    onPinFilterClick = { mainViewModel.addPinnedFilter(mainViewModel.currentFilter) },
+                    onUnpinFilterClick = { mainViewModel.removePinnedFilter(mainViewModel.currentFilter) },
+                    getPinnedFilters = { mainViewModel.getPinnedFilters() },
+                    getFilterLabel = { mainViewModel.getFilterLabel(it) }
                 )
             }
 
+            TrisquelNavHost(
+                navController = navController,
+                initialRoute = initialRoute,
+                modifier = Modifier,
+                mainTopBar = mainTopBar,
+                mainViewModel = mainViewModel,
+                filmRollViewModel = filmRollViewModel,
+                cameraViewModel = cameraViewModel,
+                lensViewModel = lensViewModel,
+                accessoryViewModel = accessoryViewModel,
+                onFilmRollDeleteRequest = { onFilmRollDeleteRequest(it) },
+                onCameraDeleteRequest = { onCameraDeleteRequest(it) },
+                onLensDeleteRequest = { onLensDeleteRequest(it) },
+                onAccessoryDeleteRequest = { onAccessoryDeleteRequest(it) },
+                onPhotoInteraction = { photo, list -> onPhotoInteraction(photo, list) }
+            )
         }
     }
 }

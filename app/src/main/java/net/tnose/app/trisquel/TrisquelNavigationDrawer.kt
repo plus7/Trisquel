@@ -29,6 +29,7 @@ fun TrisquelNavigationDrawer(
     navController: NavHostController,
     observedRoute: String,
     scope: CoroutineScope,
+    gesturesEnabled: Boolean = true,
     onSettingsClick: () -> Unit,
     onBackupClick: () -> Unit,
     onImportClick: () -> Unit,
@@ -57,6 +58,7 @@ fun TrisquelNavigationDrawer(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = gesturesEnabled,
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(12.dp))

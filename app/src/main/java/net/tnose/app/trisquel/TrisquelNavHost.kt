@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +49,7 @@ fun TrisquelNavHost(
     navController: NavHostController,
     initialRoute: String,
     modifier: Modifier = Modifier,
+    mainTopBar: @Composable (String) -> Unit,
     mainViewModel: MainViewModel,
     filmRollViewModel: FilmRollViewModel,
     cameraViewModel: CameraViewModel,
@@ -77,34 +79,37 @@ fun TrisquelNavHost(
 
             val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
             val isFilmRollsLoading by filmRollViewModel.isLoading.observeAsState(false)
-            Box(Modifier.fillMaxSize()) {
-                FilmRollListScreen(
-                    filmrolls = filmrolls,
-                    onItemClick = { item ->
-                        val f = FilmRoll.fromEntity(item)
-                        val intent = Intent(context, EditPhotoListActivity::class.java)
-                        intent.putExtra("id", f.id)
-                        editPhotoListLauncher.launch(intent)
-                    },
-                    onItemLongClick = { onFilmRollDeleteRequest(FilmRoll.fromEntity(it)) },
-                    emptyMessage = stringResource(R.string.warning_filmroll_not_registered),
-                    isLoading = isFilmRollsLoading
-                )
-                FloatingActionButton(
-                    onClick = {
-                        val intent = Intent(context, EditFilmRollActivity::class.java)
-                        if (mainViewModel.currentFilter.first == 1) {
-                            intent.putExtra("default_camera", mainViewModel.currentFilter.second[0].toInt())
-                        } else if (mainViewModel.currentFilter.first == 2) {
-                            intent.putExtra("default_manufacturer", mainViewModel.currentFilter.second[0])
-                            intent.putExtra("default_brand", mainViewModel.currentFilter.second[1])
-                        }
-                        addFilmRollLauncher.launch(intent)
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                ) {
-                    Icon(painterResource(R.drawable.ic_filmroll_vector_white), null, tint = Color.White)
+            
+            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_FILMROLLS) }) { paddingValues ->
+                Box(Modifier.fillMaxSize().padding(paddingValues)) {
+                    FilmRollListScreen(
+                        filmrolls = filmrolls,
+                        onItemClick = { item ->
+                            val f = FilmRoll.fromEntity(item)
+                            val intent = Intent(context, EditPhotoListActivity::class.java)
+                            intent.putExtra("id", f.id)
+                            editPhotoListLauncher.launch(intent)
+                        },
+                        onItemLongClick = { onFilmRollDeleteRequest(FilmRoll.fromEntity(it)) },
+                        emptyMessage = stringResource(R.string.warning_filmroll_not_registered),
+                        isLoading = isFilmRollsLoading
+                    )
+                    FloatingActionButton(
+                        onClick = {
+                            val intent = Intent(context, EditFilmRollActivity::class.java)
+                            if (mainViewModel.currentFilter.first == 1) {
+                                intent.putExtra("default_camera", mainViewModel.currentFilter.second[0].toInt())
+                            } else if (mainViewModel.currentFilter.first == 2) {
+                                intent.putExtra("default_manufacturer", mainViewModel.currentFilter.second[0])
+                                intent.putExtra("default_brand", mainViewModel.currentFilter.second[1])
+                            }
+                            addFilmRollLauncher.launch(intent)
+                        },
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                    ) {
+                        Icon(painterResource(R.drawable.ic_filmroll_vector_white), null, tint = Color.White)
+                    }
                 }
             }
         }
@@ -120,91 +125,93 @@ fun TrisquelNavHost(
             var isFabExpanded by rememberSaveable { mutableStateOf(false) }
             val interactionSource = remember { MutableInteractionSource() }
             
-            Box(Modifier.fillMaxSize()) {
-                CameraListScreen(
-                    cameras = cameras,
-                    onItemClick = { item ->
-                        val intent = Intent(context, EditCameraActivity::class.java)
-                        intent.putExtra("id", item.id)
-                        intent.putExtra("type", item.type)
-                        editCameraLauncher.launch(intent)
-                    },
-                    onItemLongClick = { onCameraDeleteRequest(it) },
-                    emptyMessage = stringResource(R.string.warning_cam_not_registered),
-                    scrollTargetIndex = null,
-                    onScrollConsumed = {},
-                    isLoading = isCamerasLoading
-                )
-
-                if (isFabExpanded) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .clickable(
-                                interactionSource = interactionSource,
-                                indication = null
-                            ) { isFabExpanded = false }
+            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_CAMERAS) }) { paddingValues ->
+                Box(Modifier.fillMaxSize().padding(paddingValues)) {
+                    CameraListScreen(
+                        cameras = cameras,
+                        onItemClick = { item ->
+                            val intent = Intent(context, EditCameraActivity::class.java)
+                            intent.putExtra("id", item.id)
+                            intent.putExtra("type", item.type)
+                            editCameraLauncher.launch(intent)
+                        },
+                        onItemLongClick = { onCameraDeleteRequest(it) },
+                        emptyMessage = stringResource(R.string.warning_cam_not_registered),
+                        scrollTargetIndex = null,
+                        onScrollConsumed = {},
+                        isLoading = isCamerasLoading
                     )
-                }
 
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                ) {
-                    AnimatedVisibility(visible = isFabExpanded) {
-                        Column(horizontalAlignment = Alignment.End) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.register_flc),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    modifier = Modifier.padding(end = 16.dp)
-                                )
-                                SmallFloatingActionButton(
-                                    onClick = {
-                                        isFabExpanded = false
-                                        val intent = Intent(context, EditCameraActivity::class.java)
-                                        intent.putExtra("type", 1)
-                                        addCameraLauncher.launch(intent)
-                                    },
-                                    containerColor = MaterialTheme.colorScheme.secondary
-                                ) {
-                                    Icon(painterResource(R.drawable.ic_menu_camera_white), contentDescription = null, tint = Color.White)
+                    if (isFabExpanded) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.5f))
+                                .clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null
+                                ) { isFabExpanded = false }
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                    ) {
+                        AnimatedVisibility(visible = isFabExpanded) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.register_flc),
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        modifier = Modifier.padding(end = 16.dp)
+                                    )
+                                    SmallFloatingActionButton(
+                                        onClick = {
+                                            isFabExpanded = false
+                                            val intent = Intent(context, EditCameraActivity::class.java)
+                                            intent.putExtra("type", 1)
+                                            addCameraLauncher.launch(intent)
+                                        },
+                                        containerColor = MaterialTheme.colorScheme.secondary
+                                    ) {
+                                        Icon(painterResource(R.drawable.ic_menu_camera_white), contentDescription = null, tint = Color.White)
+                                    }
                                 }
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.register_ilc),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    modifier = Modifier.padding(end = 16.dp)
-                                )
-                                SmallFloatingActionButton(
-                                    onClick = {
-                                        isFabExpanded = false
-                                        val intent = Intent(context, EditCameraActivity::class.java)
-                                        intent.putExtra("type", 0)
-                                        addCameraLauncher.launch(intent)
-                                    },
-                                    containerColor = MaterialTheme.colorScheme.secondary
-                                ) {
-                                    Icon(painterResource(R.drawable.ic_menu_camera_white), contentDescription = null, tint = Color.White)
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 16.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.register_ilc),
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        modifier = Modifier.padding(end = 16.dp)
+                                    )
+                                    SmallFloatingActionButton(
+                                        onClick = {
+                                            isFabExpanded = false
+                                            val intent = Intent(context, EditCameraActivity::class.java)
+                                            intent.putExtra("type", 0)
+                                            addCameraLauncher.launch(intent)
+                                        },
+                                        containerColor = MaterialTheme.colorScheme.secondary
+                                    ) {
+                                        Icon(painterResource(R.drawable.ic_menu_camera_white), contentDescription = null, tint = Color.White)
+                                    }
                                 }
                             }
                         }
-                    }
-                    FloatingActionButton(
-                        onClick = { isFabExpanded = !isFabExpanded },
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                    ) {
-                        val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.graphicsLayer(rotationZ = rotation)
-                        )
+                        FloatingActionButton(
+                            onClick = { isFabExpanded = !isFabExpanded },
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                        ) {
+                            val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.graphicsLayer(rotationZ = rotation)
+                            )
+                        }
                     }
                 }
             }
@@ -218,29 +225,32 @@ fun TrisquelNavHost(
             }
             val lenses by lensViewModel.lenses.observeAsState(emptyList())
             val isLensesLoading by lensViewModel.isLoading.observeAsState(false)
-            Box(Modifier.fillMaxSize()) {
-                LensListScreen(
-                    lenses = lenses,
-                    onItemClick = { item ->
-                        val intent = Intent(context, EditLensActivity::class.java)
-                        intent.putExtra("id", item.id)
-                        editLensLauncher.launch(intent)
-                    },
-                    onItemLongClick = { onLensDeleteRequest(it) },
-                    emptyMessage = stringResource(R.string.warning_lens_not_registered),
-                    scrollTargetIndex = null,
-                    onScrollConsumed = {},
-                    isLoading = isLensesLoading
-                )
-                FloatingActionButton(
-                    onClick = {
-                        val intent = Intent(context, EditLensActivity::class.java)
-                        addLensLauncher.launch(intent)
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                ) {
-                    Icon(painterResource(R.drawable.ic_lens_white), null, tint = Color.White)
+            
+            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_LENSES) }) { paddingValues ->
+                Box(Modifier.fillMaxSize().padding(paddingValues)) {
+                    LensListScreen(
+                        lenses = lenses,
+                        onItemClick = { item ->
+                            val intent = Intent(context, EditLensActivity::class.java)
+                            intent.putExtra("id", item.id)
+                            editLensLauncher.launch(intent)
+                        },
+                        onItemLongClick = { onLensDeleteRequest(it) },
+                        emptyMessage = stringResource(R.string.warning_lens_not_registered),
+                        scrollTargetIndex = null,
+                        onScrollConsumed = {},
+                        isLoading = isLensesLoading
+                    )
+                    FloatingActionButton(
+                        onClick = {
+                            val intent = Intent(context, EditLensActivity::class.java)
+                            addLensLauncher.launch(intent)
+                        },
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                    ) {
+                        Icon(painterResource(R.drawable.ic_lens_white), null, tint = Color.White)
+                    }
                 }
             }
         }
@@ -253,28 +263,31 @@ fun TrisquelNavHost(
             }
             val accessories by accessoryViewModel.allAccessories.observeAsState(emptyList())
             val isAccessoriesLoading by accessoryViewModel.isLoading.observeAsState(false)
-            Box(Modifier.fillMaxSize()) {
-                AccessoryListScreen(
-                    accessories = accessories,
-                    onItemClick = { item ->
-                        val a = Accessory.fromEntity(item)
-                        val intent = Intent(context, EditAccessoryActivity::class.java)
-                        intent.putExtra("id", a.id)
-                        editAccessoryLauncher.launch(intent)
-                    },
-                    onItemLongClick = { onAccessoryDeleteRequest(Accessory.fromEntity(it)) },
-                    emptyMessage = stringResource(R.string.warning_accessory_not_registered),
-                    isLoading = isAccessoriesLoading
-                )
-                FloatingActionButton(
-                    onClick = {
-                        val intent = Intent(context, EditAccessoryActivity::class.java)
-                        addAccessoryLauncher.launch(intent)
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                ) {
-                    Icon(painterResource(R.drawable.ic_extension_white), null, tint = Color.White)
+            
+            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_ACCESSORIES) }) { paddingValues ->
+                Box(Modifier.fillMaxSize().padding(paddingValues)) {
+                    AccessoryListScreen(
+                        accessories = accessories,
+                        onItemClick = { item ->
+                            val a = Accessory.fromEntity(item)
+                            val intent = Intent(context, EditAccessoryActivity::class.java)
+                            intent.putExtra("id", a.id)
+                            editAccessoryLauncher.launch(intent)
+                        },
+                        onItemLongClick = { onAccessoryDeleteRequest(Accessory.fromEntity(it)) },
+                        emptyMessage = stringResource(R.string.warning_accessory_not_registered),
+                        isLoading = isAccessoriesLoading
+                    )
+                    FloatingActionButton(
+                        onClick = {
+                            val intent = Intent(context, EditAccessoryActivity::class.java)
+                            addAccessoryLauncher.launch(intent)
+                        },
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                    ) {
+                        Icon(painterResource(R.drawable.ic_extension_white), null, tint = Color.White)
+                    }
                 }
             }
         }
@@ -296,11 +309,15 @@ fun TrisquelNavHost(
                     withContext(Dispatchers.Main) { groupedPhotos.value = result }
                 }
             }
-            FavoritePhotoScreen(
-                groupedPhotos = groupedPhotos.value,
-                columnCount = 3,
-                onItemClick = { photo, list -> onPhotoInteraction(photo, list) }
-            )
+            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_FAVORITES) }) { paddingValues ->
+                Box(Modifier.fillMaxSize().padding(paddingValues)) {
+                    FavoritePhotoScreen(
+                        groupedPhotos = groupedPhotos.value,
+                        columnCount = 3,
+                        onItemClick = { photo, list -> onPhotoInteraction(photo, list) }
+                    )
+                }
+            }
         }
     }
 }
