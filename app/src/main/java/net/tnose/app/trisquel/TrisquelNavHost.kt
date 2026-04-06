@@ -69,8 +69,6 @@ fun TrisquelNavHost(
         modifier = modifier
     ) {
         composable(MainActivity.ROUTE_FILMROLLS) {
-            val editPhotoListLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
-
             val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
             val isFilmRollsLoading by filmRollViewModel.isLoading.observeAsState(false)
             
@@ -80,9 +78,7 @@ fun TrisquelNavHost(
                         filmrolls = filmrolls,
                         onItemClick = { item ->
                             val f = FilmRoll.fromEntity(item)
-                            val intent = Intent(context, EditPhotoListActivity::class.java)
-                            intent.putExtra("id", f.id)
-                            editPhotoListLauncher.launch(intent)
+                            navController.navigate("photo_list/${f.id}")
                         },
                         onItemLongClick = { onFilmRollDeleteRequest(FilmRoll.fromEntity(it)) },
                         emptyMessage = stringResource(R.string.warning_filmroll_not_registered),
@@ -339,6 +335,17 @@ fun TrisquelNavHost(
                 id = id,
                 onCancel = { navController.popBackStack() },
                 onNavigateToEditCamera = { navController.navigate("edit_camera/0?id=-1") }
+            )
+        }
+        composable(
+            route = "photo_list/{id}",
+            arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("id") ?: -1
+            EditPhotoListRoute(
+                id = id,
+                onBack = { navController.popBackStack() },
+                onNavigateToEditFilmRoll = { frId -> navController.navigate("edit_filmroll?id=$frId") }
             )
         }
     }

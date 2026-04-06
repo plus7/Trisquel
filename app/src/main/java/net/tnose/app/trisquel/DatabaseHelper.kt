@@ -194,6 +194,9 @@ interface TrisquelDao2 {
     @Query("SELECT * from filmroll where _id = :id LIMIT 1")
     fun getFilmRoll(id : Int): LiveData<FilmRollEntity>
 
+    @Query("SELECT * from filmroll where _id = :id LIMIT 1")
+    fun getFilmRollAndRels(id : Int): LiveData<FilmRollAndRels>
+
     @Query("SELECT * from filmroll order by created desc")
     fun allFilmRollAndRels(): LiveData<List<FilmRollAndRels>>
     @Query("SELECT * from filmroll WHERE cast(camera as text) LIKE :camera AND brand LIKE :filmbrand order by created desc;")

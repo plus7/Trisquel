@@ -18,6 +18,10 @@ class TrisquelRepo {
         return mTrisquelDao.getFilmRoll(id)
     }
 
+    fun getFilmRollAndRels(id : Int) : LiveData<FilmRollAndRels> {
+        return mTrisquelDao.getFilmRollAndRels(id)
+    }
+
     fun getAllFilmRolls(sortBy : Int, filterByKind : Int, filterByValue : String): LiveData<List<FilmRollAndRels>> {
         var cameraVal = "%"
         var filmBrandVal = "%"
