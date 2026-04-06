@@ -31,26 +31,6 @@
             android:process=":restart_process"
             android:theme="@android:style/Theme.NoTitleBar" />
         <activity
-            android:name=".EditCameraActivity"
-            android:label="@string/title_activity_reg_cam"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".EditLensActivity"
-            android:label="@string/title_activity_reg_lens"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".EditPhotoActivity"
-            android:label="@string/title_activity_edit_photo"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".EditFilmRollActivity"
-            android:label="@string/title_activity_reg_filmroll"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBar"

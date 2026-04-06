@@ -224,6 +224,70 @@ fun EditPhotoRoute(
     )
 }
 
+@Composable
+fun CheckListDialog(
+    title: String,
+    items: List<String>,
+    initialCheckedIndices: List<Int>,
+    onConfirm: (List<Int>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val checkedStates = rememberSaveable { mutableStateOf(items.indices.map { initialCheckedIndices.contains(it) }) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title) },
+        text = {
+            LazyRow {
+                item {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        items.forEachIndexed { index, item ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val currentList = checkedStates.value.toMutableList()
+                                        currentList[index] = !currentList[index]
+                                        checkedStates.value = currentList
+                                    }
+                                    .padding(8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = checkedStates.value[index],
+                                    onCheckedChange = { isChecked ->
+                                        val currentList = checkedStates.value.toMutableList()
+                                        currentList[index] = isChecked
+                                        checkedStates.value = currentList
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = item)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val checkedIndices = checkedStates.value
+                        .mapIndexedNotNull { index, isChecked -> if (isChecked) index else null }
+                    onConfirm(checkedIndices)
+                }
+            ) {
+                Text(stringResource(android.R.string.yes))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.no))
+            }
+        }
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditPhotoScreen(
