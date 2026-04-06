@@ -56,6 +56,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -112,13 +113,14 @@ fun ClassicTextField(
 
 class EditAccessoryViewModel(
     application: Application,
-    savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
-    private val mRepository: TrisquelRepo = TrisquelRepo(application)
+    private val repo: TrisquelRepo = TrisquelRepo(application)
 
-    val id: Int = savedStateHandle.get<Int>("id") ?: -1
+    val idInput: Int = savedStateHandle.get<Int>("id") ?: -1
+    val id = if (idInput < 0) 0 else idInput
 
-    private val _uiState = MutableStateFlow(EditAccessoryUiState())
+    private val _uiState = MutableStateFlow(EditAccessoryUiState(id = id))
     val uiState: StateFlow<EditAccessoryUiState> = _uiState.asStateFlow()
 
     private val _isSaved = MutableStateFlow(false)
@@ -127,44 +129,42 @@ class EditAccessoryViewModel(
     init {
         if (id > 0) {
             viewModelScope.launch(Dispatchers.IO) {
-                val dao = TrisquelDao(getApplication())
-                dao.connection()
-                val a = dao.getAccessory(id)
-                dao.close()
-
-                if (a != null) {
+                val entity = repo.getAccessory(id)
+                if (entity != null) {
+                    val a = Accessory.fromEntity(entity)
                     val flFactorStr = if (a.type == Accessory.ACCESSORY_TELE_CONVERTER || a.type == Accessory.ACCESSORY_WIDE_CONVERTER) {
                         a.focal_length_factor.toString()
                     } else ""
                     val mount = if (a.type != Accessory.ACCESSORY_FILTER && a.type != Accessory.ACCESSORY_UNKNOWN) a.mount else ""
                     
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         created = Util.dateToStringUTC(a.created),
                         type = a.type,
                         name = a.name,
                         mount = mount,
                         flFactor = flFactorStr,
                         isLoaded = true
-                    )
+                    ) }
                 } else {
-                    _uiState.value = _uiState.value.copy(isLoaded = true)
+                    _uiState.update { it.copy(isLoaded = true) }
                 }
             }
         } else {
-            _uiState.value = _uiState.value.copy(isLoaded = true)
+            _uiState.update { it.copy(isLoaded = true) }
         }
     }
 
     fun save(type: Int, name: String, mount: String, flFactor: Double) {
         viewModelScope.launch(Dispatchers.IO) {
-            val created = if (_uiState.value.created.isNotEmpty()) _uiState.value.created else Util.dateToStringUTC(Date())
+            val state = _uiState.value
+            val created = if (state.created.isNotEmpty()) state.created else Util.dateToStringUTC(Date())
             val updated = Util.dateToStringUTC(Date())
             
             val m = if (type != Accessory.ACCESSORY_FILTER && type != Accessory.ACCESSORY_UNKNOWN) mount else null
             val f = if (type == Accessory.ACCESSORY_TELE_CONVERTER || type == Accessory.ACCESSORY_WIDE_CONVERTER) flFactor else 0.0
             
             val a = Accessory(
-                id = if (id > 0) id else 0,
+                id = state.id,
                 created = created,
                 last_modified = updated,
                 type = type,
@@ -172,7 +172,7 @@ class EditAccessoryViewModel(
                 mount = m,
                 focal_length_factor = f
             )
-            mRepository.upsertAccessory(a.toEntity())
+            repo.upsertAccessory(a.toEntity())
             
             _isSaved.value = true
         }
@@ -180,12 +180,14 @@ class EditAccessoryViewModel(
 }
 
 data class EditAccessoryUiState(
+    val id: Int = 0,
     val isLoaded: Boolean = false,
     val created: String = "",
     val type: Int = Accessory.ACCESSORY_FILTER,
     val name: String = "",
     val mount: String = "",
-    val flFactor: String = ""
+    val flFactor: String = "",
+    val isDirty: Boolean = false
 )
 
 @Composable
@@ -298,7 +300,6 @@ fun EditAccessoryScreen(
 
     if (showSaveDialog) {
         AlertDialog(
-            // ダイアログの角をシャープにして昔の見た目に近づける
             shape = RoundedCornerShape(4.dp),
             onDismissRequest = { showSaveDialog = false },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },

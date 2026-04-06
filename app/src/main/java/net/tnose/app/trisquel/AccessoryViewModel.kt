@@ -69,10 +69,7 @@ class AccessoryViewModel(application: Application?) : AndroidViewModel(
     }
 
     fun requestDeleteAccessory(accessory: Accessory) = viewModelScope.launch(Dispatchers.IO) {
-        val dao = TrisquelDao(getApplication())
-        dao.connection()
-        val used = dao.getAccessoryUsed(accessory.id)
-        dao.close()
+        val used = mRepository.isAccessoryUsed(accessory.id)
         if (used) {
             _events.emit(AccessoryEvent.ShowCannotDeleteAlert(accessory.name))
         } else {
