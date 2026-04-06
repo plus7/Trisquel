@@ -19,7 +19,7 @@ sealed class EditLensEvent {
 }
 
 data class EditLensUiState(
-    val id: Int = -1,
+    val id: Int = 0,
     val isLoaded: Boolean = false,
     val created: String = "",
     val manufacturer: String = "",
@@ -36,7 +36,7 @@ class EditLensViewModel(
     application: Application,
     private val savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
-    private val dao = TrisquelDao(application)
+    private val repo = TrisquelRepo(application)
     private val userPrefs = UserPreferencesRepository(application)
 
     private val _uiState = MutableStateFlow(EditLensUiState())
@@ -46,19 +46,21 @@ class EditLensViewModel(
     val events = _events.asSharedFlow()
 
     init {
-        val id = savedStateHandle.get<Int>("id") ?: -1
+        // Normalize ID: Room auto-increment expects 0 for new items
+        val idInput = savedStateHandle.get<Int>("id") ?: -1
+        val id = if (idInput < 0) 0 else idInput
         _uiState.update { it.copy(id = id) }
         loadInitialData(id)
     }
 
     private fun loadInitialData(id: Int) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
         val suggestedManufacturers = userPrefs.getSuggestList("lens_manufacturer", R.array.lens_manufacturer)
         val suggestedMounts = userPrefs.getSuggestList("camera_mounts", R.array.camera_mounts)
 
-        if (id >= 0) {
-            val l = dao.getLens(id)
-            if (l != null) {
+        if (id > 0) {
+            val entity = repo.getLens(id)
+            if (entity != null) {
+                val l = LensSpec.fromEntity(entity)
                 _uiState.update { it.copy(
                     isLoaded = true,
                     created = Util.dateToStringUTC(l.created),
@@ -80,7 +82,6 @@ class EditLensViewModel(
                 suggestedMounts = suggestedMounts
             ) }
         }
-        dao.close()
     }
 
     fun onManufacturerChange(value: String) {
@@ -118,13 +119,7 @@ class EditLensViewModel(
             fStepsString
         )
 
-        dao.connection()
-        if (state.id >= 0) {
-            dao.updateLens(l)
-        } else {
-            dao.addLens(l)
-        }
-        dao.close()
+        repo.upsertLens(l.toEntity())
 
         userPrefs.saveSuggestList("lens_manufacturer", R.array.lens_manufacturer, arrayOf(state.manufacturer))
         userPrefs.saveSuggestList("camera_mounts", R.array.camera_mounts, arrayOf(state.mount))
