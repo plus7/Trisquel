@@ -69,12 +69,6 @@ fun TrisquelNavHost(
         modifier = modifier
     ) {
         composable(MainActivity.ROUTE_FILMROLLS) {
-            val addFilmRollLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == AppCompatActivity.RESULT_OK) filmRollViewModel.handleAddResult(result.data)
-            }
-            rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == AppCompatActivity.RESULT_OK) filmRollViewModel.handleEditResult(result.data)
-            }
             val editPhotoListLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
 
             val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
@@ -96,14 +90,16 @@ fun TrisquelNavHost(
                     )
                     FloatingActionButton(
                         onClick = {
-                            val intent = Intent(context, EditFilmRollActivity::class.java)
+                            var defaultCameraId = -1
+                            var defaultManufacturer = ""
+                            var defaultBrand = ""
                             if (mainViewModel.currentFilter.first == 1) {
-                                intent.putExtra("default_camera", mainViewModel.currentFilter.second[0].toInt())
+                                defaultCameraId = mainViewModel.currentFilter.second[0].toInt()
                             } else if (mainViewModel.currentFilter.first == 2) {
-                                intent.putExtra("default_manufacturer", mainViewModel.currentFilter.second[0])
-                                intent.putExtra("default_brand", mainViewModel.currentFilter.second[1])
+                                defaultManufacturer = mainViewModel.currentFilter.second[0]
+                                defaultBrand = mainViewModel.currentFilter.second[1]
                             }
-                            addFilmRollLauncher.launch(intent)
+                            navController.navigate("edit_filmroll?id=-1&default_camera=${defaultCameraId}&default_manufacturer=${defaultManufacturer}&default_brand=${defaultBrand}")
                         },
                         containerColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
@@ -114,12 +110,6 @@ fun TrisquelNavHost(
             }
         }
         composable(MainActivity.ROUTE_CAMERAS) {
-            val addCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == AppCompatActivity.RESULT_OK) cameraViewModel.handleAddResult(result.data)
-            }
-            val editCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == AppCompatActivity.RESULT_OK) cameraViewModel.handleEditResult(result.data)
-            }
             val cameras by cameraViewModel.cameras.observeAsState(emptyList())
             val isCamerasLoading by cameraViewModel.isLoading.observeAsState(false)
             var isFabExpanded by rememberSaveable { mutableStateOf(false) }
@@ -130,10 +120,7 @@ fun TrisquelNavHost(
                     CameraListScreen(
                         cameras = cameras,
                         onItemClick = { item ->
-                            val intent = Intent(context, EditCameraActivity::class.java)
-                            intent.putExtra("id", item.id)
-                            intent.putExtra("type", item.type)
-                            editCameraLauncher.launch(intent)
+                            navController.navigate("edit_camera/${item.type}?id=${item.id}")
                         },
                         onItemLongClick = { onCameraDeleteRequest(it) },
                         emptyMessage = stringResource(R.string.warning_cam_not_registered),
@@ -170,9 +157,7 @@ fun TrisquelNavHost(
                                     SmallFloatingActionButton(
                                         onClick = {
                                             isFabExpanded = false
-                                            val intent = Intent(context, EditCameraActivity::class.java)
-                                            intent.putExtra("type", 1)
-                                            addCameraLauncher.launch(intent)
+                                            navController.navigate("edit_camera/1?id=-1")
                                         },
                                         containerColor = MaterialTheme.colorScheme.secondary
                                     ) {
@@ -189,9 +174,7 @@ fun TrisquelNavHost(
                                     SmallFloatingActionButton(
                                         onClick = {
                                             isFabExpanded = false
-                                            val intent = Intent(context, EditCameraActivity::class.java)
-                                            intent.putExtra("type", 0)
-                                            addCameraLauncher.launch(intent)
+                                            navController.navigate("edit_camera/0?id=-1")
                                         },
                                         containerColor = MaterialTheme.colorScheme.secondary
                                     ) {
@@ -322,6 +305,33 @@ fun TrisquelNavHost(
         }
         composable(MainActivity.ROUTE_LICENSE) {
             LicenseScreen(onBack = { navController.popBackStack() })
+        }
+        composable(
+            route = "edit_camera/{type}?id={id}",
+            arguments = listOf(
+                androidx.navigation.navArgument("type") { type = androidx.navigation.NavType.IntType },
+                androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 }
+            )
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getInt("type") ?: 0
+            val id = backStackEntry.arguments?.getInt("id") ?: -1
+            EditCameraRoute(id = id, type = type, onCancel = { navController.popBackStack() })
+        }
+        composable(
+            route = "edit_filmroll?id={id}&default_camera={default_camera}&default_manufacturer={default_manufacturer}&default_brand={default_brand}",
+            arguments = listOf(
+                androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 },
+                androidx.navigation.navArgument("default_camera") { type = androidx.navigation.NavType.IntType; defaultValue = -1 },
+                androidx.navigation.navArgument("default_manufacturer") { type = androidx.navigation.NavType.StringType; defaultValue = "" },
+                androidx.navigation.navArgument("default_brand") { type = androidx.navigation.NavType.StringType; defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("id") ?: -1
+            EditFilmRollRoute(
+                id = id,
+                onCancel = { navController.popBackStack() },
+                onNavigateToEditCamera = { navController.navigate("edit_camera/0?id=-1") }
+            )
         }
     }
 }

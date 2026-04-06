@@ -88,7 +88,7 @@ class EditPhotoListActivity : AppCompatActivity() {
 
     internal val editFilmRollLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            handleEditFilmRollResult(result.data)
+            handleEditFilmRollResult()
         }
     }
 
@@ -226,7 +226,7 @@ class EditPhotoListActivity : AppCompatActivity() {
         }
 
         override fun parseResult(resultCode: Int, intent: Intent?): List<Uri> {
-            if (resultCode == Activity.RESULT_OK) {
+            if (resultCode == RESULT_OK) {
                 val uris = Matisse.obtainResult(intent)
                 return uris
             }
@@ -252,26 +252,15 @@ class EditPhotoListActivity : AppCompatActivity() {
         if (p != null) updatePhoto(p, tags)
     }
 
-    fun handleEditFilmRollResult(data: Intent?) {
-        val bundle = data?.extras
-        if (bundle != null) {
-            val dao = TrisquelDao(this.applicationContext)
-            dao.connection()
-            val c = dao.getCamera(bundle.getInt("camera"))
-            dao.close()
-            val f = FilmRoll(
-                bundle.getInt("id"),
-                bundle.getString("name")!!,
-                bundle.getString("created")!!,
-                Util.dateToStringUTC(Date()),
-                c!!,
-                bundle.getString("manufacturer")!!,
-                bundle.getString("brand")!!,
-                bundle.getInt("iso"),
-                36
-            )
-            mFilmRoll = f
-            mFilmRollViewModel!!.update(f.toEntity())
+    fun handleEditFilmRollResult() {
+        val frId = mFilmRoll?.id ?: return
+        val dao = TrisquelDao(this.applicationContext)
+        dao.connection()
+        val reloadedFilmRoll = dao.getFilmRoll(frId)
+        dao.close()
+        if (reloadedFilmRoll != null) {
+            mFilmRoll = reloadedFilmRoll
+            mFilmRollViewModel!!.update(reloadedFilmRoll.toEntity())
         }
     }
 
@@ -450,7 +439,7 @@ fun EditPhotoListScreen(
                             text = { Text(stringResource(R.string.menu_copy_to_clipboard)) },
                             onClick = {
                                 menuExpanded = false
-                                val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 cm.setPrimaryClip(ClipData.newPlainText("", context.filmRollText))
                                 Toast.makeText(context, context.getString(R.string.notify_copied), Toast.LENGTH_SHORT).show()
                             }
