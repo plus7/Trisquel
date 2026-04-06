@@ -94,6 +94,20 @@ class LensSpec: Parcelable {
         fSteps = inp.createDoubleArray()!!.toTypedArray()
     }
 
+    fun toEntity(): LensEntity {
+        return LensEntity(
+            id = id,
+            created = Util.dateToStringUTC(created),
+            lastModified = Util.dateToStringUTC(lastModified),
+            mount = mount,
+            body = body,
+            manufacturer = manufacturer,
+            modelName = modelName,
+            focalLength = focalLength,
+            fSteps = fSteps.joinToString(",")
+        )
+    }
+
     companion object {
         @JvmField val CREATOR: Parcelable.Creator<LensSpec> = object : Parcelable.Creator<LensSpec> {
             override fun createFromParcel(inp: Parcel): LensSpec {
@@ -103,6 +117,14 @@ class LensSpec: Parcelable {
             override fun newArray(size: Int): Array<LensSpec?> {
                 return arrayOfNulls<LensSpec?>(size)
             }
+        }
+
+        internal fun fromEntity(entity: LensEntity): LensSpec {
+            return LensSpec(
+                entity.id, entity.created, entity.lastModified,
+                entity.mount, entity.body ?: 0, entity.manufacturer,
+                entity.modelName, entity.focalLength, entity.fSteps
+            )
         }
     }
 }

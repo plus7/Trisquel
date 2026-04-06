@@ -138,6 +138,26 @@ class CameraSpec: Parcelable {
         evWidth = inp.readInt()
     }
 
+    fun toEntity(): CameraEntity {
+        return CameraEntity(
+            id = id,
+            created = Util.dateToStringUTC(created),
+            lastModified = Util.dateToStringUTC(lastModified),
+            type = type,
+            mount = mount,
+            manufacturer = manufacturer,
+            modelName = modelName,
+            format = format,
+            ssGrainSize = shutterSpeedGrainSize,
+            fastestSs = fastestShutterSpeed,
+            slowestSs = slowestShutterSpeed,
+            bulbAvailable = if (bulbAvailable) 1 else 0,
+            shutterSpeeds = shutterSpeedSteps.joinToString(","),
+            evGrainSize = evGrainSize,
+            evWidth = evWidth
+        )
+    }
+
     companion object {
         @JvmField val CREATOR: Parcelable.Creator<CameraSpec> = object : Parcelable.Creator<CameraSpec> {
             override fun createFromParcel(inp: Parcel): CameraSpec {

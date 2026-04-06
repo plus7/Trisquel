@@ -15,6 +15,7 @@ import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Transaction
 import androidx.room.Upsert
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -190,6 +191,18 @@ interface TrisquelDao2 {
 
     @Query("select * from camera order by created desc;")
     fun allCameras () : LiveData<List<CameraEntity>>
+    
+    @Query("SELECT * from camera where _id = :id LIMIT 1")
+    suspend fun getCamera(id : Int): CameraEntity?
+
+    @Query("SELECT EXISTS(SELECT 1 FROM filmroll WHERE camera = :id) OR EXISTS(SELECT 1 FROM photo WHERE camera = :id)")
+    suspend fun isCameraUsed(id: Int): Boolean
+
+    @Upsert
+    suspend fun upsertCamera(entity: CameraEntity): Long
+
+    @Delete
+    suspend fun deleteCamera(vararg entity: CameraEntity)
 
     @Query("SELECT * from filmroll where _id = :id LIMIT 1")
     fun getFilmRoll(id : Int): LiveData<FilmRollEntity>
@@ -222,6 +235,9 @@ interface TrisquelDao2 {
 
     @Delete
     suspend fun deletePhoto(vararg entity: PhotoEntity)
+    
+    @Query("SELECT * from photo where _id = :id LIMIT 1")
+    suspend fun getPhoto(id: Int): PhotoEntity?
 
     @Query("select * from accessory order by created desc;")
     fun allAccessories() : LiveData<List<AccessoryEntity>>
@@ -235,6 +251,33 @@ interface TrisquelDao2 {
 
     @Delete
     suspend fun deleteAccessory(vararg entity: AccessoryEntity)
+    
+    @Query("SELECT * from accessory where _id = :id LIMIT 1")
+    suspend fun getAccessory(id: Int): AccessoryEntity?
+
+    @Query("SELECT EXISTS(SELECT 1 FROM photo WHERE accessories LIKE '%/' || :id || '/%')")
+    suspend fun isAccessoryUsed(id: Int): Boolean
+
+    @Query("select * from lens order by created desc;")
+    fun allLenses() : LiveData<List<LensEntity>>
+    
+    @Query("SELECT * from lens where _id = :id LIMIT 1")
+    suspend fun getLens(id: Int): LensEntity?
+
+    @Query("SELECT * from lens where body = :bodyId LIMIT 1")
+    suspend fun getLensByFixedBody(bodyId: Int): LensEntity?
+
+    @Query("SELECT * from lens where mount = :mount order by created desc")
+    suspend fun getLensesByMount(mount: String): List<LensEntity>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM photo WHERE lens = :id)")
+    suspend fun isLensUsed(id: Int): Boolean
+
+    @Upsert
+    suspend fun upsertLens(entity: LensEntity): Long
+
+    @Delete
+    suspend fun deleteLens(vararg entity: LensEntity)
 
     @Query("select * from tag;")
     fun allTags() : LiveData<List<TagEntity>>

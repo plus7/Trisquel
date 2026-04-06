@@ -14,6 +14,41 @@ class TrisquelRepo {
         mTrisquelDao = db.trisquelDao()
     }
 
+    /* Camera */
+    fun getAllCameras(): LiveData<List<CameraEntity>> = mTrisquelDao.allCameras()
+
+    suspend fun getCamera(id: Int): CameraEntity? = mTrisquelDao.getCamera(id)
+
+    suspend fun isCameraUsed(id: Int): Boolean = mTrisquelDao.isCameraUsed(id)
+
+    @WorkerThread
+    suspend fun upsertCamera(entity: CameraEntity): Long = mTrisquelDao.upsertCamera(entity)
+
+    @WorkerThread
+    suspend fun deleteCamera(id: Int) {
+        mTrisquelDao.deleteCamera(CameraEntity(id, "", 0, "", "", "", "", 0, 0, 0.0, 0.0, 0, "", 0, 0))
+    }
+
+    /* Lens */
+    fun getAllLenses(): LiveData<List<LensEntity>> = mTrisquelDao.allLenses()
+
+    suspend fun getLens(id: Int): LensEntity? = mTrisquelDao.getLens(id)
+
+    suspend fun getLensByFixedBody(bodyId: Int): LensEntity? = mTrisquelDao.getLensByFixedBody(bodyId)
+
+    suspend fun getLensesByMount(mount: String): List<LensEntity> = mTrisquelDao.getLensesByMount(mount)
+
+    suspend fun isLensUsed(id: Int): Boolean = mTrisquelDao.isLensUsed(id)
+
+    @WorkerThread
+    suspend fun upsertLens(entity: LensEntity): Long = mTrisquelDao.upsertLens(entity)
+
+    @WorkerThread
+    suspend fun deleteLens(id: Int) {
+        mTrisquelDao.deleteLens(LensEntity(id, "", "", "", 0, "", "", "", ""))
+    }
+
+    /* Film roll */
     fun getFilmRoll(id : Int) : LiveData<FilmRollEntity> {
         return mTrisquelDao.getFilmRoll(id)
     }
@@ -101,8 +136,7 @@ class TrisquelRepo {
         mTrisquelDao.deleteFilmRoll(FilmRollEntity(id, "", "","",0, "", "", "", ""))
     }
 
-    // 日付の切り替わりタイミングで日付を出すという表示の都合上、
-    // 直前のショットのDateとPairにするという変則的なデータとなっている。
+    /* Photo */
     fun getPhotosByFilmRollId(filmRollId: Int): LiveData<List<Pair<String, PhotoAndTagIds>>> {
         return mTrisquelDao.photosByFilmRollId(filmRollId).map{
             it.runningFold(
@@ -117,24 +151,7 @@ class TrisquelRepo {
         }.asLiveData()
     }
 
-    // 日付とフィルムの境目でヘッダーを出すために変則的なデータ構造になっている
-    fun getPhotosByAndQuery(tags: List<String>): LiveData<List<Pair<Pair<String, Int>, PhotoAndRels>>> {
-        return mTrisquelDao.getPhotosByAndQuery(tags, tags.count()).map {
-                it -> it.sortedByDescending { it.filmRollDate } // 日付は新しいほう優先なのでソート
-        }.map{
-            it.runningFold(
-            Pair(Pair("",0),
-                PhotoAndRels(PhotoEntity(
-                            0, 0, 0, "", 0, 0,
-                    0.0, 0.0, 0.0, 0.0,
-                    0.0, "", 0.0, 0.0,
-                        "", "", "", 0),
-                    "", "", listOf()
-                ))) {
-                acc, value -> Pair(Pair(acc.second.photo.date, acc.second.photo.filmroll!!), value)
-            }.drop(1)
-        }.asLiveData()
-    }
+    suspend fun getPhoto(id: Int): PhotoEntity? = mTrisquelDao.getPhoto(id)
 
     @WorkerThread
     suspend fun upsertPhoto(entity: PhotoEntity) : Long {
@@ -162,6 +179,7 @@ class TrisquelRepo {
         )
     }
 
+    /* Accessory */
     fun getAllAccessories(sortBy : Int): LiveData<List<AccessoryEntity>> {
         when(sortBy) {
             0 -> { return mTrisquelDao.allAccessories() }
@@ -170,6 +188,11 @@ class TrisquelRepo {
             else -> { return mTrisquelDao.allAccessories() }
         }
     }
+
+    suspend fun getAccessory(id: Int): AccessoryEntity? = mTrisquelDao.getAccessory(id)
+
+    suspend fun isAccessoryUsed(id: Int): Boolean = mTrisquelDao.isAccessoryUsed(id)
+
     @WorkerThread
     suspend fun upsertAccessory(entity: AccessoryEntity) {
         mTrisquelDao.upsertAccessory(entity)
@@ -180,6 +203,7 @@ class TrisquelRepo {
         mTrisquelDao.deleteAccessory(AccessoryEntity(id, "", "",0,"", "", 0.0))
     }
 
+    /* Tag */
     fun getTag(id : Int) : LiveData<TagEntity> {
         return mTrisquelDao.getTag(id)
     }
@@ -249,5 +273,24 @@ class TrisquelRepo {
     @WorkerThread
     suspend fun deleteTagMap(id: Int) {
         mTrisquelDao.deleteTagMap(TagMapEntity(id, 0, 0,0))
+    }
+
+    /* Search */
+    fun getPhotosByAndQuery(tags: List<String>): LiveData<List<Pair<Pair<String, Int>, PhotoAndRels>>> {
+        return mTrisquelDao.getPhotosByAndQuery(tags, tags.count()).map {
+                it -> it.sortedByDescending { it.filmRollDate } // 日付は新しいほう優先なのでソート
+        }.map{
+            it.runningFold(
+            Pair(Pair("",0),
+                PhotoAndRels(PhotoEntity(
+                            0, 0, 0, "", 0, 0,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, "", 0.0, 0.0,
+                        "", "", "", 0),
+                    "", "", listOf()
+                ))) {
+                acc, value -> Pair(Pair(acc.second.photo.date, acc.second.photo.filmroll!!), value)
+            }.drop(1)
+        }.asLiveData()
     }
 }
