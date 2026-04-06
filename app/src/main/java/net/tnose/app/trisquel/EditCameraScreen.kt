@@ -65,6 +65,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.regex.Pattern
@@ -75,12 +76,13 @@ class EditCameraViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
-    private val mRepository = TrisquelRepo(application)
+    private val repo = TrisquelRepo(application)
 
-    val id: Int = savedStateHandle.get<Int>("id") ?: -1
+    val idInput: Int = savedStateHandle.get<Int>("id") ?: -1
     val type: Int = savedStateHandle.get<Int>("type") ?: 0
+    val id = if (idInput < 0) 0 else idInput
 
-    private val _uiState = MutableStateFlow(EditCameraUiState(type = type))
+    private val _uiState = MutableStateFlow(EditCameraUiState(id = id, type = type))
     val uiState: StateFlow<EditCameraUiState> = _uiState.asStateFlow()
 
     private val _isSaved = MutableStateFlow(false)
@@ -88,26 +90,25 @@ class EditCameraViewModel(
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            if (id >= 0) {
-                val dao = TrisquelDao(getApplication())
-                dao.connection()
-                val c = dao.getCamera(id)
-                if (c != null) {
+            if (id > 0) {
+                val entity = repo.getCamera(id)
+                if (entity != null) {
+                    val c = CameraSpec.fromEntity(entity)
                     var lensName = ""
                     var focalLength = ""
                     var fSteps = emptySet<Double>()
                     if (type == 1) {
-                        val l = dao.getLens(dao.getFixedLensIdByBody(id))
-                        if (l != null) {
+                        val lEntity = repo.getLensByFixedBody(id)
+                        if (lEntity != null) {
+                            val l = LensSpec.fromEntity(lEntity)
                             lensName = l.modelName
                             focalLength = l.focalLength
-                            fSteps = l.fSteps.toSet() //parseFSteps(l.fStepsString)
+                            fSteps = l.fSteps.toSet()
                         }
                     }
-                    _uiState.value = EditCameraUiState(
+                    _uiState.update { it.copy(
                         isLoaded = true,
                         created = Util.dateToStringUTC(c.created),
-                        type = type,
                         manufacturer = c.manufacturer,
                         mount = c.mount,
                         modelName = c.modelName,
@@ -122,25 +123,14 @@ class EditCameraViewModel(
                         lensName = lensName,
                         focalLength = focalLength,
                         fSteps = fSteps
-                    )
+                    ) }
                 } else {
-                    _uiState.value = _uiState.value.copy(isLoaded = true)
+                    _uiState.update { it.copy(isLoaded = true) }
                 }
-                dao.close()
             } else {
-                _uiState.value = _uiState.value.copy(isLoaded = true)
+                _uiState.update { it.copy(isLoaded = true) }
             }
         }
-    }
-
-    private fun parseFSteps(s: String): Set<Double> {
-        if (s.isEmpty()) return emptySet()
-        val fsAsArray = s.split(", ").filter { it.isNotEmpty() }
-        val list = mutableSetOf<Double>()
-        for (speed in fsAsArray) {
-            speed.toDoubleOrNull()?.let { list.add(it) }
-        }
-        return list
     }
 
     fun save(
@@ -160,15 +150,16 @@ class EditCameraViewModel(
         fSteps: Set<Double>
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            val state = _uiState.value
             val fStepsString = mFArray.filter { fSteps.contains(it) }.joinToString(", ")
             val fastestSsDouble = Util.stringToDoubleShutterSpeed(fastestSs)
             val slowestSsDouble = Util.stringToDoubleShutterSpeed(slowestSs)
 
-            val created = if (_uiState.value.created.isNotEmpty()) _uiState.value.created else Util.dateToStringUTC(Date())
+            val created = if (state.created.isNotEmpty()) state.created else Util.dateToStringUTC(Date())
             val updated = Util.dateToStringUTC(Date())
 
             val c = CameraSpec(
-                id = if (id > 0) id else 0,
+                id = state.id,
                 type = type,
                 created = created,
                 lastModified = updated,
@@ -185,54 +176,32 @@ class EditCameraViewModel(
                 evWidth = evWidth
             )
             
-            val dao = TrisquelDao(getApplication())
-            dao.connection()
+            val newCameraId = repo.upsertCamera(c.toEntity()).toInt()
+            val actualCameraId = if (state.id > 0) state.id else newCameraId
 
-            if (id >= 0) {
-                dao.updateCamera(c)
-                if (type == 1) {
-                    val lensId = dao.getFixedLensIdByBody(id)
-                    val l = LensSpec(
-                        id = lensId,
-                        created = created,
-                        lastModified = updated,
-                        mount = "",
-                        body = id,
-                        manufacturer = manufacturer,
-                        modelName = lensName,
-                        focalLength = focalLength,
-                        fSteps = fStepsString
-                    )
-                    if (lensId >= 0) {
-                        dao.updateLens(l)
-                    } else {
-                        dao.addLens(l)
-                    }
-                }
-            } else {
-                val newId = dao.addCamera(c).toInt()
-                if (type == 1) {
-                    val l = LensSpec(
-                        id = -1,
-                        created = updated,
-                        lastModified = updated,
-                        mount = "",
-                        body = newId,
-                        manufacturer = manufacturer,
-                        modelName = lensName,
-                        focalLength = focalLength,
-                        fSteps = fStepsString
-                    )
-                    dao.addLens(l)
-                }
+            if (type == 1) {
+                val existingLens = repo.getLensByFixedBody(actualCameraId)
+                val l = LensSpec(
+                    id = existingLens?.id ?: 0,
+                    created = if (existingLens != null) existingLens.created else updated,
+                    lastModified = updated,
+                    mount = "",
+                    body = actualCameraId,
+                    manufacturer = manufacturer,
+                    modelName = lensName,
+                    focalLength = focalLength,
+                    fSteps = fStepsString
+                )
+                repo.upsertLens(l.toEntity())
             }
-            dao.close()
+            
             _isSaved.value = true
         }
     }
 }
 
 data class EditCameraUiState(
+    val id: Int = 0,
     val isLoaded: Boolean = false,
     val type: Int = 0,
     val created: String = "",
@@ -249,7 +218,8 @@ data class EditCameraUiState(
     val evWidth: Int = 1,
     val lensName: String = "",
     val focalLength: String = "",
-    val fSteps: Set<Double> = emptySet()
+    val fSteps: Set<Double> = emptySet(),
+    val isDirty: Boolean = false
 )
 
 @Composable
