@@ -18,6 +18,10 @@ class EditCameraActivity : AppCompatActivity() {
                 EditCameraRoute(
                     id = id,
                     type = type,
+                    onSaveSuccess = {
+                        setResult(RESULT_OK, Intent())
+                        finish()
+                    },
                     onCancel = {
                         setResult(RESULT_OK, Intent())
                         finish()

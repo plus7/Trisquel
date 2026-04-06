@@ -315,7 +315,15 @@ fun TrisquelNavHost(
         ) { backStackEntry ->
             val type = backStackEntry.arguments?.getInt("type") ?: 0
             val id = backStackEntry.arguments?.getInt("id") ?: -1
-            EditCameraRoute(id = id, type = type, onCancel = { navController.popBackStack() })
+            EditCameraRoute(
+                id = id, 
+                type = type, 
+                onSaveSuccess = { 
+                    cameraViewModel.load()
+                    navController.popBackStack() 
+                },
+                onCancel = { navController.popBackStack() }
+            )
         }
         composable(
             route = "edit_filmroll?id={id}&default_camera={default_camera}&default_manufacturer={default_manufacturer}&default_brand={default_brand}",

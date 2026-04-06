@@ -187,21 +187,44 @@ class EditCameraViewModel(
             
             val dao = TrisquelDao(getApplication())
             dao.connection()
-            val newId = dao.addCamera(c).toInt()
-            
-            if (type == 1) {
-                val l = LensSpec(
-                    id = -1,
-                    created = "",
-                    lastModified = "",
-                    mount = "",
-                    body = newId,
-                    manufacturer = manufacturer,
-                    modelName = lensName,
-                    focalLength = focalLength,
-                    fSteps = fStepsString
-                )
-                dao.addLens(l)
+
+            if (id >= 0) {
+                dao.updateCamera(c)
+                if (type == 1) {
+                    val lensId = dao.getFixedLensIdByBody(id)
+                    val l = LensSpec(
+                        id = lensId,
+                        created = created,
+                        lastModified = updated,
+                        mount = "",
+                        body = id,
+                        manufacturer = manufacturer,
+                        modelName = lensName,
+                        focalLength = focalLength,
+                        fSteps = fStepsString
+                    )
+                    if (lensId >= 0) {
+                        dao.updateLens(l)
+                    } else {
+                        dao.addLens(l)
+                    }
+                }
+            } else {
+                val newId = dao.addCamera(c).toInt()
+                if (type == 1) {
+                    val l = LensSpec(
+                        id = -1,
+                        created = updated,
+                        lastModified = updated,
+                        mount = "",
+                        body = newId,
+                        manufacturer = manufacturer,
+                        modelName = lensName,
+                        focalLength = focalLength,
+                        fSteps = fStepsString
+                    )
+                    dao.addLens(l)
+                }
             }
             dao.close()
             _isSaved.value = true
@@ -233,6 +256,7 @@ data class EditCameraUiState(
 fun EditCameraRoute(
     id: Int,
     type: Int,
+    onSaveSuccess: () -> Unit,
     onCancel: () -> Unit,
     viewModel: EditCameraViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
@@ -241,7 +265,7 @@ fun EditCameraRoute(
 
     LaunchedEffect(isSaved) {
         if (isSaved) {
-            onCancel()
+            onSaveSuccess()
         }
     }
 
