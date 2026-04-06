@@ -24,7 +24,6 @@ class EditPhotoListViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
     private val repo = TrisquelRepo(application)
-    private val dao = TrisquelDao(application)
 
     val filmRollId: Int = savedStateHandle.get<Int>("id") ?: -1
 
@@ -107,14 +106,14 @@ class EditPhotoListViewModel(
         val c = fr.camera
         sb.append(context.getString(R.string.label_camera) + ": " + c.manufacturer + " " + c.modelName + "\n")
 
-        dao.connection()
-        val ps = dao.getPhotosByFilmRollId(fr.id)
-        for (p in ps) {
-            val l = dao.getLens(p.lensid)
+        val ps = repo.getPhotosByFilmRollIdRaw(fr.id)
+        for (pEntity in ps) {
+            val p = Photo.fromEntity(pEntity)
+            val lEntity = repo.getLens(p.lensid)
             sb.append("------[No. " + (p.frameIndex + 1) + "]------\n")
             sb.append(context.getString(R.string.label_date) + ": " + p.date + "\n")
-            if (l != null) {
-                sb.append(context.getString(R.string.label_lens_name) + ": " + l.manufacturer + " " + l.modelName + "\n")
+            if (lEntity != null) {
+                sb.append(context.getString(R.string.label_lens_name) + ": " + lEntity.manufacturer + " " + lEntity.modelName + "\n")
             }
             if (p.aperture > 0) sb.append(context.getString(R.string.label_aperture) + ": " + p.aperture + "\n")
             if (p.shutterSpeed > 0) sb.append(context.getString(R.string.label_shutter_speed) + ": " + Util.doubleToStringShutterSpeed(p.shutterSpeed) + "\n")
@@ -126,12 +125,11 @@ class EditPhotoListViewModel(
 
             if (p.accessories.isNotEmpty()) {
                 sb.append(context.getString(R.string.label_accessories) + ": ")
-                val accNames = p.accessories.mapNotNull { dao.getAccessory(it)?.name }
+                val accNames = p.accessories.mapNotNull { repo.getAccessory(it)?.name }
                 sb.append(accNames.joinToString(", "))
                 sb.append("\n")
             }
         }
-        dao.close()
         sb.toString()
     }
 
@@ -145,10 +143,7 @@ class EditPhotoListViewModel(
     }
 
     suspend fun getPhotoById(id: Int): Photo? = withContext(Dispatchers.IO) {
-        dao.connection()
-        val p = dao.getPhoto(id)
-        dao.close()
-        p
+        repo.getPhoto(id)?.let { Photo.fromEntity(it) }
     }
 
     fun handleAddPhotoResult(data: Intent?) {
