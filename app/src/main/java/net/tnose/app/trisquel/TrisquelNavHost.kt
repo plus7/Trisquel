@@ -196,12 +196,6 @@ fun TrisquelNavHost(
             }
         }
         composable(MainActivity.ROUTE_LENSES) {
-            val addLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == AppCompatActivity.RESULT_OK) lensViewModel.handleAddResult(result.data)
-            }
-            val editLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == AppCompatActivity.RESULT_OK) lensViewModel.handleEditResult(result.data)
-            }
             val lenses by lensViewModel.lenses.observeAsState(emptyList())
             val isLensesLoading by lensViewModel.isLoading.observeAsState(false)
             
@@ -210,9 +204,7 @@ fun TrisquelNavHost(
                     LensListScreen(
                         lenses = lenses,
                         onItemClick = { item ->
-                            val intent = Intent(context, EditLensActivity::class.java)
-                            intent.putExtra("id", item.id)
-                            editLensLauncher.launch(intent)
+                            navController.navigate("edit_lens?id=${item.id}")
                         },
                         onItemLongClick = { onLensDeleteRequest(it) },
                         emptyMessage = stringResource(R.string.warning_lens_not_registered),
@@ -222,8 +214,7 @@ fun TrisquelNavHost(
                     )
                     FloatingActionButton(
                         onClick = {
-                            val intent = Intent(context, EditLensActivity::class.java)
-                            addLensLauncher.launch(intent)
+                            navController.navigate("edit_lens?id=-1")
                         },
                         containerColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
@@ -368,8 +359,24 @@ fun TrisquelNavHost(
                 frameIndex = frameIndex,
                 onCancel = { navController.popBackStack() },
                 onNavigateToEditLens = {
-                    // navController.navigate("edit_lens?id=-1")
+                    navController.navigate("edit_lens?id=-1")
                 }
+            )
+        }
+        composable(
+            route = "edit_lens?id={id}",
+            arguments = listOf(
+                androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 }
+            )
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("id") ?: -1
+            EditLensRoute(
+                id = id,
+                onSaveSuccess = {
+                    lensViewModel.load()
+                    navController.popBackStack()
+                },
+                onCancel = { navController.popBackStack() }
             )
         }
     }

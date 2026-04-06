@@ -161,16 +161,6 @@ fun EditPhotoRoute(
         }
     }
 
-    val addLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val bundle = result.data?.extras
-            val l = androidx.core.os.BundleCompat.getParcelable(bundle!!, "lensspec", LensSpec::class.java)
-            if (l != null) {
-                viewModel.handleAddLensResult(l)
-            }
-        }
-    }
-
     if (!uiState.isLoaded) return
 
     EditPhotoScreen(
@@ -228,10 +218,7 @@ fun EditPhotoRoute(
             cm.setPrimaryClip(ClipData.newPlainText("", text))
             Toast.makeText(context, context.getString(R.string.notify_copied), Toast.LENGTH_SHORT).show()
         },
-        onNavigateToEditLens = {
-            val intent = Intent(context, EditLensActivity::class.java)
-            addLensLauncher.launch(intent)
-        },
+        onNavigateToEditLens = onNavigateToEditLens,
         onMountAdaptersChanged = { mount, selected -> viewModel.onMountAdaptersChanged(mount, selected) },
         viewModel = viewModel
     )
