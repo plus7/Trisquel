@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 
-// Wrapper activity for legacy intents (e.g. from EditPhotoListActivity)
+// Wrapper activity for legacy intents
 class EditFilmRollActivity : AppCompatActivity() {
     private val addCameraLauncher = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult().let {
         registerForActivityResult(it) { result ->
