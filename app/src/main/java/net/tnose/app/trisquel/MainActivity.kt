@@ -118,8 +118,6 @@ class MainActivity : AppCompatActivity() {
         pendingImportMode = null
     }
 
-    private val searchLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
-
     private var pendingExportMode: Int? = null
     private val requestExportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         handleExportPermissionsResult(permissions)
@@ -447,9 +445,7 @@ class MainActivity : AppCompatActivity() {
                         val title = getString(R.string.title_dialog_search_by_tags)
                         mainViewModel.requestSearch(title) { checkedLabels ->
                             if (checkedLabels.isNotEmpty()) {
-                                val intent = Intent(application, SearchActivity::class.java)
-                                intent.putExtra("tags", checkedLabels)
-                                searchLauncher.launch(intent)
+                                navController.navigate("search?tags=${checkedLabels.joinToString(",")}")
                             }
                         }
                     },

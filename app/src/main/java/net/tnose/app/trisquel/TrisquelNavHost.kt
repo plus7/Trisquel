@@ -379,5 +379,25 @@ fun TrisquelNavHost(
                 onCancel = { navController.popBackStack() }
             )
         }
+        composable(
+            route = "search?tags={tags}",
+            arguments = listOf(
+                androidx.navigation.navArgument("tags") { type = androidx.navigation.NavType.StringType; defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            val tagsString = backStackEntry.arguments?.getString("tags") ?: ""
+            val tags = tagsString.split(",").filter { it.isNotEmpty() }
+            SearchRoute(
+                tags = tags,
+                onBack = { navController.popBackStack() },
+                onNavigateToEditPhoto = { frId, pId, fIdx ->
+                    navController.navigate("edit_photo?filmroll=$frId&id=$pId&frameIndex=$fIdx")
+                },
+                onNavigateToGallery = { photo, list ->
+                    onPhotoInteraction(photo, list)
+                },
+                mainViewModel = mainViewModel
+            )
+        }
     }
 }
