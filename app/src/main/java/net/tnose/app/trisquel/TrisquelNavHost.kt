@@ -345,7 +345,31 @@ fun TrisquelNavHost(
             EditPhotoListRoute(
                 id = id,
                 onBack = { navController.popBackStack() },
-                onNavigateToEditFilmRoll = { frId -> navController.navigate("edit_filmroll?id=$frId") }
+                onNavigateToEditFilmRoll = { frId -> navController.navigate("edit_filmroll?id=$frId") },
+                onNavigateToEditPhoto = { frId, pId, fIdx -> 
+                    navController.navigate("edit_photo?filmroll=$frId&id=$pId&frameIndex=$fIdx")
+                }
+            )
+        }
+        composable(
+            route = "edit_photo?filmroll={filmroll}&id={id}&frameIndex={frameIndex}",
+            arguments = listOf(
+                androidx.navigation.navArgument("filmroll") { type = androidx.navigation.NavType.IntType },
+                androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 },
+                androidx.navigation.navArgument("frameIndex") { type = androidx.navigation.NavType.IntType; defaultValue = -1 }
+            )
+        ) { backStackEntry ->
+            val filmroll = backStackEntry.arguments?.getInt("filmroll") ?: -1
+            val id = backStackEntry.arguments?.getInt("id") ?: -1
+            val frameIndex = backStackEntry.arguments?.getInt("frameIndex") ?: -1
+            EditPhotoRoute(
+                id = id,
+                filmRollId = filmroll,
+                frameIndex = frameIndex,
+                onCancel = { navController.popBackStack() },
+                onNavigateToEditLens = {
+                    // navController.navigate("edit_lens?id=-1")
+                }
             )
         }
     }

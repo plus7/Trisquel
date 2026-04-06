@@ -63,6 +63,7 @@ fun EditPhotoListRoute(
     id: Int,
     onBack: () -> Unit,
     onNavigateToEditFilmRoll: (Int) -> Unit,
+    onNavigateToEditPhoto: (Int, Int, Int) -> Unit,
     viewModel: EditPhotoListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val context = LocalContext.current
@@ -70,18 +71,6 @@ fun EditPhotoListRoute(
     val filmRoll by viewModel.filmRoll.observeAsState()
     val photos by viewModel.photos.observeAsState(initial = emptyList())
     val isLoading by viewModel.isLoading.observeAsState(initial = false)
-
-    val addPhotoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.handleAddPhotoResult(result.data)
-        }
-    }
-
-    val editPhotoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.handleEditPhotoResult(result.data)
-        }
-    }
 
     class PickImageUriContract : ActivityResultContract<Any, List<Uri>>() {
         override fun createIntent(context: Context, input: Any): Intent {
@@ -156,25 +145,10 @@ fun EditPhotoListRoute(
             intent.putExtra("filmroll", id)
             context.startActivity(intent)
         },
-        onAddPhoto = {
-            val intent = Intent(context, EditPhotoActivity::class.java)
-            intent.putExtra("filmroll", id)
-            addPhotoLauncher.launch(intent)
-        },
-        onItemClick = { item ->
-            val intent = Intent(context, EditPhotoActivity::class.java)
-            intent.putExtra("filmroll", id)
-            intent.putExtra("id", item.id)
-            intent.putExtra("frameIndex", item.frameIndex)
-            editPhotoLauncher.launch(intent)
-        },
+        onAddPhoto = { onNavigateToEditPhoto(id, -1, -1) },
+        onItemClick = { item -> onNavigateToEditPhoto(id, item.id, item.frameIndex) },
         onDeletePhoto = { viewModel.deletePhoto(it.id) },
-        onAddPhotoSameIndex = { photo ->
-            val intent = Intent(context, EditPhotoActivity::class.java)
-            intent.putExtra("filmroll", id)
-            intent.putExtra("frameIndex", photo.frameIndex)
-            addPhotoLauncher.launch(intent)
-        },
+        onAddPhotoSameIndex = { photo -> onNavigateToEditPhoto(id, -1, photo.frameIndex) },
         onUpdatePhotoIndex = { photo, newIndex ->
             photo.frameIndex = newIndex
             viewModel.updatePhoto(photo, null)
