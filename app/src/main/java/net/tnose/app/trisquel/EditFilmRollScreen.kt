@@ -56,41 +56,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.os.BundleCompat
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 import java.util.regex.Pattern
@@ -99,9 +73,10 @@ class EditFilmRollViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
-    private val mRepository = TrisquelRepo(application)
+    private val repo = TrisquelRepo(application)
 
-    val id: Int = savedStateHandle.get<Int>("id") ?: 0
+    val idInput: Int = savedStateHandle.get<Int>("id") ?: -1
+    val id = if (idInput < 0) 0 else idInput
     val defaultCameraId = savedStateHandle.get<Int>("default_camera") ?: -1
     val defaultManufacturer = savedStateHandle.get<String>("default_manufacturer") ?: ""
     val defaultBrand = savedStateHandle.get<String>("default_brand") ?: ""
@@ -117,70 +92,66 @@ class EditFilmRollViewModel(
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            val dao = TrisquelDao(getApplication())
-            dao.connection()
-            _cameras.value = dao.allCameras
+            reloadCamerasInternal()
             
             if (id > 0) {
-                val f = dao.getFilmRoll(id)
-                if (f != null) {
-                    val initIso = if (f.iso > 0) f.iso.toString() else ""
-                    _uiState.value = _uiState.value.copy(
-                        created = Util.dateToStringUTC(f.created),
-                        name = f.name,
-                        cameraId = f.camera.id,
-                        manufacturer = f.manufacturer,
-                        brand = f.brand,
+                val fEntity = repo.getFilmRollRaw(id)
+                if (fEntity != null) {
+                    val initIso = if (fEntity.iso.isNotEmpty() && fEntity.iso != "0") fEntity.iso else ""
+                    _uiState.update { it.copy(
+                        created = fEntity.created,
+                        name = fEntity.name,
+                        cameraId = fEntity.camera ?: -1,
+                        manufacturer = fEntity.manufacturer,
+                        brand = fEntity.brand,
                         iso = initIso,
                         isLoaded = true
-                    )
+                    ) }
                 } else {
-                    _uiState.value = _uiState.value.copy(isLoaded = true)
+                    _uiState.update { it.copy(isLoaded = true) }
                 }
             } else {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     cameraId = defaultCameraId,
                     manufacturer = defaultManufacturer,
                     brand = defaultBrand,
                     isLoaded = true
-                )
+                ) }
             }
-            dao.close()
         }
+    }
+
+    private suspend fun reloadCamerasInternal() {
+        val entities = repo.getAllCamerasRaw()
+        _cameras.value = entities.map { CameraSpec.fromEntity(it) }
     }
 
     // New camera may have been added, reload
     fun reloadCameras() {
         viewModelScope.launch(Dispatchers.IO) {
-            val dao = TrisquelDao(getApplication())
-            dao.connection()
-            _cameras.value = dao.allCameras
-            dao.close()
+            reloadCamerasInternal()
         }
     }
 
     fun save(name: String, cameraId: Int, manufacturer: String, brand: String, isoStr: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val created = if (_uiState.value.created.isNotEmpty()) _uiState.value.created else Util.dateToStringUTC(Date())
-            val iso = isoStr.toIntOrNull() ?: 0
             
-            val f = FilmRoll(
-                id = if (id > 0) id else 0,
+            val cameraEntity = repo.getCamera(cameraId) ?: return@launch
+            
+            val f = FilmRollEntity(
+                id = id,
                 name = name,
                 created = created,
-                lastModified = created,
-                camera = CameraSpec(id = cameraId, type = 0, created = "", lastModified = "", mount = "", manufacturer = "", modelName = "", format = 0, shutterSpeedGrainSize = 0, fastestShutterSpeed = 0.0, slowestShutterSpeed = 0.0, bulbAvailable = false, shutterSpeedSteps = "", evGrainSize = 0, evWidth = 0),
+                lastModified = Util.dateToStringUTC(Date()),
+                camera = cameraId,
+                format = cameraEntity.format?.toString() ?: "0",
                 manufacturer = manufacturer,
                 brand = brand,
-                iso = iso,
-                exposures = 0
+                iso = isoStr.ifEmpty { "0" }
             )
-            val dao = TrisquelDao(getApplication())
-            dao.connection()
-            f.camera = dao.getCamera(cameraId)!! // we need full camera object... actually FilmRollEntity only needs cameraId
-            dao.close()
 
-            mRepository.upsertFilmRoll(f.toEntity())
+            repo.upsertFilmRoll(f)
             _isSaved.value = true
         }
     }

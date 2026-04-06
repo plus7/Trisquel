@@ -17,6 +17,8 @@ class TrisquelRepo {
     /* Camera */
     fun getAllCameras(): LiveData<List<CameraEntity>> = mTrisquelDao.allCameras()
 
+    suspend fun getAllCamerasRaw(): List<CameraEntity> = mTrisquelDao.allCamerasRaw()
+
     suspend fun getCamera(id: Int): CameraEntity? = mTrisquelDao.getCamera(id)
 
     suspend fun isCameraUsed(id: Int): Boolean = mTrisquelDao.isCameraUsed(id)

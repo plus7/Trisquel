@@ -192,6 +192,9 @@ interface TrisquelDao2 {
     @Query("select * from camera order by created desc;")
     fun allCameras () : LiveData<List<CameraEntity>>
     
+    @Query("select * from camera order by created desc;")
+    suspend fun allCamerasRaw () : List<CameraEntity>
+
     @Query("SELECT * from camera where _id = :id LIMIT 1")
     suspend fun getCamera(id : Int): CameraEntity?
 
