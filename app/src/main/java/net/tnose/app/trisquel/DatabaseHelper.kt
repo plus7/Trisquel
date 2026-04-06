@@ -208,6 +208,9 @@ interface TrisquelDao2 {
     fun getFilmRoll(id : Int): LiveData<FilmRollEntity>
 
     @Query("SELECT * from filmroll where _id = :id LIMIT 1")
+    suspend fun getFilmRollRaw(id : Int): FilmRollEntity?
+
+    @Query("SELECT * from filmroll where _id = :id LIMIT 1")
     fun getFilmRollAndRels(id : Int): LiveData<FilmRollAndRels>
 
     @Query("SELECT * from filmroll order by created desc")
@@ -281,6 +284,8 @@ interface TrisquelDao2 {
 
     @Query("select * from tag;")
     fun allTags() : LiveData<List<TagEntity>>
+    @Query("select * from tag;")
+    suspend fun allTagsRaw() : List<TagEntity>
     @Query("SELECT * from tag where _id = :id LIMIT 1")
     fun getTag(id : Int): LiveData<TagEntity>
     @Query("SELECT * from tag where label = :label LIMIT 1")

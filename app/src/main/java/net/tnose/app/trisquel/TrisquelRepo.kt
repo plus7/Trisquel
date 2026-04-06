@@ -53,6 +53,8 @@ class TrisquelRepo {
         return mTrisquelDao.getFilmRoll(id)
     }
 
+    suspend fun getFilmRollRaw(id: Int): FilmRollEntity? = mTrisquelDao.getFilmRollRaw(id)
+
     fun getFilmRollAndRels(id : Int) : LiveData<FilmRollAndRels> {
         return mTrisquelDao.getFilmRollAndRels(id)
     }
@@ -151,6 +153,8 @@ class TrisquelRepo {
         }.asLiveData()
     }
 
+    suspend fun getPhotosByFilmRollIdRaw(filmRollId: Int): List<PhotoEntity> = mTrisquelDao.photosByFilmRollIdRaw(filmRollId)
+
     suspend fun getPhoto(id: Int): PhotoEntity? = mTrisquelDao.getPhoto(id)
 
     @WorkerThread
@@ -207,6 +211,7 @@ class TrisquelRepo {
     fun getTag(id : Int) : LiveData<TagEntity> {
         return mTrisquelDao.getTag(id)
     }
+    suspend fun getAllTagsRaw(): List<TagEntity> = mTrisquelDao.allTagsRaw()
     suspend fun getTagByLabel(label : String) : TagEntity? {
         return mTrisquelDao.getTagByLabel(label)
     }

@@ -1,11 +1,8 @@
 package net.tnose.app.trisquel
 
 import android.app.Application
-import android.content.Intent
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
@@ -17,13 +14,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.TimeZone
 
 sealed class EditPhotoEvent {
@@ -67,7 +62,6 @@ class EditPhotoViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
     private val repo = TrisquelRepo(application)
-    private val dao = TrisquelDao(application)
     private val userPrefs = UserPreferencesRepository(application)
 
     private val _uiState = MutableStateFlow(EditPhotoUiState())
@@ -94,21 +88,23 @@ class EditPhotoViewModel(
 
     private fun loadInitialData() = viewModelScope.launch(Dispatchers.IO) {
         val currentState = _uiState.value
-        dao.connection()
-        val filmRoll = dao.getFilmRoll(currentState.filmRollId) ?: return@launch
-        val photo = if (currentState.id > 0) dao.getPhoto(currentState.id) else null
+        val filmRollEntity = repo.getFilmRollRaw(currentState.filmRollId) ?: return@launch
+        val cameraEntity = repo.getCamera(filmRollEntity.camera!!) ?: return@launch
+        val camera = CameraSpec.fromEntity(cameraEntity)
 
-        val evGrainSize = filmRoll.camera.evGrainSize
-        val evWidth = filmRoll.camera.evWidth
+        val photoEntity = if (currentState.id > 0) repo.getPhoto(currentState.id) else null
 
-        val ssList = when (filmRoll.camera.shutterSpeedGrainSize) {
+        val evGrainSize = camera.evGrainSize
+        val evWidth = camera.evWidth
+
+        val ssList = when (camera.shutterSpeedGrainSize) {
             1 -> getApplication<Application>().resources.getStringArray(R.array.shutter_speeds_one)
             2 -> getApplication<Application>().resources.getStringArray(R.array.shutter_speeds_half)
             3 -> getApplication<Application>().resources.getStringArray(R.array.shutter_speeds_one_third)
-            else -> filmRoll.camera.shutterSpeedSteps.map { Util.doubleToStringShutterSpeed(it) }.toTypedArray()
+            else -> camera.shutterSpeedSteps.map { Util.doubleToStringShutterSpeed(it) }.toTypedArray()
         }.filter { s ->
             val ssval = Util.stringToDoubleShutterSpeed(s)
-            ssval <= filmRoll.camera.slowestShutterSpeed!! && ssval >= filmRoll.camera.fastestShutterSpeed!!
+            ssval <= (camera.slowestShutterSpeed ?: 999.0) && ssval >= (camera.fastestShutterSpeed ?: 0.0)
         }
 
         var lensId = -1
@@ -128,7 +124,8 @@ class EditPhotoViewModel(
         var allTags: List<String> = emptyList()
         var tagCheckedStates: List<Boolean> = emptyList()
 
-        if (photo != null) {
+        if (photoEntity != null) {
+            val photo = Photo.fromEntity(photoEntity)
             lensId = photo.lensid
             date = if (photo.date.isNotEmpty()) photo.date else ""
             latitude = photo.latitude
@@ -143,26 +140,25 @@ class EditPhotoViewModel(
             favorite = photo.favorite
             supplementalImages = photo.supplementalImages
 
-            val tags = dao.getTagsByPhoto(photo.id)
-            val allTagsDb = dao.allTags.sortedBy { it.label }
+            val tagAndTagMaps = repo.getTagMapAndTagsByPhoto(photo.id)
+            val allTagsDb = repo.getAllTagsRaw().sortedBy { it.label }
             allTags = allTagsDb.map { it.label }
-            tagCheckedStates = allTagsDb.map { t -> tags.any { it.id == t.id } }
+            tagCheckedStates = allTagsDb.map { t -> tagAndTagMaps.any { it.tag?.id == t.id } }
         } else {
             val calendar = Calendar.getInstance()
             val sdf = SimpleDateFormat("yyyy/MM/dd")
             date = sdf.format(calendar.time)
 
-            if (filmRoll.camera.type == 1) {
-                lensId = dao.getFixedLensIdByBody(filmRoll.camera.id)
+            if (camera.type == 1) {
+                lensId = repo.getLensByFixedBody(camera.id)?.id ?: -1
             } else {
                 if (userPrefs.isAutocompleteFromPreviousShotEnabled()) {
-                    val ps = dao.getPhotosByFilmRollId(currentState.filmRollId)
-                    // When creating a new photo, currentState.id is 0.indexOf(0) will be -1.
+                    val ps = repo.getPhotosByFilmRollIdRaw(currentState.filmRollId)
                     val pos = ps.indexOfFirst { it.id == currentState.id }
                     lensId = if (pos > 0) {
-                        ps[pos - 1].lensid
+                        ps[pos - 1].lens ?: 0
                     } else if (ps.isNotEmpty()) {
-                        ps.last().lensid
+                        ps.last().lens ?: 0
                     } else {
                         0
                     }
@@ -171,15 +167,16 @@ class EditPhotoViewModel(
                 }
             }
 
-            val allTagsDb = dao.allTags.sortedBy { it.label }
+            val allTagsDb = repo.getAllTagsRaw().sortedBy { it.label }
             allTags = allTagsDb.map { it.label }
             tagCheckedStates = allTagsDb.map { false }
         }
 
-        val lens = dao.getLens(lensId)
+        val lensEntity = repo.getLens(lensId)
+        val lens = if (lensEntity != null) LensSpec.fromEntity(lensEntity) else null
         val focalLengthRange = if (lens != null) Util.getFocalLengthRangeFromStr(lens.focalLength) else Pair(0.0, 0.0)
-        if (photo != null && lens != null) {
-            focalLengthProgress = (photo.focalLength - focalLengthRange.first).toInt()
+        if (photoEntity != null && lens != null) {
+            focalLengthProgress = (Photo.fromEntity(photoEntity).focalLength - focalLengthRange.first).toInt()
         }
 
         _uiState.update { state ->
@@ -207,23 +204,21 @@ class EditPhotoViewModel(
                 tagCheckedStates = tagCheckedStates
             )
         }
-        updateLensListInternal(lens, filmRoll)
+        updateLensListInternal(lens, camera)
         refreshApertureListInternal(lens)
         updateAccessoriesStrInternal()
-        dao.close()
     }
 
-    private fun updateLensListInternal(currentLens: LensSpec?, filmRoll: FilmRoll) {
-        val lensList = if (filmRoll.camera.type == 1) {
-            val fixedLensId = dao.getFixedLensIdByBody(filmRoll.camera.id)
-            val fixedLens = dao.getLens(fixedLensId)
-            if (fixedLens != null) listOf(fixedLens) else emptyList()
+    private fun updateLensListInternal(currentLens: LensSpec?, camera: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
+        val lensList = if (camera.type == 1) {
+            val fixedLens = repo.getLensByFixedBody(camera.id)
+            if (fixedLens != null) listOf(LensSpec.fromEntity(fixedLens)) else emptyList()
         } else {
-            val list = dao.getLensesByMount(filmRoll.camera.mount)
-            for (s in userPrefs.getSuggestListSub("mount_adapters", filmRoll.camera.mount)) {
-                list.addAll(dao.getLensesByMount(s))
+            val list = repo.getLensesByMount(camera.mount).map { LensSpec.fromEntity(it) }.toMutableList()
+            for (s in userPrefs.getSuggestListSub("mount_adapters", camera.mount)) {
+                list.addAll(repo.getLensesByMount(s).map { LensSpec.fromEntity(it) })
             }
-            if (currentLens != null && filmRoll.camera.mount != currentLens.mount && list.none { it.id == currentLens.id }) {
+            if (currentLens != null && camera.mount != currentLens.mount && list.none { it.id == currentLens.id }) {
                 list.add(0, currentLens)
             }
             list
@@ -241,8 +236,8 @@ class EditPhotoViewModel(
         }
     }
 
-    private fun updateAccessoriesStrInternal() {
-        val names = _uiState.value.selectedAccessories.mapNotNull { dao.getAccessory(it)?.name }
+    private fun updateAccessoriesStrInternal() = viewModelScope.launch(Dispatchers.IO) {
+        val names = _uiState.value.selectedAccessories.mapNotNull { repo.getAccessory(it)?.name }
         _uiState.update { it.copy(accessoriesStr = names.joinToString(", ")) }
     }
 
@@ -251,12 +246,11 @@ class EditPhotoViewModel(
     }
 
     fun onLensChange(lensId: Int) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        val lens = dao.getLens(lensId)
+        val lensEntity = repo.getLens(lensId)
+        val lens = if (lensEntity != null) LensSpec.fromEntity(lensEntity) else null
         val focalLengthRange = if (lens != null) Util.getFocalLengthRangeFromStr(lens.focalLength) else Pair(0.0, 0.0)
         _uiState.update { it.copy(lensId = lensId, focalLengthRange = focalLengthRange, focalLengthProgress = 0, isDirty = true) }
         refreshApertureListInternal(lens)
-        dao.close()
     }
 
     fun onApertureChange(aperture: String) {
@@ -296,10 +290,8 @@ class EditPhotoViewModel(
     }
 
     fun onAccessoriesChange(accessories: List<Int>) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        val names = accessories.mapNotNull { dao.getAccessory(it)?.name }
+        val names = accessories.mapNotNull { repo.getAccessory(it)?.name }
         _uiState.update { it.copy(selectedAccessories = accessories, accessoriesStr = names.joinToString(", "), isDirty = true) }
-        dao.close()
     }
 
     fun onSupplementalImagesChange(images: List<String>) {
@@ -327,27 +319,28 @@ class EditPhotoViewModel(
     }
 
     fun handleAddLensResult(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        val newId = dao.addLens(lens).toInt()
-        val filmRoll = dao.getFilmRoll(_uiState.value.filmRollId)
-        val l = dao.getLens(newId)
-        if (filmRoll != null && l != null) {
+        val newId = repo.upsertLens(lens.toEntity()).toInt()
+        val filmRollEntity = repo.getFilmRollRaw(_uiState.value.filmRollId) ?: return@launch
+        val cameraEntity = repo.getCamera(filmRollEntity.camera!!) ?: return@launch
+        val camera = CameraSpec.fromEntity(cameraEntity)
+        val lEntity = repo.getLens(newId)
+        val l = if (lEntity != null) LensSpec.fromEntity(lEntity) else null
+        
+        if (l != null) {
             _uiState.update { it.copy(lensId = newId, focalLengthRange = Util.getFocalLengthRangeFromStr(l.focalLength), focalLengthProgress = 0, isDirty = true) }
-            updateLensListInternal(l, filmRoll)
+            updateLensListInternal(l, camera)
             refreshApertureListInternal(l)
         }
-        dao.close()
     }
 
     fun onMountAdaptersChanged(mount: String, selectedMounts: ArrayList<String>) = viewModelScope.launch(Dispatchers.IO) {
         userPrefs.saveSuggestListSub("mount_adapters", mount, selectedMounts)
-        dao.connection()
-        val filmRoll = dao.getFilmRoll(_uiState.value.filmRollId)
-        val currentLens = dao.getLens(_uiState.value.lensId)
-        if (filmRoll != null) {
-            updateLensListInternal(currentLens, filmRoll)
-        }
-        dao.close()
+        val filmRollEntity = repo.getFilmRollRaw(_uiState.value.filmRollId) ?: return@launch
+        val cameraEntity = repo.getCamera(filmRollEntity.camera!!) ?: return@launch
+        val camera = CameraSpec.fromEntity(cameraEntity)
+        val currentLensEntity = repo.getLens(_uiState.value.lensId)
+        val currentLens = if (currentLensEntity != null) LensSpec.fromEntity(currentLensEntity) else null
+        updateLensListInternal(currentLens, camera)
     }
 
     fun getExpCompensation(): Double {
@@ -380,10 +373,8 @@ class EditPhotoViewModel(
 
         var frameIndex = state.frameIndex
         if (frameIndex == -1) {
-            dao.connection()
-            val ps = dao.getPhotosByFilmRollId(state.filmRollId)
-            dao.close()
-            frameIndex = if (ps.isEmpty()) 0 else ps.last().frameIndex + 1
+            val ps = repo.getPhotosByFilmRollIdRaw(state.filmRollId)
+            frameIndex = if (ps.isEmpty()) 0 else (ps.last()._index ?: 0) + 1
         }
 
         val photo = Photo(
