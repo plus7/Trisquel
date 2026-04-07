@@ -51,7 +51,6 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.18.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.viewpager2:viewpager2:1.1.0'
     implementation 'androidx.vectordrawable:vectordrawable:1.2.0'
@@ -82,6 +81,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.13.2'
     implementation 'com.rengwuxian.materialedittext:library:2.1.4'
     implementation "androidx.work:work-runtime-ktx:2.11.2"
+    implementation "androidx.print:print:1.1.0"
 
     implementation 'it.sephiroth.android.library.imagezoom:library:1.0.4'
     implementation 'com.github.bumptech.glide:glide:5.0.5'
