@@ -27,12 +27,6 @@ import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 
 class MainActivity : AppCompatActivity() {
     companion object {
-        const val ID_FILMROLL = 0
-        const val ID_CAMERA = 1
-        const val ID_LENS = 2
-        const val ID_ACCESSORY = 3
-        const val ID_FAVORITES = 4
-        
         const val ROUTE_FILMROLLS = "filmrolls"
         const val ROUTE_CAMERAS = "cameras"
         const val ROUTE_LENSES = "lenses"
