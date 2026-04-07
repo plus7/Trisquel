@@ -49,33 +49,33 @@ class MainActivity : AppCompatActivity() {
     private val mainViewModel: MainViewModel by viewModels()
     private lateinit var userPreferencesRepository: UserPreferencesRepository
 
-    private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            mainViewModel.onBackupDirChosen(result.data?.data, 0)
+    private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) {
+            mainViewModel.onBackupDirChosen(uri, 0)
         }
     }
 
-    private val backupDirChosenForFullExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            mainViewModel.onBackupDirChosen(result.data?.data, 1)
+    private val backupDirChosenForFullExLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) {
+            mainViewModel.onBackupDirChosen(uri, 1)
         }
     }
 
-    private val zipFileChosenForMergeIpLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            mainViewModel.onImportFileChosen(result.data?.data, 0)
+    private val zipFileChosenForMergeIpLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            mainViewModel.onImportFileChosen(uri, 0)
         }
     }
 
-    private val zipFileChosenForReplIpLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            mainViewModel.onImportFileChosen(result.data?.data, 1)
+    private val zipFileChosenForReplIpLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            mainViewModel.onImportFileChosen(uri, 1)
         }
     }
 
-    private val dbFileChosenForReplDbLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            mainViewModel.onDbFileChosen(result.data?.data, contentResolver)
+    private val dbFileChosenForReplDbLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            mainViewModel.onDbFileChosen(uri, contentResolver)
         }
     }
 
@@ -162,25 +162,15 @@ class MainActivity : AppCompatActivity() {
                                 requestImportPermissionsLauncher.launch(PERMISSIONS)
                             }
                             is MainEvent.LaunchExportDocumentTree -> {
-                                val chooserIntent = Intent(Intent.ACTION_CREATE_DOCUMENT)
-                                chooserIntent.addCategory(Intent.CATEGORY_OPENABLE)
-                                chooserIntent.type = "application/zip"
-                                chooserIntent.putExtra(Intent.EXTRA_TITLE, event.fileName)
-                                if(event.mode == 0) backupDirChosenForSlimExLauncher.launch(chooserIntent)
-                                else backupDirChosenForFullExLauncher.launch(chooserIntent)
+                                if(event.mode == 0) backupDirChosenForSlimExLauncher.launch(event.fileName)
+                                else backupDirChosenForFullExLauncher.launch(event.fileName)
                             }
                             is MainEvent.LaunchImportDocumentPicker -> {
-                                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                                intent.addCategory(Intent.CATEGORY_OPENABLE)
-                                if(event.mode == 2){
-                                    intent.type = "*/*"
-                                }else {
-                                    intent.type = "application/zip"
-                                }
+                                val mimeType = if(event.mode == 2) arrayOf("*/*") else arrayOf("application/zip")
                                 when(event.mode){
-                                    0 -> zipFileChosenForMergeIpLauncher.launch(intent)
-                                    1 -> zipFileChosenForReplIpLauncher.launch(intent)
-                                    else -> dbFileChosenForReplDbLauncher.launch(intent)
+                                    0 -> zipFileChosenForMergeIpLauncher.launch(mimeType)
+                                    1 -> zipFileChosenForReplIpLauncher.launch(mimeType)
+                                    else -> dbFileChosenForReplDbLauncher.launch(mimeType)
                                 }
                             }
                         }
