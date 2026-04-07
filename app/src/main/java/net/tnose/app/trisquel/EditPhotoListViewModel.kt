@@ -160,20 +160,6 @@ class EditPhotoListViewModel(
         repo.getPhoto(id)?.let { Photo.fromEntity(it) }
     }
 
-    fun handleAddPhotoResult(data: Intent?) {
-        val bundle = data?.extras ?: return
-        val p: Photo? = androidx.core.os.BundleCompat.getParcelable(bundle, "photo", Photo::class.java)
-        val tags: ArrayList<String>? = bundle.getStringArrayList("tags")
-        if (p != null) insertPhoto(p, tags)
-    }
-
-    fun handleEditPhotoResult(data: Intent?) {
-        val bundle = data?.extras ?: return
-        val p: Photo? = androidx.core.os.BundleCompat.getParcelable(bundle, "photo", Photo::class.java)
-        val tags: ArrayList<String>? = bundle.getStringArrayList("tags")
-        if (p != null) updatePhoto(p, tags)
-    }
-
     fun handlePickImageResult(uris: List<Uri>) {
         if (uris.isEmpty()) {
             setThumbnailEditingPhotoId(-1)

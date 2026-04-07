@@ -54,22 +54,6 @@ class AccessoryViewModel(application: Application, private val savedStateHandle:
         savedStateHandle["sorting_rule"] = rule
     }
 
-    fun handleAddResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val bundle = intent?.extras ?: return@launch
-        val a = Accessory(0, Util.dateToStringUTC(Date()), Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
-        mRepository.upsertAccessory(a.toEntity())
-    }
-
-    fun handleEditResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val bundle = intent?.extras ?: return@launch
-        val a = Accessory(bundle.getInt("id"), bundle.getString("created")!!, Util.dateToStringUTC(Date()), bundle.getInt("type"), bundle.getString("name")!!, bundle.getString("mount"), bundle.getDouble("focal_length_factor"))
-        mRepository.upsertAccessory(a.toEntity())
-    }
-
-    fun insert(entity: AccessoryEntity) = viewModelScope.launch {
-        mRepository.upsertAccessory(entity)
-    }
-
     fun update(entity: AccessoryEntity) = viewModelScope.launch {
         mRepository.upsertAccessory(entity)
     }

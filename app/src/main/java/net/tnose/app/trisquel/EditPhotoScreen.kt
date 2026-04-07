@@ -225,16 +225,6 @@ fun EditPhotoRoute(
         }
     }
 
-    val addLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val bundle = result.data?.extras ?: return@rememberLauncherForActivityResult
-            val l = androidx.core.os.BundleCompat.getParcelable(bundle, "lensspec", LensSpec::class.java)
-            if (l != null) {
-                viewModel.handleAddLensResult(l)
-            }
-        }
-    }
-
     if (!uiState.isLoaded) return
 
     EditPhotoScreen(

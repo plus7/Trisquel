@@ -72,42 +72,6 @@ class CameraViewModel(application: Application, private val savedStateHandle: Sa
         }
     }
 
-    fun handleAddResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val bundle = intent?.extras ?: return@launch
-        val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
-        val newId = repo.upsertCamera(c.toEntity())
-        if (c.type == 1) {
-            val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
-            if (l != null) {
-                l.body = newId.toInt()
-                repo.upsertLens(l.toEntity())
-            }
-        }
-    }
-
-    fun handleEditResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val bundle = intent?.extras ?: return@launch
-        val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
-        repo.upsertCamera(c.toEntity())
-        if (c.type == 1) {
-            val lensEntity = repo.getLensByFixedBody(c.id)
-            val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
-            if (l != null) {
-                l.id = lensEntity?.id ?: 0
-                l.body = c.id
-                repo.upsertLens(l.toEntity())
-            }
-        }
-    }
-
-    fun insertCamera(camera: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
-        repo.upsertCamera(camera.toEntity())
-    }
-
-    fun updateCamera(camera: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
-        repo.upsertCamera(camera.toEntity())
-    }
-
     fun deleteCamera(id: Int) = viewModelScope.launch(Dispatchers.IO) {
         val entity = repo.getCamera(id)
         if (entity?.type == 1) {

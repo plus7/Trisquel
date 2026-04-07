@@ -54,26 +54,6 @@ class FilmRollViewModel(application: Application, private val savedStateHandle: 
         savedStateHandle["view_rule"] = rule
     }
 
-    fun handleAddResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val bundle = intent?.extras ?: return@launch
-        val cEntity = mRepository.getCamera(bundle.getInt("camera"))
-        val c = cEntity?.let { CameraSpec.fromEntity(it) }
-        val f = FilmRoll(0, bundle.getString("name")!!, c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
-        mRepository.upsertFilmRoll(f.toEntity())
-    }
-
-    fun handleEditResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val bundle = intent?.extras ?: return@launch
-        val cEntity = mRepository.getCamera(bundle.getInt("camera"))
-        val c = cEntity?.let { CameraSpec.fromEntity(it) }
-        val f = FilmRoll(bundle.getInt("id"), bundle.getString("name")!!, bundle.getString("created")!!, Util.dateToStringUTC(Date()), c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
-        mRepository.upsertFilmRoll(f.toEntity())
-    }
-
-    fun insert(entity: FilmRollEntity) = viewModelScope.launch {
-        mRepository.upsertFilmRoll(entity)
-    }
-
     fun update(entity: FilmRollEntity) = viewModelScope.launch {
         mRepository.upsertFilmRoll(entity)
     }

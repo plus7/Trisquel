@@ -68,28 +68,6 @@ class LensViewModel(application: Application, private val savedStateHandle: Save
         }
     }
 
-    fun handleAddResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val l = BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
-        if (l != null) {
-            repo.upsertLens(l.toEntity())
-        }
-    }
-
-    fun handleEditResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val l = BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
-        if (l != null) {
-            repo.upsertLens(l.toEntity())
-        }
-    }
-
-    fun insertLens(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
-        repo.upsertLens(lens.toEntity())
-    }
-
-    fun updateLens(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
-        repo.upsertLens(lens.toEntity())
-    }
-
     fun deleteLens(id: Int) = viewModelScope.launch(Dispatchers.IO) {
         repo.deleteLens(id)
     }
