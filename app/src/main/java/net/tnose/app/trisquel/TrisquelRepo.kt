@@ -1,16 +1,23 @@
 package net.tnose.app.trisquel
 
 import android.app.Application
+import android.content.ContentValues
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
 
-class TrisquelRepo {
-    protected lateinit var mTrisquelDao: TrisquelDao2
-    constructor (application: Application?) {
-        val db : TrisquelRoomDatabase = TrisquelRoomDatabase.getInstance(application!!.applicationContext)
+class TrisquelRepo(private val application: Application) {
+    private val mTrisquelDao: TrisquelDao2
+    private val db: TrisquelRoomDatabase
+
+    init {
+        db = TrisquelRoomDatabase.getInstance(application.applicationContext)
         mTrisquelDao = db.trisquelDao()
     }
 
@@ -34,6 +41,8 @@ class TrisquelRepo {
     /* Lens */
     fun getAllLenses(): LiveData<List<LensEntity>> = mTrisquelDao.allLenses()
 
+    suspend fun getAllLensesRaw(): List<LensEntity> = mTrisquelDao.allLensesRaw()
+
     suspend fun getLens(id: Int): LensEntity? = mTrisquelDao.getLens(id)
 
     suspend fun getLensByFixedBody(bodyId: Int): LensEntity? = mTrisquelDao.getLensByFixedBody(bodyId)
@@ -41,6 +50,8 @@ class TrisquelRepo {
     suspend fun getLensesByMount(mount: String): List<LensEntity> = mTrisquelDao.getLensesByMount(mount)
 
     suspend fun isLensUsed(id: Int): Boolean = mTrisquelDao.isLensUsed(id)
+
+    suspend fun getAvailableMountList(): List<String> = mTrisquelDao.getAvailableMountList()
 
     @WorkerThread
     suspend fun upsertLens(entity: LensEntity): Long = mTrisquelDao.upsertLens(entity)
@@ -125,6 +136,9 @@ class TrisquelRepo {
             }
         }
     }
+
+    suspend fun getAvailableFilmBrandList(): List<FilmBrand> = mTrisquelDao.getAvailableFilmBrandList()
+
     @WorkerThread
     suspend fun upsertFilmRoll(entity: FilmRollEntity) {
         mTrisquelDao.upsertFilmRoll(entity)
@@ -133,9 +147,8 @@ class TrisquelRepo {
     @WorkerThread
     suspend fun deleteFilmRoll(id: Int) {
         val photos = mTrisquelDao.photosByFilmRollIdRaw(id)
-        //val photos = getPhotosByFilmRollId(id).value // これだと読み込みが終わる間がないためnullが帰ってくる？
         for (p in photos) {
-            deletePhoto(p.id) //tagのリファレンスカウントも管理する必要があるため
+            deletePhoto(p.id)
         }
         mTrisquelDao.deleteFilmRoll(FilmRollEntity(id, "", "","",0, "", "", "", ""))
     }
@@ -158,6 +171,10 @@ class TrisquelRepo {
     suspend fun getPhotosByFilmRollIdRaw(filmRollId: Int): List<PhotoEntity> = mTrisquelDao.photosByFilmRollIdRaw(filmRollId)
 
     suspend fun getPhoto(id: Int): PhotoEntity? = mTrisquelDao.getPhoto(id)
+
+    suspend fun getAllFavedPhotosRaw(): List<PhotoEntity> = mTrisquelDao.getAllFavedPhotosRaw()
+
+    suspend fun getPhotos4Conversion(): List<PhotoEntity> = mTrisquelDao.getPhotos4Conversion()
 
     @WorkerThread
     suspend fun upsertPhoto(entity: PhotoEntity) : Long {
@@ -195,6 +212,8 @@ class TrisquelRepo {
         }
     }
 
+    suspend fun getAllAccessoriesRaw(): List<AccessoryEntity> = mTrisquelDao.allAccessoriesRaw()
+
     suspend fun getAccessory(id: Int): AccessoryEntity? = mTrisquelDao.getAccessory(id)
 
     suspend fun isAccessoryUsed(id: Int): Boolean = mTrisquelDao.isAccessoryUsed(id)
@@ -227,10 +246,9 @@ class TrisquelRepo {
             if (existingTag == null){
                 createList.add(label)
             }else{
-                removeList.remove(existingTag) //existingTagは現状維持の対象なのでremoveListから外す
+                removeList.remove(existingTag)
             }
         }
-        //作成またはrefcntをインクリメント
         for(label in createList){
             val t = getTagByLabel(label)
             if(t == null) {
@@ -241,12 +259,11 @@ class TrisquelRepo {
                 mTrisquelDao.upsertTagMap(TagMapEntity(0, photoId, t.id, filmRollId))
             }
         }
-        //removeList内はrefcntをデクリメントもしくは削除の対象
         for(t in removeList){
             deleteTagMap(t.tagMap.tagId!!)
-            if(t.tag!!.refcnt == 1){ // 削除対象
+            if(t.tag!!.refcnt == 1){
                 deleteTag(t.tag!!.id)
-            }else{ // デクリメントだけ
+            }else{
                 upsertTag(TagEntity(t.tag!!.id, t.tag!!.label, t.tag!!.refcnt!! - 1))
             }
         }
@@ -283,9 +300,9 @@ class TrisquelRepo {
     }
 
     /* Search */
-    fun getPhotosByAndQuery(tags: List<String>): LiveData<List<Pair<Pair<String, Int>, PhotoAndRels>>> {
+    fun getPhotosByAndQuery(tags: List<String>): Flow<List<Pair<Pair<String, Int>, PhotoAndRels>>> {
         return mTrisquelDao.getPhotosByAndQuery(tags, tags.count()).map {
-                it -> it.sortedByDescending { it.filmRollDate } // 日付は新しいほう優先なのでソート
+                it -> it.sortedByDescending { it.filmRollDate }
         }.map{
             it.runningFold(
             Pair(Pair("",0),
@@ -298,6 +315,231 @@ class TrisquelRepo {
                 ))) {
                 acc, value -> Pair(Pair(acc.second.photo.date, acc.second.photo.filmroll!!), value)
             }.drop(1)
-        }.asLiveData()
+        }
+    }
+
+    /* Metadata */
+    suspend fun getMetadata(): TrisquelMetadataEntity? = mTrisquelDao.getMetadata()
+
+    @WorkerThread
+    suspend fun setConversionState(value: Int) {
+        val metadata = mTrisquelDao.getMetadata()
+        if (metadata != null) {
+            mTrisquelDao.upsertMetadata(metadata.copy(pathConvDone = value))
+        } else {
+            mTrisquelDao.upsertMetadata(TrisquelMetadataEntity(0, value))
+        }
+    }
+
+    /* Legacy JSON Support for Workers */
+    fun getAllEntriesJSON(type: String): JSONArray {
+        val cursor = db.query("select * from $type order by _id desc;", null)
+        val ja = JSONArray()
+        cursor.use {
+            while (it.moveToNext()) {
+                val obj = JSONObject()
+                for (i in 0 until it.columnCount) {
+                    val cname = it.getColumnName(i)
+                    when (it.getType(i)) {
+                        Cursor.FIELD_TYPE_NULL -> obj.put(cname, JSONObject.NULL)
+                        Cursor.FIELD_TYPE_FLOAT -> obj.put(cname, it.getDouble(i))
+                        Cursor.FIELD_TYPE_INTEGER -> obj.put(cname, it.getInt(i))
+                        Cursor.FIELD_TYPE_STRING -> obj.put(cname, it.getString(i))
+                        Cursor.FIELD_TYPE_BLOB -> { /* BLOB not expected in this app */ }
+                    }
+                }
+                ja.put(obj)
+            }
+        }
+        return ja
+    }
+
+    @WorkerThread
+    fun beginTransaction() {
+        db.openHelper.writableDatabase.beginTransaction()
+    }
+
+    @WorkerThread
+    fun setTransactionSuccessful() {
+        db.openHelper.writableDatabase.setTransactionSuccessful()
+    }
+
+    @WorkerThread
+    fun endTransaction() {
+        db.openHelper.writableDatabase.endTransaction()
+    }
+
+    @WorkerThread
+    fun deleteAll() {
+        val sdb = db.openHelper.writableDatabase
+        for(table in listOf("camera", "lens", "filmroll", "photo", "accessory", "tag", "tagmap")) {
+            sdb.delete(table, null, null)
+            val cval = ContentValues()
+            cval.put("seq", 0)
+            sdb.update("sqlite_sequence", SQLiteDatabase.CONFLICT_ABORT, cval, "name = ?", arrayOf(table))
+        }
+    }
+
+    @WorkerThread
+    fun mergeCameraJSON(obj: JSONObject): Pair<Int, Int> {
+        val oldId = obj.getInt("_id")
+        val cval = ContentValues()
+        obj.keys().forEach { key ->
+            if (key != "_id") {
+                val value = obj.get(key)
+                when (value) {
+                    is Int -> cval.put(key, value)
+                    is Double -> cval.put(key, value)
+                    is String -> cval.put(key, value)
+                    is Long -> cval.put(key, value)
+                }
+            }
+        }
+        val newId = db.openHelper.writableDatabase.insert("camera", SQLiteDatabase.CONFLICT_ABORT, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    @WorkerThread
+    fun mergeLensJSON(obj: JSONObject, cameraOld2NewId: Map<Int, Int>): Pair<Int, Int> {
+        val oldId = obj.getInt("_id")
+        val cval = ContentValues()
+        obj.keys().forEach { key ->
+            if (key != "_id") {
+                if (key == "body") cval.put("body", cameraOld2NewId[obj.getInt(key)])
+                else {
+                    val value = obj.get(key)
+                    when (value) {
+                        is Int -> cval.put(key, value)
+                        is Double -> cval.put(key, value)
+                        is String -> cval.put(key, value)
+                        is Long -> cval.put(key, value)
+                    }
+                }
+            }
+        }
+        val newId = db.openHelper.writableDatabase.insert("lens", SQLiteDatabase.CONFLICT_ABORT, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    @WorkerThread
+    fun mergeAccessoryJSON(obj: JSONObject): Pair<Int, Int> {
+        val oldId = obj.getInt("_id")
+        val cval = ContentValues()
+        obj.keys().forEach { key ->
+            if (key != "_id") {
+                val value = obj.get(key)
+                when (value) {
+                    is Int -> cval.put(key, value)
+                    is Double -> cval.put(key, value)
+                    is String -> cval.put(key, value)
+                    is Long -> cval.put(key, value)
+                }
+            }
+        }
+        val newId = db.openHelper.writableDatabase.insert("accessory", SQLiteDatabase.CONFLICT_ABORT, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    @WorkerThread
+    fun mergeFilmRollJSON(obj: JSONObject, cameraOld2NewId: Map<Int, Int>): Pair<Int, Int> {
+        val oldId = obj.getInt("_id")
+        val cval = ContentValues()
+        obj.keys().forEach { key ->
+            if (key != "_id") {
+                if (key == "camera") cval.put("camera", cameraOld2NewId[obj.getInt(key)])
+                else {
+                    val value = obj.get(key)
+                    when (value) {
+                        is Int -> cval.put(key, value)
+                        is Double -> cval.put(key, value)
+                        is String -> cval.put(key, value)
+                        is Long -> cval.put(key, value)
+                    }
+                }
+            }
+        }
+        val newId = db.openHelper.writableDatabase.insert("filmroll", SQLiteDatabase.CONFLICT_ABORT, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    @WorkerThread
+    fun mergePhotoJSON(obj: JSONObject,
+                       newpaths: ArrayList<String>,
+                       importErrorStr: String,
+                       cameraOld2NewId: Map<Int, Int>,
+                       lensOld2NewId: Map<Int, Int>,
+                       filmrollOld2NewId: Map<Int, Int>,
+                       accessoryOld2NewId: Map<Int, Int>): Pair<Int, Int> {
+        val oldId = obj.getInt("_id")
+        val cval = ContentValues()
+        obj.keys().forEach { key ->
+            if (key != "_id") {
+                when (key) {
+                    "camera" -> cval.put(key, cameraOld2NewId[obj.getInt(key)])
+                    "lens" -> cval.put(key, lensOld2NewId[obj.getInt(key)])
+                    "filmroll" -> cval.put(key, filmrollOld2NewId[obj.getInt(key)])
+                    "accessories" -> {
+                        val accessories = obj.getString(key)
+                            .split(Photo.splitter)
+                            .filter { it.isNotEmpty() }
+                            .map { accessoryOld2NewId[it.toInt()] }
+                            .joinToString("/", "/", "/")
+                        cval.put(key, accessories)
+                    }
+                    "suppimgs" -> cval.put(key, JSONArray(newpaths).toString())
+                    "memo" -> {
+                        val value = obj.getString(key)
+                        val appendStr = if (importErrorStr.isNotEmpty()) {
+                            (if (value.isEmpty()) "" else "\n") + importErrorStr
+                        } else ""
+                        cval.put(key, value + appendStr)
+                    }
+                    else -> {
+                        if (!key.startsWith("suppimgs_")) {
+                            val value = obj.get(key)
+                            when (value) {
+                                is Int -> cval.put(key, value)
+                                is Double -> cval.put(key, value)
+                                is String -> cval.put(key, value)
+                                is Long -> cval.put(key, value)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        val newId = db.openHelper.writableDatabase.insert("photo", SQLiteDatabase.CONFLICT_ABORT, cval)
+        return Pair(oldId, newId.toInt())
+    }
+
+    @WorkerThread
+    fun mergeTagMapJSON(tagmaps: JSONArray, tags: JSONArray,
+                        filmrollOld2NewId: Map<Int, Int>, photoOld2NewId: Map<Int, Int>) {
+        val tagOldId2Label = HashMap<Int, String>()
+        for (i in 0 until tags.length()) {
+            val tag = tags.getJSONObject(i)
+            tagOldId2Label[tag.getInt("_id")] = tag.getString("label")
+        }
+
+        val tagmapsArray = ArrayList<Triple<Int, Int, String>>()
+        for (i in 0 until tagmaps.length()) {
+            val tagmap = tagmaps.getJSONObject(i)
+            tagmapsArray.add(Triple(
+                photoOld2NewId[tagmap.getInt("photo_id")] ?: -1,
+                filmrollOld2NewId[tagmap.getInt("filmroll_id")] ?: -1,
+                tagOldId2Label[tagmap.getInt("tag_id")] ?: ""
+            ))
+        }
+
+        for (group in tagmapsArray.groupBy { it.first }) {
+            if (group.key == -1) continue
+            val filmrollId = group.value[0].second
+            if (filmrollId == -1) continue
+            
+            val tagLabels = ArrayList(group.value.map { it.third })
+            kotlinx.coroutines.runBlocking {
+                tagPhoto(group.key, filmrollId, tagLabels)
+            }
+        }
     }
 }

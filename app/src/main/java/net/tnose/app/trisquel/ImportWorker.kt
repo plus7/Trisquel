@@ -48,6 +48,8 @@ sealed class WrappedZipFile {
 class CustomImportException : Exception ("Internal backup before import failed!")
 class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     private val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val repo = TrisquelRepo(ctx as android.app.Application)
+
     companion object{
         val PARAM_ZIPFILE = "zipfile"
         val PARAM_URI = "uri"
@@ -88,7 +90,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 
         val retval = try {
             backupDBBeforeImport()
-            val result = importFromZip(Uri.parse(uri), (mode == 0))
+            val result = importFromZip(Uri.parse(uri!!), (mode == 0))
             if(result != SUCCESS){
                 val errstr = when(result){
                     VERSION_UNMATCH -> "Database version is too new"
@@ -113,7 +115,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 workDataOf(
                     Pair(PARAM_PERCENTAGE, 100.0),
                     Pair(PARAM_STATUS, "Backup canceled.")))
-        } catch (e: Throwable){ // ★変更: Exception -> Throwable にしてOOM等もキャッチ
+        } catch (e: Throwable){
             Log.e("TrisquelImport", "Fatal error in Worker: ${e.message}", e)
             Result.failure(
                 workDataOf(
@@ -297,7 +299,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         return item.toString()
     }
 
-    private fun newPathsFullRestore(wzf: WrappedZipFile, photo: JSONObject, dao: TrisquelDao, filmrollIdOld2NewMap: HashMap<Int, Int>): Pair<ArrayList<String>, String>{
+    private fun newPathsFullRestore(wzf: WrappedZipFile, photo: JSONObject, filmrollIdOld2NewMap: HashMap<Int, Int>): Pair<ArrayList<String>, String>{
         val result = ArrayList<String>()
         //val importErrors = ArrayList<String>()
 
@@ -491,9 +493,6 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         val fis = FileInputStream(pfd.fileDescriptor)
         val zipfile: WrappedZipFile = WrappedZipFile.ApacheCCZipFile(ZipFile(fis.channel))
 
-        val dao = TrisquelDao(applicationContext)
-        dao.connection()
-        //try {
         try {
             val metadataJSON = getJSONObjectFromEntry(zipfile, "metadata.json")
             val dbver = metadataJSON.getInt("DB_VERSION")
@@ -505,31 +504,31 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 throw VersionUnmatchException()
             }
 
-            dao.beginTransaction()
+            repo.beginTransaction()
 
-            if (!merge) dao.deleteAll()
+            if (!merge) repo.deleteAll()
 
             val cameraJSON = getJSONArrayFromEntry(zipfile, "camera.json")
             for (i in 0 until cameraJSON.length()) {
-                val id_pair = dao.mergeCameraJSON(cameraJSON.getJSONObject(i))
+                val id_pair = repo.mergeCameraJSON(cameraJSON.getJSONObject(i))
                 cameraIdOld2NewMap[id_pair.first] = id_pair.second
             }
 
             val lensJSON = getJSONArrayFromEntry(zipfile, "lens.json")
             for (i in 0 until lensJSON.length()) {
-                val id_pair = dao.mergeLensJSON(lensJSON.getJSONObject(i), cameraIdOld2NewMap)
+                val id_pair = repo.mergeLensJSON(lensJSON.getJSONObject(i), cameraIdOld2NewMap)
                 lensIdOld2NewMap[id_pair.first] = id_pair.second
             }
 
             val accessoryJSON = getJSONArrayFromEntry(zipfile, "accessory.json")
             for (i in 0 until accessoryJSON.length()) {
-                val id_pair = dao.mergeAccessoryJSON(accessoryJSON.getJSONObject(i))
+                val id_pair = repo.mergeAccessoryJSON(accessoryJSON.getJSONObject(i))
                 accessoryIdOld2NewMap[id_pair.first] = id_pair.second
             }
 
             val filmrollJSON = getJSONArrayFromEntry(zipfile, "filmroll.json")
             for (i in 0 until filmrollJSON.length()) {
-                val id_pair = dao.mergeFilmRollJSON(filmrollJSON.getJSONObject(i), cameraIdOld2NewMap)
+                val id_pair = repo.mergeFilmRollJSON(filmrollJSON.getJSONObject(i), cameraIdOld2NewMap)
                 filmrollIdOld2NewMap[id_pair.first] = id_pair.second
                 filmrollNameByOldIdMap[id_pair.first] = filmrollJSON.getJSONObject(i).getString("name")
             }
@@ -539,11 +538,11 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 val pjo = photoJSON.getJSONObject(i)
                 val tmp: Pair<ArrayList<String>, String> =
                     if (mode == 0) assumedPaths(pjo)
-                    else newPathsFullRestore(zipfile, pjo, dao, filmrollIdOld2NewMap)
+                    else newPathsFullRestore(zipfile, pjo, filmrollIdOld2NewMap)
                 val newpaths = tmp.first
                 val importErrorStr = tmp.second
                 // val (newpaths, importErrorStr) = tmp なぜかこれができない
-                val id_pair = dao.mergePhotoJSON(pjo, newpaths, importErrorStr,
+                val id_pair = repo.mergePhotoJSON(pjo, newpaths, importErrorStr,
                     cameraIdOld2NewMap, lensIdOld2NewMap, filmrollIdOld2NewMap, accessoryIdOld2NewMap)
                 photoIdOld2NewMap[id_pair.first] = id_pair.second
 
@@ -553,15 +552,13 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 
             val tagJSON = getJSONArrayFromEntry(zipfile, "tag.json")
             val tagmapJSON = getJSONArrayFromEntry(zipfile, "tagmap.json")
-            dao.mergeTagMapJSON(tagmapJSON, tagJSON, filmrollIdOld2NewMap, photoIdOld2NewMap)
+            repo.mergeTagMapJSON(tagmapJSON, tagJSON, filmrollIdOld2NewMap, photoIdOld2NewMap)
 
-            //} catch( e: Exception ) {
-            //    Log.d("ZipFile", e.toString())
-            dao.setTransactionSuccessful()
+            repo.setTransactionSuccessful()
             result = SUCCESS
         } catch (e: VersionUnmatchException) {
             result = VERSION_UNMATCH
-        } catch (e: Throwable){ // ★変更: Exception -> Throwable にしてOOM等もキャッチ
+        } catch (e: Throwable){
             Log.e("TrisquelImport", "Error during import loop: ${e.message}", e)
             result = UNKNOWN
         } finally {
@@ -571,25 +568,12 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 Log.e("TrisquelImport", "Error closing zip: ${e.message}", e)
             }
             try {
-                // ★追加: endTransaction 自体が例外を投げる可能性を考慮
-                dao.endTransaction()
+                repo.endTransaction()
             } catch (e: Throwable) {
                 Log.e("TrisquelImport", "Error ending transaction: ${e.message}", e)
             }
-
-            try {
-                dao.close()
-            } catch (e: Throwable) {
-                Log.e("TrisquelImport", "Error closing DAO: ${e.message}", e)
-            }
-            //zipfile.close()
-            //tmpFile.delete()
         }
-        //} catch( e: Exception ) {
-        //Log.d("ZipFile", e.toString())
-        //} finally {
-        //}
-        pfd.close() //念のため最後にpfdを触るコードを入れてGCさせない（いいのかこれで？） ついでにクローズもしてみる
+        pfd.close()
 
 
         return result

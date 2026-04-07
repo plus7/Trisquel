@@ -145,9 +145,11 @@ data class TrisquelMetadataEntity(
     @ColumnInfo(name = "path_conv_done") val pathConvDone: Int?,
 )
 
-data class ExpDate(
-    val date: String
+data class FilmBrand(
+    val manufacturer: String,
+    val brand: String
 )
+
 data class FilmRollAndRels(
     @Embedded
     val filmRoll: FilmRollEntity,
@@ -226,6 +228,8 @@ interface TrisquelDao2 {
     @Query("SELECT * from filmroll WHERE cast(camera as text) LIKE :camera AND brand LIKE :filmbrand order by created desc;")
     fun allFilmRollAndRelsWithFilterFlow(camera : String, filmbrand : String): Flow<List<FilmRollAndRels>>
 
+    @Query("select distinct manufacturer, brand from filmroll order by manufacturer;")
+    suspend fun getAvailableFilmBrandList(): List<FilmBrand>
 
     @Upsert
     suspend fun upsertFilmRoll(entity: FilmRollEntity)
@@ -245,8 +249,18 @@ interface TrisquelDao2 {
     @Query("SELECT * from photo where _id = :id LIMIT 1")
     suspend fun getPhoto(id: Int): PhotoEntity?
 
+    @Query("SELECT * from photo where favorite = 1 order by date desc")
+    suspend fun getAllFavedPhotosRaw(): List<PhotoEntity>
+
+    @Query("SELECT * from photo where suppimgs like '[\"\\/' || '%'")
+    suspend fun getPhotos4Conversion(): List<PhotoEntity>
+
     @Query("select * from accessory order by created desc;")
     fun allAccessories() : LiveData<List<AccessoryEntity>>
+
+    @Query("select * from accessory order by created desc;")
+    suspend fun allAccessoriesRaw() : List<AccessoryEntity>
+
     @Query("select * from accessory order by name asc;") //ダサいがこうするしかない？
     fun allAccessoriesSortByName() : LiveData<List<AccessoryEntity>>
     @Query("select * from accessory order by type asc;")
@@ -266,6 +280,9 @@ interface TrisquelDao2 {
 
     @Query("select * from lens order by created desc;")
     fun allLenses() : LiveData<List<LensEntity>>
+
+    @Query("select * from lens order by created desc;")
+    suspend fun allLensesRaw() : List<LensEntity>
     
     @Query("SELECT * from lens where _id = :id LIMIT 1")
     suspend fun getLens(id: Int): LensEntity?
@@ -278,6 +295,9 @@ interface TrisquelDao2 {
 
     @Query("SELECT EXISTS(SELECT 1 FROM photo WHERE lens = :id)")
     suspend fun isLensUsed(id: Int): Boolean
+
+    @Query("select distinct mount from lens where mount != '' order by mount;")
+    suspend fun getAvailableMountList(): List<String>
 
     @Upsert
     suspend fun upsertLens(entity: LensEntity): Long
@@ -317,6 +337,12 @@ interface TrisquelDao2 {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMetadata(metadata: TrisquelMetadataEntity)
+
+    @Upsert
+    suspend fun upsertMetadata(metadata: TrisquelMetadataEntity)
+
+    @Query("select * from trisquel_metadata LIMIT 1")
+    suspend fun getMetadata(): TrisquelMetadataEntity?
 }
 
 // 元々のバージョンが17だったので、一つ上の18に設定する

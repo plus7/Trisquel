@@ -33,6 +33,7 @@ import kotlin.coroutines.cancellation.CancellationException
 
 class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     private val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val repo = TrisquelRepo(ctx as android.app.Application)
 
     companion object{
         @Volatile
@@ -99,11 +100,11 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                     Pair(PARAM_PERCENTAGE, 100.0),
                     Pair(PARAM_STATUS, "IO error: "+error.toString())))
         } catch (throwable: Throwable) {
-            Log.e("Export", throwable.localizedMessage!!)
+            Log.e("Export", throwable.localizedMessage ?: "Unknown error")
             Result.failure(
                 workDataOf(
                     Pair(PARAM_PERCENTAGE, 100.0),
-                    Pair(PARAM_STATUS, throwable.localizedMessage!!)))
+                    Pair(PARAM_STATUS, throwable.localizedMessage ?: "Unknown error")))
         }
         notifyCompletion(success)
         return retval
@@ -177,7 +178,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         setProgress(workDataOf(Pair(PARAM_PERCENTAGE, percentage), Pair(PARAM_STATUS, status)))
     }
 
-    suspend fun doMetadataWrite(mode: Int, zos: ZipOutputStream, osw: OutputStreamWriter, dao: TrisquelDao){
+    suspend fun doMetadataWrite(mode: Int, zos: ZipOutputStream, osw: OutputStreamWriter){
         // Metadata
         val ze = ZipEntry("metadata.json")
         zos.putNextEntry(ze)
@@ -190,13 +191,13 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         zos.closeEntry()
     }
 
-    suspend fun doDatabaseWrite(percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter, dao: TrisquelDao): Double{
+    suspend fun doDatabaseWrite(percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter): Double{
         val types = listOf("camera", "lens", "filmroll", "accessory", "tag", "tagmap")
         var mypercentage = percentage
         for (type in types) {
             val ze = ZipEntry(type + ".json")
             zos.putNextEntry(ze)
-            val entries = dao.getAllEntriesJSON(type)
+            val entries = repo.getAllEntriesJSON(type)
             osw.write(entries.toString())
             osw.flush()
             zos.closeEntry()
@@ -207,7 +208,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         return mypercentage
     }
 
-    suspend fun doPhotoInfoWrite(appContext: Context, mode: Int, percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter, dao: TrisquelDao, entries: JSONArray): Double {
+    suspend fun doPhotoInfoWrite(appContext: Context, mode: Int, percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter, entries: JSONArray): Double {
         val zep = ZipEntry("photo.json")
         zos.putNextEntry(zep)
         val checkSumPercentage = if(mode == 1) (99.99 - percentage)/4 else 99.99 - percentage
@@ -261,7 +262,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         return percentage + checkSumPercentage
     }
 
-    suspend fun doPhotoContentWrite(appContext: Context, percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter, dao: TrisquelDao, entries: JSONArray): Double {
+    suspend fun doPhotoContentWrite(appContext: Context, percentage: Double, zos: ZipOutputStream, osw: OutputStreamWriter, entries: JSONArray): Double {
         val hs = HashSet<String>()
         val photosPercentage = 99.99 - percentage
         for (i in 0..entries.length() - 1) {
@@ -318,32 +319,29 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         val zos = ZipOutputStream(zipFile)
         zos.setMethod(ZipOutputStream.DEFLATED)
         val osw = OutputStreamWriter(zos, "UTF-8")
-        val dao = TrisquelDao(appContext)
-        dao.connection()
 
         var completed = false
 
         try {
             bcastProgress(0.0, "Writing metadata...")
 
-            doMetadataWrite(mode, zos, osw, dao)
+            doMetadataWrite(mode, zos, osw)
             if (!shouldContinue){ throw InterruptedException() }
 
             var percentage = 1.0
             bcastProgress(percentage, "Writing database entries...")
 
-            percentage = doDatabaseWrite(percentage, zos, osw, dao)
+            percentage = doDatabaseWrite(percentage, zos, osw)
 
-            val entries = dao.getAllEntriesJSON("photo")
-            percentage = doPhotoInfoWrite(appContext, mode, percentage, zos, osw, dao, entries)
+            val entries = repo.getAllEntriesJSON("photo")
+            percentage = doPhotoInfoWrite(appContext, mode, percentage, zos, osw, entries)
             if(mode == 1) {
-                percentage = doPhotoContentWrite(appContext, percentage, zos, osw, dao, entries)
+                percentage = doPhotoContentWrite(appContext, percentage, zos, osw, entries)
             }
             completed = true
         } catch (e: InterruptedException){
             Log.d("EIS", "interrupted")
         } finally {
-            dao.close()
             zos.close()
         }
 

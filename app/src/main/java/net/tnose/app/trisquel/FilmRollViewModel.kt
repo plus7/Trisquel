@@ -17,8 +17,8 @@ sealed class FilmRollEvent {
     data class ShowDeleteConfirm(val id: Int, val name: String) : FilmRollEvent()
 }
 
-class FilmRollViewModel(application: Application?) : AndroidViewModel(
-    application!!
+class FilmRollViewModel(application: Application) : AndroidViewModel(
+    application
 ) {
     private val mRepository: TrisquelRepo
 
@@ -47,20 +47,16 @@ class FilmRollViewModel(application: Application?) : AndroidViewModel(
 
     fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
         val bundle = intent?.extras ?: return@launch
-        val dao = TrisquelDao(getApplication())
-        dao.connection()
-        val c = dao.getCamera(bundle.getInt("camera"))
-        dao.close()
+        val cEntity = mRepository.getCamera(bundle.getInt("camera"))
+        val c = cEntity?.let { CameraSpec.fromEntity(it) }
         val f = FilmRoll(0, bundle.getString("name")!!, c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
         mRepository.upsertFilmRoll(f.toEntity())
     }
 
     fun handleEditResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
         val bundle = intent?.extras ?: return@launch
-        val dao = TrisquelDao(getApplication())
-        dao.connection()
-        val c = dao.getCamera(bundle.getInt("camera"))
-        dao.close()
+        val cEntity = mRepository.getCamera(bundle.getInt("camera"))
+        val c = cEntity?.let { CameraSpec.fromEntity(it) }
         val f = FilmRoll(bundle.getInt("id"), bundle.getString("name")!!, bundle.getString("created")!!, Util.dateToStringUTC(Date()), c!!, bundle.getString("manufacturer")!!, bundle.getString("brand")!!, bundle.getInt("iso"), 36)
         mRepository.upsertFilmRoll(f.toEntity())
     }
@@ -76,7 +72,7 @@ class FilmRollViewModel(application: Application?) : AndroidViewModel(
 
     fun refresh(id: Int) = viewModelScope.launch {
         val entity = mRepository.getFilmRoll(id)
-        mRepository.upsertFilmRoll(entity.value!!)
+        entity.value?.let { mRepository.upsertFilmRoll(it) }
     }
 
     fun requestDelete(filmRoll: FilmRoll) = viewModelScope.launch {

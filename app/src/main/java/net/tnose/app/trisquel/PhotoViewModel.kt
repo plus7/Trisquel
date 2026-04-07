@@ -9,8 +9,8 @@ import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
-class PhotoViewModel(application: Application?) : AndroidViewModel(
-    application!!
+class PhotoViewModel(application: Application) : AndroidViewModel(
+    application
 ) {
     private val mRepository: TrisquelRepo
     val filmRollId = MutableLiveData<Int>(0)

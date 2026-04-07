@@ -43,7 +43,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var currentSubtitle by mutableStateOf("")
 
     private val userPreferencesRepository = UserPreferencesRepository(application)
+    private val repo = TrisquelRepo(application)
     private val workManager = WorkManager.getInstance(application)
+
+    private val cameraNameCache = mutableMapOf<Int, String>()
 
     init {
         viewModelScope.launch {
@@ -102,6 +105,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val status = workInfo.progress.getString(DbConvWorker.PARAM_STATUS) ?: ""
                     val progress = workInfo.progress.getDouble(DbConvWorker.PARAM_PERCENTAGE, 0.0)
                     showDialog(ActiveDialog.Progress("DB Conversion", progress, status, {}))
+                }
+            }
+        }
+
+        // Cache camera names
+        viewModelScope.launch {
+            repo.getAllCameras().observeForever { cameras ->
+                cameras?.forEach {
+                    cameraNameCache[it.id] = "${it.manufacturer} ${it.modelName}"
                 }
             }
         }
@@ -166,11 +178,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun getFilterLabel(f: Pair<Int, ArrayList<String>>): String {
         return when(f.first) {
             1 -> {
-                val dao = TrisquelDao(getApplication())
-                dao.connection()
-                val c = dao.getCamera(f.second[0].toInt())
-                dao.close()
-                if (c != null) "📷 " + c.manufacturer + " " + c.modelName else ""
+                val name = cameraNameCache[f.second[0].toInt()]
+                if (name != null) "📷 $name" else ""
             }
             2 -> "🎞 " + f.second.joinToString(" ")
             else -> ""
@@ -178,27 +187,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun getAllCameras(): List<CameraSpec> = withContext(Dispatchers.IO) {
-        val dao = TrisquelDao(getApplication())
-        dao.connection()
-        val list = dao.allCameras
-        dao.close()
-        list
+        repo.getAllCamerasRaw().map { CameraSpec.fromEntity(it) }
     }
 
     private suspend fun getAvailableFilmBrandList(): List<Pair<String, String>> = withContext(Dispatchers.IO) {
-        val dao = TrisquelDao(getApplication())
-        dao.connection()
-        val list = dao.availableFilmBrandList
-        dao.close()
-        list
+        repo.getAvailableFilmBrandList().map { it.manufacturer to it.brand }
     }
 
     private suspend fun getAllTags(): List<Tag> = withContext(Dispatchers.IO) {
-        val dao = TrisquelDao(getApplication())
-        dao.connection()
-        val list = dao.allTags
-        dao.close()
-        list
+        repo.getAllTagsRaw().map { Tag(it.id, it.label, it.refcnt ?: 0) }
     }
 
     fun requestFilterByCamera(onSelected: (Int, Int?) -> Unit) = viewModelScope.launch {
@@ -231,11 +228,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun isDbConvForAndroid11Done(): Boolean = withContext(Dispatchers.IO) {
-        val dao = TrisquelDao(getApplication())
-        dao.connection()
-        val state = dao.getConversionState()
-        dao.close()
-        state >= 1
+        val metadata = repo.getMetadata()
+        (metadata?.pathConvDone ?: 0) >= 1
     }
 
     fun checkAppStartupState(currentVersion: Int) = viewModelScope.launch {

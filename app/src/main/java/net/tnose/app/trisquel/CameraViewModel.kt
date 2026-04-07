@@ -18,7 +18,7 @@ sealed class CameraEvent {
 }
 
 class CameraViewModel(application: Application) : AndroidViewModel(application) {
-    private val dao = TrisquelDao(application)
+    private val repo = TrisquelRepo(application)
     
     private val _events = MutableSharedFlow<CameraEvent>()
     val events = _events.asSharedFlow()
@@ -38,9 +38,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     fun load() = viewModelScope.launch {
         _isLoading.value = true
         withContext(Dispatchers.IO) {
-            dao.connection()
-            val list = dao.allCameras
-            dao.close()
+            val entities = repo.getAllCamerasRaw()
+            val list = entities.map { CameraSpec.fromEntity(it) }
             withContext(Dispatchers.Main) {
                 _cameras.value = sortList(list, _sortKey.value ?: 0)
                 _isLoading.value = false
@@ -66,66 +65,55 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
         val bundle = intent?.extras ?: return@launch
         val c = androidx.core.os.BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
-        dao.connection()
-        val newId = dao.addCamera(c)
+        val newId = repo.upsertCamera(c.toEntity())
         if (c.type == 1) {
             val l = androidx.core.os.BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
             if (l != null) {
                 l.body = newId.toInt()
-                dao.addLens(l)
+                repo.upsertLens(l.toEntity())
             }
         }
-        dao.close()
         load()
     }
 
     fun handleEditResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
         val bundle = intent?.extras ?: return@launch
         val c = androidx.core.os.BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
-        dao.connection()
-        dao.updateCamera(c)
+        repo.upsertCamera(c.toEntity())
         if (c.type == 1) {
-            val lensid = dao.getFixedLensIdByBody(c.id)
+            val lensEntity = repo.getLensByFixedBody(c.id)
             val l = androidx.core.os.BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
             if (l != null) {
-                l.id = lensid
+                l.id = lensEntity?.id ?: 0
                 l.body = c.id
-                dao.updateLens(l)
+                repo.upsertLens(l.toEntity())
             }
         }
-        dao.close()
         load()
     }
 
     fun insertCamera(camera: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        dao.addCamera(camera)
-        dao.close()
+        repo.upsertCamera(camera.toEntity())
         load()
     }
 
     fun updateCamera(camera: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        dao.updateCamera(camera)
-        dao.close()
+        repo.upsertCamera(camera.toEntity())
         load()
     }
 
     fun deleteCamera(id: Int) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        val c = dao.getCamera(id)
-        if (c?.type == 1) {
-            dao.deleteLens(dao.getFixedLensIdByBody(id))
+        val entity = repo.getCamera(id)
+        if (entity?.type == 1) {
+            val fixedLens = repo.getLensByFixedBody(id)
+            if (fixedLens != null) repo.deleteLens(fixedLens.id)
         }
-        dao.deleteCamera(id)
-        dao.close()
+        repo.deleteCamera(id)
         load()
     }
 
     fun requestDeleteCamera(item: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        val used = dao.getCameraUsage(item.id)
-        dao.close()
+        val used = repo.isCameraUsed(item.id)
         if (used) {
             _events.emit(CameraEvent.ShowCannotDeleteAlert(item.modelName))
         } else {

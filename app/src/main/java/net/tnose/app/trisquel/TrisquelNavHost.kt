@@ -62,6 +62,7 @@ fun TrisquelNavHost(
     onPhotoInteraction: (Photo?, List<Photo?>) -> Unit
 ) {
     val context = LocalContext.current
+    val repo = remember { TrisquelRepo(context.applicationContext as android.app.Application) }
 
     NavHost(
         navController = navController,
@@ -263,17 +264,14 @@ fun TrisquelNavHost(
             val groupedPhotos = remember { mutableStateOf<List<Pair<String, List<Photo>>>>(emptyList()) }
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) {
-                    val dao = TrisquelDao(context)
-                    dao.connection()
-                    val list = dao.getAllFavedPhotos()
+                    val list = repo.getAllFavedPhotosRaw().map { Photo.fromEntity(it) }
                     val map = list.groupBy { it.filmrollid }
                     val list2 = map.values.sortedByDescending { it[0].date }
                     val result = list2.map { l ->
                         val sortedList = l.sortedBy { it.frameIndex }
-                        val filmrollName = dao.getFilmRoll(l[0].filmrollid)?.name ?: ""
+                        val filmrollName = repo.getFilmRollRaw(l[0].filmrollid)?.name ?: ""
                         Pair(filmrollName, sortedList)
                     }
-                    dao.close()
                     withContext(Dispatchers.Main) { groupedPhotos.value = result }
                 }
             }

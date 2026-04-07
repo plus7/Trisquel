@@ -104,16 +104,17 @@ fun PhotoItemCompose(
     var lens by remember { mutableStateOf<LensSpec?>(null) }
     var tags by remember { mutableStateOf<List<Tag>>(emptyList()) }
 
-    LaunchedEffect(photo, tagIds) {
+    LaunchedEffect(photo.id) {
         withContext(Dispatchers.IO) {
-            val dao = TrisquelDao(context)
-            dao.connection()
-            val l = dao.getLens(photo.lensid)
-            val t = dao.getTagsByPhoto(photo.id)
-            dao.close()
+            val db = TrisquelRoomDatabase.getInstance(context)
+            val dao = db.trisquelDao()
+            val lEntity = dao.getLens(photo.lensid)
+            val tagAndTagMaps = dao.getTagMapAndTagsByPhoto(photo.id)
+            
             withContext(Dispatchers.Main) {
-                lens = l
-                tags = t.apply { sortByDescending { it.refcnt } }
+                lens = lEntity?.let { LensSpec.fromEntity(it) }
+                tags = tagAndTagMaps.mapNotNull { it.tag?.let { tEntity -> Tag(tEntity.id, tEntity.label, tEntity.refcnt ?: 0) } }
+                    .sortedByDescending { it.refcnt }
             }
         }
     }

@@ -26,8 +26,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,8 +49,8 @@ fun SearchRoute(
     mainViewModel: MainViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val context = LocalContext.current
-    val photos by viewModel.photosByAndQuery.observeAsState(emptyList())
-    val isLoading by viewModel.isLoading.observeAsState(false)
+    val photos by viewModel.photosByAndQuery.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     var thumbnailEditingPhoto by remember { mutableStateOf<Photo?>(null) }
 
     LaunchedEffect(tags) {
@@ -86,7 +86,7 @@ fun SearchRoute(
         thumbnailEditingPhoto = null
     }
 
-    val permissionsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+    val requestPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         if (permissions.entries.all { it.value }) {
             pickImageLauncher.launch(42)
         } else {
@@ -110,7 +110,7 @@ fun SearchRoute(
         val cameraDenied = ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
 
         if (readDenied || cameraDenied) {
-            permissionsLauncher.launch(permissions)
+            requestPermissionLauncher.launch(permissions)
         } else {
             pickImageLauncher.launch(42)
         }

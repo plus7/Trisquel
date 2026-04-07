@@ -18,8 +18,8 @@ sealed class AccessoryEvent {
     data class ShowDeleteConfirm(val id: Int, val name: String) : AccessoryEvent()
 }
 
-class AccessoryViewModel(application: Application?) : AndroidViewModel(
-    application!!
+class AccessoryViewModel(application: Application) : AndroidViewModel(
+    application
 ) {
     private val mRepository: TrisquelRepo
 

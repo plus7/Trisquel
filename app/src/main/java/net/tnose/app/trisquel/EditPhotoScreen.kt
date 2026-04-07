@@ -94,6 +94,70 @@ import java.util.Calendar
 import java.util.TimeZone
 
 @Composable
+fun CheckListDialog(
+    title: String,
+    items: List<String>,
+    initialCheckedIndices: List<Int>,
+    onConfirm: (List<Int>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val checkedStates = rememberSaveable { mutableStateOf(items.indices.map { initialCheckedIndices.contains(it) }) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title) },
+        text = {
+            LazyRow {
+                item {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        items.forEachIndexed { index, item ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val currentList = checkedStates.value.toMutableList()
+                                        currentList[index] = !currentList[index]
+                                        checkedStates.value = currentList
+                                    }
+                                    .padding(8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = checkedStates.value[index],
+                                    onCheckedChange = { isChecked ->
+                                        val currentList = checkedStates.value.toMutableList()
+                                        currentList[index] = isChecked
+                                        checkedStates.value = currentList
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = item)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val checkedIndices = checkedStates.value
+                        .mapIndexedNotNull { index, isChecked -> if (isChecked) index else null }
+                    onConfirm(checkedIndices)
+                }
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
 fun EditPhotoRoute(
     id: Int,
     filmRollId: Int,
@@ -161,6 +225,16 @@ fun EditPhotoRoute(
         }
     }
 
+    val addLensLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val bundle = result.data?.extras ?: return@rememberLauncherForActivityResult
+            val l = androidx.core.os.BundleCompat.getParcelable(bundle, "lensspec", LensSpec::class.java)
+            if (l != null) {
+                viewModel.handleAddLensResult(l)
+            }
+        }
+    }
+
     if (!uiState.isLoaded) return
 
     EditPhotoScreen(
@@ -224,70 +298,6 @@ fun EditPhotoRoute(
     )
 }
 
-@Composable
-fun CheckListDialog(
-    title: String,
-    items: List<String>,
-    initialCheckedIndices: List<Int>,
-    onConfirm: (List<Int>) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val checkedStates = rememberSaveable { mutableStateOf(items.indices.map { initialCheckedIndices.contains(it) }) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = title) },
-        text = {
-            LazyRow {
-                item {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        items.forEachIndexed { index, item ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        val currentList = checkedStates.value.toMutableList()
-                                        currentList[index] = !currentList[index]
-                                        checkedStates.value = currentList
-                                    }
-                                    .padding(8.dp)
-                            ) {
-                                Checkbox(
-                                    checked = checkedStates.value[index],
-                                    onCheckedChange = { isChecked ->
-                                        val currentList = checkedStates.value.toMutableList()
-                                        currentList[index] = isChecked
-                                        checkedStates.value = currentList
-                                    }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = item)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val checkedIndices = checkedStates.value
-                        .mapIndexedNotNull { index, isChecked -> if (isChecked) index else null }
-                    onConfirm(checkedIndices)
-                }
-            ) {
-                Text(stringResource(android.R.string.yes))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(android.R.string.no))
-            }
-        }
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditPhotoScreen(
@@ -318,6 +328,7 @@ fun EditPhotoScreen(
     viewModel: EditPhotoViewModel
 ) {
     val context = LocalContext.current
+    val repo = remember { TrisquelRepo(context.applicationContext as android.app.Application) }
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
     var showAskCreateLensDialog by rememberSaveable { mutableStateOf(false) }
@@ -431,10 +442,7 @@ fun EditPhotoScreen(
         var accessories by remember { mutableStateOf<List<Accessory>>(emptyList()) }
         LaunchedEffect(Unit) {
             withContext(Dispatchers.IO) {
-                val dao = TrisquelDao(context)
-                dao.connection()
-                val list = dao.accessories
-                dao.close()
+                val list = repo.getAllAccessoriesRaw().map { Accessory.fromEntity(it) }
                 accessories = list
             }
         }
@@ -460,10 +468,7 @@ fun EditPhotoScreen(
         
         LaunchedEffect(Unit) {
             withContext(Dispatchers.IO) {
-                val dao = TrisquelDao(context)
-                dao.connection()
-                val list = dao.availableMountList
-                dao.close()
+                val list = repo.getAvailableMountList().toMutableList()
                 if (mount != null) list.remove(mount)
                 availableLensMounts = list
             }

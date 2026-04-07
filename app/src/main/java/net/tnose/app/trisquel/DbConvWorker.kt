@@ -18,6 +18,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 
 class DbConvWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    private val repo = TrisquelRepo(ctx as android.app.Application)
+
     companion object {
         val PARAM_PERCENTAGE = "percentage"
         val PARAM_STATUS = "status"
@@ -77,38 +79,36 @@ class DbConvWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     }
 
     suspend fun doConvert(): Boolean {
-        val dao = TrisquelDao(applicationContext)
         var status = false
         try {
-            dao.connection()
-            val photoList = dao.getPhotos4Conversion()
+            val photoEntities = repo.getPhotos4Conversion()
             var processedCount = 0.0
-            for(p in photoList){
-                for(i in 0..p.supplementalImages.size-1) {
-                    val before = p.supplementalImages[i]
-                    val newpath = pathConversion(p.supplementalImages[i])
-                    p.supplementalImages[i] = newpath
+            for(entity in photoEntities){
+                val photo = Photo.fromEntity(entity)
+                for(i in 0..photo.supplementalImages.size-1) {
+                    val before = photo.supplementalImages[i]
+                    val newpath = pathConversion(photo.supplementalImages[i])
+                    photo.supplementalImages[i] = newpath
                     if(newpath.isEmpty()){
                         val f = File(before)
-                        val prefix = if(p.memo.isEmpty()) "" else "\n"
+                        val prefix = if(photo.memo.isEmpty()) "" else "\n"
                         if(f.exists()){
-                            p.memo += prefix + "Path conversion failed: %s".format(f.name)
+                            photo.memo += prefix + "Path conversion failed: %s".format(f.name)
                         }else{
-                            p.memo += prefix + "Not found: %s".format(f.name)
+                            photo.memo += prefix + "Not found: %s".format(f.name)
                         }
                     }
-                    Log.d("CONV", "before:" + before +" after:" + p.supplementalImages[i])
+                    Log.d("CONV", "before:" + before +" after:" + photo.supplementalImages[i])
                 }
-                dao.doPhotoConversion(p)
+                repo.upsertPhoto(photo.toEntity())
                 processedCount += 1.0
-                bcastProgress( processedCount / (photoList.size + 1) * 100, applicationContext.getString(R.string.description_update_dialog))
+                bcastProgress( processedCount / (photoEntities.size + 1) * 100, applicationContext.getString(R.string.description_update_dialog))
             }
             status = true
         }finally {
             if (status == true){
-                dao.setConversionState(1)
+                repo.setConversionState(1)
             }
-            dao.close()
         }
         return status
     }

@@ -18,7 +18,7 @@ sealed class LensEvent {
 }
 
 class LensViewModel(application: Application) : AndroidViewModel(application) {
-    private val dao = TrisquelDao(application)
+    private val repo = TrisquelRepo(application)
     
     private val _events = MutableSharedFlow<LensEvent>()
     val events = _events.asSharedFlow()
@@ -38,9 +38,9 @@ class LensViewModel(application: Application) : AndroidViewModel(application) {
     fun load() = viewModelScope.launch {
         _isLoading.value = true
         withContext(Dispatchers.IO) {
-            dao.connection()
-            val list = dao.allVisibleLenses
-            dao.close()
+            val entities = repo.getAllLensesRaw()
+            // Legacy code used "allVisibleLenses" which filters out fixed lenses (body != 0)
+            val list = entities.filter { it.body == 0 }.map { LensSpec.fromEntity(it) }
             withContext(Dispatchers.Main) {
                 _lenses.value = sortList(list, _sortKey.value ?: 0)
                 _isLoading.value = false
@@ -66,9 +66,7 @@ class LensViewModel(application: Application) : AndroidViewModel(application) {
     fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
         val l = androidx.core.os.BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
         if (l != null) {
-            dao.connection()
-            dao.addLens(l)
-            dao.close()
+            repo.upsertLens(l.toEntity())
             load()
         }
     }
@@ -76,38 +74,28 @@ class LensViewModel(application: Application) : AndroidViewModel(application) {
     fun handleEditResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
         val l = androidx.core.os.BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
         if (l != null) {
-            dao.connection()
-            dao.updateLens(l)
-            dao.close()
+            repo.upsertLens(l.toEntity())
             load()
         }
     }
 
     fun insertLens(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        dao.addLens(lens)
-        dao.close()
+        repo.upsertLens(lens.toEntity())
         load()
     }
 
     fun updateLens(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        dao.updateLens(lens)
-        dao.close()
+        repo.upsertLens(lens.toEntity())
         load()
     }
 
     fun deleteLens(id: Int) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        dao.deleteLens(id)
-        dao.close()
+        repo.deleteLens(id)
         load()
     }
 
     fun requestDeleteLens(item: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
-        dao.connection()
-        val used = dao.getLensUsage(item.id)
-        dao.close()
+        val used = repo.isLensUsed(item.id)
         if (used) {
             _events.emit(LensEvent.ShowCannotDeleteAlert(item.modelName))
         } else {
