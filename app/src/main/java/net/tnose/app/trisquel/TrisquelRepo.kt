@@ -5,8 +5,6 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import androidx.annotation.WorkerThread
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -22,7 +20,6 @@ class TrisquelRepo(private val application: Application) {
     }
 
     /* Camera */
-    fun getAllCameras(): LiveData<List<CameraEntity>> = mTrisquelDao.allCameras()
     fun getAllCamerasFlow(): Flow<List<CameraEntity>> = mTrisquelDao.allCamerasFlow()
 
     suspend fun getAllCamerasRaw(): List<CameraEntity> = mTrisquelDao.allCamerasRaw()
@@ -40,7 +37,6 @@ class TrisquelRepo(private val application: Application) {
     }
 
     /* Lens */
-    fun getAllLenses(): LiveData<List<LensEntity>> = mTrisquelDao.allLenses()
     fun getAllLensesFlow(): Flow<List<LensEntity>> = mTrisquelDao.allLensesFlow()
 
     suspend fun getAllLensesRaw(): List<LensEntity> = mTrisquelDao.allLensesRaw()
@@ -64,18 +60,12 @@ class TrisquelRepo(private val application: Application) {
     }
 
     /* Film roll */
-    fun getFilmRoll(id : Int) : LiveData<FilmRollEntity> {
-        return mTrisquelDao.getFilmRoll(id)
-    }
     fun getFilmRollFlow(id : Int) : Flow<FilmRollEntity> {
         return mTrisquelDao.getFilmRollFlow(id)
     }
 
     suspend fun getFilmRollRaw(id: Int): FilmRollEntity? = mTrisquelDao.getFilmRollRaw(id)
 
-    fun getFilmRollAndRels(id : Int) : LiveData<FilmRollAndRels> {
-        return mTrisquelDao.getFilmRollAndRels(id)
-    }
     fun getFilmRollAndRelsFlow(id : Int) : Flow<FilmRollAndRels> {
         return mTrisquelDao.getFilmRollAndRelsFlow(id)
     }
@@ -137,10 +127,6 @@ class TrisquelRepo(private val application: Application) {
         }
     }
 
-    fun getAllFilmRolls(sortBy : Int, filterByKind : Int, filterByValue : String): LiveData<List<FilmRollAndRels>> {
-        return getAllFilmRollsFlow(sortBy, filterByKind, filterByValue).asLiveData()
-    }
-
     suspend fun getAvailableFilmBrandList(): List<FilmBrand> = mTrisquelDao.getAvailableFilmBrandList()
 
     @WorkerThread
@@ -158,9 +144,6 @@ class TrisquelRepo(private val application: Application) {
     }
 
     /* Photo */
-    fun getPhotosByFilmRollId(filmRollId: Int): LiveData<List<Pair<String, PhotoAndTagIds>>> {
-        return getPhotosByFilmRollIdFlow(filmRollId).asLiveData()
-    }
 
     fun getPhotosByFilmRollIdFlow(filmRollId: Int): Flow<List<Pair<String, PhotoAndTagIds>>> {
         return mTrisquelDao.photosByFilmRollId(filmRollId).map{
@@ -211,9 +194,6 @@ class TrisquelRepo(private val application: Application) {
     }
 
     /* Accessory */
-    fun getAllAccessories(sortBy : Int): LiveData<List<AccessoryEntity>> {
-        return getAllAccessoriesFlow(sortBy).asLiveData()
-    }
 
     fun getAllAccessoriesFlow(sortBy : Int): Flow<List<AccessoryEntity>> {
         return when(sortBy) {
@@ -241,9 +221,6 @@ class TrisquelRepo(private val application: Application) {
     }
 
     /* Tag */
-    fun getTag(id : Int) : LiveData<TagEntity> {
-        return mTrisquelDao.getTag(id)
-    }
     fun getTagFlow(id : Int) : Flow<TagEntity> {
         return mTrisquelDao.getTagFlow(id)
     }
