@@ -2,7 +2,6 @@ package net.tnose.app.trisquel
 
 import android.app.Application
 import android.net.Uri
-import android.os.Bundle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
