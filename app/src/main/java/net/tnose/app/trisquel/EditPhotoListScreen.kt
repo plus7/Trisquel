@@ -41,7 +41,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
 import com.zhihu.matisse.internal.entity.CaptureStrategy
@@ -68,9 +68,9 @@ fun EditPhotoListRoute(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val filmRoll by viewModel.filmRoll.observeAsState()
-    val photos by viewModel.photos.observeAsState(initial = emptyList())
-    val isLoading by viewModel.isLoading.observeAsState(initial = false)
+    val filmRoll by viewModel.filmRoll.collectAsStateWithLifecycle()
+    val photos by viewModel.photos.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     class PickImageUriContract : ActivityResultContract<Any, List<Uri>>() {
         override fun createIntent(context: Context, input: Any): Intent {

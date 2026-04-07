@@ -4,13 +4,21 @@ import android.app.Application
 import android.content.Intent
 import androidx.core.os.BundleCompat
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -25,35 +33,33 @@ class CameraViewModel(application: Application, private val savedStateHandle: Sa
     private val _events = MutableSharedFlow<CameraEvent>()
     val events = _events.asSharedFlow()
 
-    private val _cameras = MutableLiveData<List<CameraSpec>>(emptyList())
-    val cameras: LiveData<List<CameraSpec>> = _cameras
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    val sortKey = savedStateHandle.getStateFlow("sort_key", 0)
 
-    private var _sortKey: Int
-        get() = savedStateHandle["sort_key"] ?: 0
-        set(value) { savedStateHandle["sort_key"] = value }
-
-    init {
-        load()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val cameras: StateFlow<List<CameraSpec>> = combine(
+        repo.getAllCamerasFlow(),
+        sortKey
+    ) { entities, key ->
+        val list = entities.map { CameraSpec.fromEntity(it) }
+        sortList(list, key)
     }
+    .onEach { _isLoading.value = false }
+    .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
-    fun load() = viewModelScope.launch {
+    fun load() {
+        // Now handled automatically by the cameras StateFlow
         _isLoading.value = true
-        withContext(Dispatchers.IO) {
-            val entities = repo.getAllCamerasRaw()
-            val list = entities.map { CameraSpec.fromEntity(it) }
-            withContext(Dispatchers.Main) {
-                _cameras.value = sortList(list, _sortKey)
-                _isLoading.value = false
-            }
-        }
     }
 
     fun changeSortKey(key: Int) {
-        _sortKey = key
-        _cameras.value = sortList(_cameras.value ?: emptyList(), key)
+        savedStateHandle["sort_key"] = key
     }
 
     private fun sortList(list: List<CameraSpec>, key: Int): List<CameraSpec> {
@@ -77,7 +83,6 @@ class CameraViewModel(application: Application, private val savedStateHandle: Sa
                 repo.upsertLens(l.toEntity())
             }
         }
-        load()
     }
 
     fun handleEditResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
@@ -93,17 +98,14 @@ class CameraViewModel(application: Application, private val savedStateHandle: Sa
                 repo.upsertLens(l.toEntity())
             }
         }
-        load()
     }
 
     fun insertCamera(camera: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
         repo.upsertCamera(camera.toEntity())
-        load()
     }
 
     fun updateCamera(camera: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {
         repo.upsertCamera(camera.toEntity())
-        load()
     }
 
     fun deleteCamera(id: Int) = viewModelScope.launch(Dispatchers.IO) {
@@ -113,7 +115,6 @@ class CameraViewModel(application: Application, private val savedStateHandle: Sa
             if (fixedLens != null) repo.deleteLens(fixedLens.id)
         }
         repo.deleteCamera(id)
-        load()
     }
 
     fun requestDeleteCamera(item: CameraSpec) = viewModelScope.launch(Dispatchers.IO) {

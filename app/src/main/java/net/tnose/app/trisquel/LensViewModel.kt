@@ -4,16 +4,20 @@ import android.app.Application
 import android.content.Intent
 import androidx.core.os.BundleCompat
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 sealed class LensEvent {
     data class ShowCannotDeleteAlert(val modelName: String) : LensEvent()
@@ -26,35 +30,32 @@ class LensViewModel(application: Application, private val savedStateHandle: Save
     private val _events = MutableSharedFlow<LensEvent>()
     val events = _events.asSharedFlow()
 
-    private val _lenses = MutableLiveData<List<LensSpec>>(emptyList())
-    val lenses: LiveData<List<LensSpec>> = _lenses
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    val sortKey = savedStateHandle.getStateFlow("sort_key", 0)
 
-    private var _sortKey: Int
-        get() = savedStateHandle["sort_key"] ?: 0
-        set(value) { savedStateHandle["sort_key"] = value }
-
-    init {
-        load()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val lenses: StateFlow<List<LensSpec>> = combine(
+        repo.getAllLensesFlow(),
+        sortKey
+    ) { entities, key ->
+        val list = entities.filter { it.body == 0 }.map { LensSpec.fromEntity(it) }
+        sortList(list, key)
     }
+    .onEach { _isLoading.value = false }
+    .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
-    fun load() = viewModelScope.launch {
+    fun load() {
         _isLoading.value = true
-        withContext(Dispatchers.IO) {
-            val entities = repo.getAllLensesRaw()
-            val list = entities.filter { it.body == 0 }.map { LensSpec.fromEntity(it) }
-            withContext(Dispatchers.Main) {
-                _lenses.value = sortList(list, _sortKey)
-                _isLoading.value = false
-            }
-        }
     }
 
     fun changeSortKey(key: Int) {
-        _sortKey = key
-        _lenses.value = sortList(_lenses.value ?: emptyList(), key)
+        savedStateHandle["sort_key"] = key
     }
 
     private fun sortList(list: List<LensSpec>, key: Int): List<LensSpec> {
@@ -71,7 +72,6 @@ class LensViewModel(application: Application, private val savedStateHandle: Save
         val l = BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
         if (l != null) {
             repo.upsertLens(l.toEntity())
-            load()
         }
     }
 
@@ -79,23 +79,19 @@ class LensViewModel(application: Application, private val savedStateHandle: Save
         val l = BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
         if (l != null) {
             repo.upsertLens(l.toEntity())
-            load()
         }
     }
 
     fun insertLens(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
         repo.upsertLens(lens.toEntity())
-        load()
     }
 
     fun updateLens(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
         repo.upsertLens(lens.toEntity())
-        load()
     }
 
     fun deleteLens(id: Int) = viewModelScope.launch(Dispatchers.IO) {
         repo.deleteLens(id)
-        load()
     }
 
     fun requestDeleteLens(item: LensSpec) = viewModelScope.launch(Dispatchers.IO) {

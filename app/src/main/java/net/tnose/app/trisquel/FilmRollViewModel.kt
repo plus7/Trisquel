@@ -3,15 +3,19 @@ package net.tnose.app.trisquel
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.map
-import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -22,30 +26,32 @@ sealed class FilmRollEvent {
 class FilmRollViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(
     application
 ) {
-    private val mRepository: TrisquelRepo
+    private val mRepository: TrisquelRepo = TrisquelRepo(application)
 
     private val _events = MutableSharedFlow<FilmRollEvent>()
     val events = _events.asSharedFlow()
 
-    init {
-        mRepository = TrisquelRepo(application)
-    }
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    // SavedStateHandleからStateFlowを取得
+    val viewRule = savedStateHandle.getStateFlow("view_rule", Pair(0, Pair(0, "")))
 
-    val viewRule: MutableLiveData<Pair<Int, Pair<Int, String>>> = 
-        savedStateHandle.getLiveData("view_rule", Pair(0, Pair(0, "")))
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val allFilmRollAndRels: StateFlow<List<FilmRollAndRels>> = viewRule
+        .onEach { _isLoading.value = true }
+        .flatMapLatest { rule ->
+            mRepository.getAllFilmRollsFlow(rule.first, rule.second.first, rule.second.second)
+        }
+        .onEach { _isLoading.value = false }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    val allFilmRollAndRels: LiveData<List<FilmRollAndRels>> = viewRule.switchMap {
-        val sortBy = it.first
-        val filterByKind = it.second.first
-        val filterByValue = it.second.second
-        _isLoading.value = true
-        mRepository.getAllFilmRolls(sortBy, filterByKind, filterByValue)
-    }.map {
-        _isLoading.value = false
-        it
+    fun updateViewRule(rule: Pair<Int, Pair<Int, String>>) {
+        savedStateHandle["view_rule"] = rule
     }
 
     fun handleAddResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
@@ -73,8 +79,8 @@ class FilmRollViewModel(application: Application, private val savedStateHandle: 
     }
 
     fun refresh(id: Int) = viewModelScope.launch {
-        val entity = mRepository.getFilmRoll(id)
-        entity.value?.let { mRepository.upsertFilmRoll(it) }
+        val entity = mRepository.getFilmRollRaw(id)
+        entity?.let { mRepository.upsertFilmRoll(it) }
     }
 
     fun requestDelete(filmRoll: FilmRoll) = viewModelScope.launch {

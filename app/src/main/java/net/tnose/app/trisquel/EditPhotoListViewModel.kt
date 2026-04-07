@@ -4,14 +4,17 @@ import android.app.Application
 import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -30,14 +33,25 @@ class EditPhotoListViewModel(
     private val _events = MutableSharedFlow<EditPhotoListEvent>()
     val events = _events.asSharedFlow()
 
-    val filmRoll: LiveData<FilmRoll?> = repo.getFilmRollAndRels(filmRollId).map { rels ->
-        if (rels == null) null else FilmRoll.fromEntity(rels)
-    }
+    val filmRoll: StateFlow<FilmRoll?> = repo.getFilmRollAndRelsFlow(filmRollId)
+        .map { rels ->
+            if (rels == null) null else FilmRoll.fromEntity(rels)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
-    val photos: LiveData<List<Pair<String, PhotoAndTagIds>>> = repo.getPhotosByFilmRollId(filmRollId)
+    val photos: StateFlow<List<Pair<String, PhotoAndTagIds>>> = repo.getPhotosByFilmRollIdFlow(filmRollId)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     fun deletePhoto(id: Int) = viewModelScope.launch(Dispatchers.IO) {
         repo.deletePhoto(id)
@@ -57,7 +71,7 @@ class EditPhotoListViewModel(
 
     fun insertPhoto(photo: Photo, tags: ArrayList<String>?) = viewModelScope.launch(Dispatchers.IO) {
         if (photo.frameIndex == -1) {
-            val currentPhotos = photos.value ?: emptyList()
+            val currentPhotos = photos.value
             photo.frameIndex = if (currentPhotos.isEmpty()) 0 else (currentPhotos.last().second.photo._index ?: 0) + 1
         }
         val id = repo.upsertPhoto(photo.toEntity())
@@ -67,7 +81,7 @@ class EditPhotoListViewModel(
     }
 
     fun shiftFrameIndexFrom(photo: Photo, amount: Int) = viewModelScope.launch(Dispatchers.IO) {
-        val currentPhotos = photos.value ?: return@launch
+        val currentPhotos = photos.value
         val curPos = currentPhotos.indexOfFirst { it.second.photo.id == photo.id }
         if (curPos == -1) return@launch
 
@@ -79,7 +93,7 @@ class EditPhotoListViewModel(
     }
 
     fun possibleDownShiftLimit(photo: Photo): Int {
-        val currentPhotos = photos.value ?: return 0
+        val currentPhotos = photos.value
         val curPos = currentPhotos.indexOfFirst { it.second.photo.id == photo.id }
         return if (curPos > 0) {
             currentPhotos[curPos - 1].second.photo._index ?: 0

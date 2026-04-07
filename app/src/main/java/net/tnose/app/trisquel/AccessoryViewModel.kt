@@ -3,16 +3,20 @@ package net.tnose.app.trisquel
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.map
-import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.Date
 
 sealed class AccessoryEvent {
@@ -23,26 +27,31 @@ sealed class AccessoryEvent {
 class AccessoryViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(
     application
 ) {
-    private val mRepository: TrisquelRepo
+    private val mRepository: TrisquelRepo = TrisquelRepo(application)
 
     private val _events = MutableSharedFlow<AccessoryEvent>()
     val events = _events.asSharedFlow()
 
-    init {
-        mRepository = TrisquelRepo(application)
-    }
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    val sortingRule = savedStateHandle.getStateFlow("sorting_rule", 0)
 
-    val sortingRule: MutableLiveData<Int> = savedStateHandle.getLiveData("sorting_rule", 0)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val allAccessories: StateFlow<List<AccessoryEntity>> = sortingRule
+        .onEach { _isLoading.value = true }
+        .flatMapLatest { sortRule ->
+            mRepository.getAllAccessoriesFlow(sortRule)
+        }
+        .onEach { _isLoading.value = false }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    val allAccessories: LiveData<List<AccessoryEntity>> = sortingRule.switchMap {
-        _isLoading.value = true
-        mRepository.getAllAccessories(it)
-    }.map {
-        _isLoading.value = false
-        it
+    fun updateSortingRule(rule: Int) {
+        savedStateHandle["sorting_rule"] = rule
     }
 
     fun handleAddResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {

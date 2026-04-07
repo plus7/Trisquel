@@ -193,6 +193,9 @@ interface TrisquelDao2 {
 
     @Query("select * from camera order by created desc;")
     fun allCameras () : LiveData<List<CameraEntity>>
+
+    @Query("select * from camera order by created desc;")
+    fun allCamerasFlow () : Flow<List<CameraEntity>>
     
     @Query("select * from camera order by created desc;")
     suspend fun allCamerasRaw () : List<CameraEntity>
@@ -213,10 +216,16 @@ interface TrisquelDao2 {
     fun getFilmRoll(id : Int): LiveData<FilmRollEntity>
 
     @Query("SELECT * from filmroll where _id = :id LIMIT 1")
+    fun getFilmRollFlow(id : Int): Flow<FilmRollEntity>
+
+    @Query("SELECT * from filmroll where _id = :id LIMIT 1")
     suspend fun getFilmRollRaw(id : Int): FilmRollEntity?
 
     @Query("SELECT * from filmroll where _id = :id LIMIT 1")
     fun getFilmRollAndRels(id : Int): LiveData<FilmRollAndRels>
+
+    @Query("SELECT * from filmroll where _id = :id LIMIT 1")
+    fun getFilmRollAndRelsFlow(id : Int): Flow<FilmRollAndRels>
 
     @Query("SELECT * from filmroll order by created desc")
     fun allFilmRollAndRels(): LiveData<List<FilmRollAndRels>>
@@ -259,12 +268,22 @@ interface TrisquelDao2 {
     fun allAccessories() : LiveData<List<AccessoryEntity>>
 
     @Query("select * from accessory order by created desc;")
+    fun allAccessoriesFlow() : Flow<List<AccessoryEntity>>
+
+    @Query("select * from accessory order by created desc;")
     suspend fun allAccessoriesRaw() : List<AccessoryEntity>
 
     @Query("select * from accessory order by name asc;") //ダサいがこうするしかない？
     fun allAccessoriesSortByName() : LiveData<List<AccessoryEntity>>
+
+    @Query("select * from accessory order by name asc;")
+    fun allAccessoriesSortByNameFlow() : Flow<List<AccessoryEntity>>
+
     @Query("select * from accessory order by type asc;")
     fun allAccessoriesSortByType() : LiveData<List<AccessoryEntity>>
+
+    @Query("select * from accessory order by type asc;")
+    fun allAccessoriesSortByTypeFlow() : Flow<List<AccessoryEntity>>
 
     @Upsert
     suspend fun upsertAccessory(entity: AccessoryEntity)
@@ -280,6 +299,9 @@ interface TrisquelDao2 {
 
     @Query("select * from lens order by created desc;")
     fun allLenses() : LiveData<List<LensEntity>>
+
+    @Query("select * from lens order by created desc;")
+    fun allLensesFlow() : Flow<List<LensEntity>>
 
     @Query("select * from lens order by created desc;")
     suspend fun allLensesRaw() : List<LensEntity>
@@ -307,10 +329,18 @@ interface TrisquelDao2 {
 
     @Query("select * from tag;")
     fun allTags() : LiveData<List<TagEntity>>
+
+    @Query("select * from tag;")
+    fun allTagsFlow() : Flow<List<TagEntity>>
+
     @Query("select * from tag;")
     suspend fun allTagsRaw() : List<TagEntity>
     @Query("SELECT * from tag where _id = :id LIMIT 1")
     fun getTag(id : Int): LiveData<TagEntity>
+
+    @Query("SELECT * from tag where _id = :id LIMIT 1")
+    fun getTagFlow(id : Int): Flow<TagEntity>
+
     @Query("SELECT * from tag where label = :label LIMIT 1")
     suspend fun getTagByLabel(label : String): TagEntity?
     @Query("SELECT * from tag where label = :label LIMIT 1")

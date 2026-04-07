@@ -177,10 +177,10 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
             }
         }
 
-        // Cache camera names
+        // Cache camera names using Flow instead of observeForever
         viewModelScope.launch {
-            repo.getAllCameras().observeForever { cameras ->
-                cameras?.forEach {
+            repo.getAllCamerasFlow().collect { cameras ->
+                cameras.forEach {
                     cameraNameCache[it.id] = "${it.manufacturer} ${it.modelName}"
                 }
             }
@@ -201,7 +201,7 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
     fun requestImport(mode: Int, hasPermissions: Boolean) {
         if (!hasPermissions) {
             pendingImportMode = mode
-            viewModelScope.launch { _events.emit(MainEvent.RequestImportPermissions(mode)) }
+            viewModelScope.launch { _events.emit(MainEvent.LaunchImportDocumentPicker(mode)) }
             return
         }
         viewModelScope.launch { _events.emit(MainEvent.LaunchImportDocumentPicker(mode)) }

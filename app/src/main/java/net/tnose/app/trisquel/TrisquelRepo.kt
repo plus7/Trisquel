@@ -23,6 +23,7 @@ class TrisquelRepo(private val application: Application) {
 
     /* Camera */
     fun getAllCameras(): LiveData<List<CameraEntity>> = mTrisquelDao.allCameras()
+    fun getAllCamerasFlow(): Flow<List<CameraEntity>> = mTrisquelDao.allCamerasFlow()
 
     suspend fun getAllCamerasRaw(): List<CameraEntity> = mTrisquelDao.allCamerasRaw()
 
@@ -40,6 +41,7 @@ class TrisquelRepo(private val application: Application) {
 
     /* Lens */
     fun getAllLenses(): LiveData<List<LensEntity>> = mTrisquelDao.allLenses()
+    fun getAllLensesFlow(): Flow<List<LensEntity>> = mTrisquelDao.allLensesFlow()
 
     suspend fun getAllLensesRaw(): List<LensEntity> = mTrisquelDao.allLensesRaw()
 
@@ -65,14 +67,20 @@ class TrisquelRepo(private val application: Application) {
     fun getFilmRoll(id : Int) : LiveData<FilmRollEntity> {
         return mTrisquelDao.getFilmRoll(id)
     }
+    fun getFilmRollFlow(id : Int) : Flow<FilmRollEntity> {
+        return mTrisquelDao.getFilmRollFlow(id)
+    }
 
     suspend fun getFilmRollRaw(id: Int): FilmRollEntity? = mTrisquelDao.getFilmRollRaw(id)
 
     fun getFilmRollAndRels(id : Int) : LiveData<FilmRollAndRels> {
         return mTrisquelDao.getFilmRollAndRels(id)
     }
+    fun getFilmRollAndRelsFlow(id : Int) : Flow<FilmRollAndRels> {
+        return mTrisquelDao.getFilmRollAndRelsFlow(id)
+    }
 
-    fun getAllFilmRolls(sortBy : Int, filterByKind : Int, filterByValue : String): LiveData<List<FilmRollAndRels>> {
+    fun getAllFilmRollsFlow(sortBy : Int, filterByKind : Int, filterByValue : String): Flow<List<FilmRollAndRels>> {
         var cameraVal = "%"
         var filmBrandVal = "%"
 
@@ -82,59 +90,55 @@ class TrisquelRepo(private val application: Application) {
             filmBrandVal = filterByValue
         }
 
-        when(sortBy) {
-            0 -> {
-                if (filterByKind == 0) {
-                    return mTrisquelDao.allFilmRollAndRels()
-                } else {
-                    return mTrisquelDao.allFilmRollAndRelsWithFilter(cameraVal, filmBrandVal)
-                }
-            }
-
+        return when(sortBy) {
             1 -> {
                 if (filterByKind == 0) {
-                    return mTrisquelDao.allFilmRollAndRelsFlow().map {
+                    mTrisquelDao.allFilmRollAndRelsFlow().map {
                             it -> it.sortedBy { it.filmRoll.name }
-                    }.asLiveData()
+                    }
                 } else {
-                    return mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
+                    mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
                             it -> it.sortedBy { it.filmRoll.name }
-                    }.asLiveData()
+                    }
                 }
             }
 
             2 -> {
                 if (filterByKind == 0) {
-                    return mTrisquelDao.allFilmRollAndRelsFlow().map {
-                        it -> it.sortedBy { it.camera!!.manufacturer + " " + it.camera!!.modelName }
-                    }.asLiveData()
+                    mTrisquelDao.allFilmRollAndRelsFlow().map {
+                        it -> it.sortedBy { it.camera?.let { c -> "${c.manufacturer} ${c.modelName}" } ?: "" }
+                    }
                 } else {
-                    return mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
-                            it -> it.sortedBy { it.camera!!.manufacturer + " " + it.camera!!.modelName }
-                    }.asLiveData()
+                    mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
+                            it -> it.sortedBy { it.camera?.let { c -> "${c.manufacturer} ${c.modelName}" } ?: "" }
+                    }
                 }
             }
 
             3 -> {
                 if (filterByKind == 0) {
-                    return mTrisquelDao.allFilmRollAndRelsFlow().map {
-                            it -> it.sortedBy { it.filmRoll.manufacturer + " " + it.filmRoll.brand }
-                    }.asLiveData()
+                    mTrisquelDao.allFilmRollAndRelsFlow().map {
+                            it -> it.sortedBy { "${it.filmRoll.manufacturer} ${it.filmRoll.brand}" }
+                    }
                 } else {
-                    return mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
-                            it -> it.sortedBy { it.filmRoll.manufacturer + " " + it.filmRoll.brand }
-                    }.asLiveData()
+                    mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal).map {
+                            it -> it.sortedBy { "${it.filmRoll.manufacturer} ${it.filmRoll.brand}" }
+                    }
                 }
             }
 
             else -> {
                 if (filterByKind == 0) {
-                    return mTrisquelDao.allFilmRollAndRels()
+                    mTrisquelDao.allFilmRollAndRelsFlow()
                 } else {
-                    return mTrisquelDao.allFilmRollAndRelsWithFilter(cameraVal, filmBrandVal)
+                    mTrisquelDao.allFilmRollAndRelsWithFilterFlow(cameraVal, filmBrandVal)
                 }
             }
         }
+    }
+
+    fun getAllFilmRolls(sortBy : Int, filterByKind : Int, filterByValue : String): LiveData<List<FilmRollAndRels>> {
+        return getAllFilmRollsFlow(sortBy, filterByKind, filterByValue).asLiveData()
     }
 
     suspend fun getAvailableFilmBrandList(): List<FilmBrand> = mTrisquelDao.getAvailableFilmBrandList()
@@ -155,17 +159,21 @@ class TrisquelRepo(private val application: Application) {
 
     /* Photo */
     fun getPhotosByFilmRollId(filmRollId: Int): LiveData<List<Pair<String, PhotoAndTagIds>>> {
+        return getPhotosByFilmRollIdFlow(filmRollId).asLiveData()
+    }
+
+    fun getPhotosByFilmRollIdFlow(filmRollId: Int): Flow<List<Pair<String, PhotoAndTagIds>>> {
         return mTrisquelDao.photosByFilmRollId(filmRollId).map{
             it.runningFold(
-            Pair("", PhotoAndTagIds(PhotoEntity(
-                0, 0, 0, "", 0, 0,
-                0.0, 0.0, 0.0, 0.0,
-                0.0, "", 0.0, 0.0,
-                "", "", "", 0), listOf())
-            )) {
-                acc, value -> Pair(acc.second.photo.date, value)
+                Pair("", PhotoAndTagIds(PhotoEntity(
+                    0, 0, 0, "", 0, 0,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, "", 0.0, 0.0,
+                    "", "", "", 0), listOf())
+                )) {
+                    acc, value -> Pair(acc.second.photo.date, value)
             }.drop(1)
-        }.asLiveData()
+        }
     }
 
     suspend fun getPhotosByFilmRollIdRaw(filmRollId: Int): List<PhotoEntity> = mTrisquelDao.photosByFilmRollIdRaw(filmRollId)
@@ -204,11 +212,15 @@ class TrisquelRepo(private val application: Application) {
 
     /* Accessory */
     fun getAllAccessories(sortBy : Int): LiveData<List<AccessoryEntity>> {
-        when(sortBy) {
-            0 -> { return mTrisquelDao.allAccessories() }
-            1 -> { return mTrisquelDao.allAccessoriesSortByName() }
-            2 -> { return mTrisquelDao.allAccessoriesSortByType() }
-            else -> { return mTrisquelDao.allAccessories() }
+        return getAllAccessoriesFlow(sortBy).asLiveData()
+    }
+
+    fun getAllAccessoriesFlow(sortBy : Int): Flow<List<AccessoryEntity>> {
+        return when(sortBy) {
+            0 -> mTrisquelDao.allAccessoriesFlow()
+            1 -> mTrisquelDao.allAccessoriesSortByNameFlow()
+            2 -> mTrisquelDao.allAccessoriesSortByTypeFlow()
+            else -> mTrisquelDao.allAccessoriesFlow()
         }
     }
 
@@ -232,7 +244,13 @@ class TrisquelRepo(private val application: Application) {
     fun getTag(id : Int) : LiveData<TagEntity> {
         return mTrisquelDao.getTag(id)
     }
+    fun getTagFlow(id : Int) : Flow<TagEntity> {
+        return mTrisquelDao.getTagFlow(id)
+    }
+
     suspend fun getAllTagsRaw(): List<TagEntity> = mTrisquelDao.allTagsRaw()
+    fun getAllTagsFlow(): Flow<List<TagEntity>> = mTrisquelDao.allTagsFlow()
+
     suspend fun getTagByLabel(label : String) : TagEntity? {
         return mTrisquelDao.getTagByLabel(label)
     }

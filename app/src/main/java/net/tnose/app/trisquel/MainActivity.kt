@@ -272,10 +272,10 @@ class MainActivity : AppCompatActivity() {
         userPreferencesRepository.setSortKey(route, which)
 
         when (route) {
-            ROUTE_FILMROLLS -> filmRollViewModel.viewRule.value = Pair(which, filmRollViewModel.viewRule.value?.second ?: Pair(0, ""))
+            ROUTE_FILMROLLS -> filmRollViewModel.updateViewRule(Pair(which, filmRollViewModel.viewRule.value.second))
             ROUTE_CAMERAS -> cameraViewModel.changeSortKey(which)
             ROUTE_LENSES -> lensViewModel.changeSortKey(which)
-            ROUTE_ACCESSORIES -> accessoryViewModel.sortingRule.value = which
+            ROUTE_ACCESSORIES -> accessoryViewModel.updateSortingRule(which)
         }
     }
 
@@ -362,26 +362,26 @@ class MainActivity : AppCompatActivity() {
                     },
                     onFilterNoFilterClick = {
                         mainViewModel.currentFilter = Pair(0, arrayListOf())
-                        filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(0, ""))
+                        filmRollViewModel.updateViewRule(Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(0, "")))
                     },
                     onFilterByCameraClick = {
                         mainViewModel.requestFilterByCamera { _, id ->
                             if (id != null) {
                                 mainViewModel.currentFilter = Pair(1, arrayListOf(id.toString()))
-                                filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(1, id.toString()))
+                                filmRollViewModel.updateViewRule(Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(1, id.toString())))
                             }
                         }
                     },
                     onFilterByFilmBrandClick = {
                         mainViewModel.requestFilterByFilmBrand { fb ->
                             mainViewModel.currentFilter = Pair(2, arrayListOf(fb.first, fb.second))
-                            filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(2, fb.second))
+                            filmRollViewModel.updateViewRule(Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(2, fb.second)))
                         }
                     },
                     onPinnedFilterClick = { f ->
                         mainViewModel.currentFilter = f
                         val searchStr = if(f.first == 1) f.second[0].toInt().toString() else f.second[1]
-                        filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(f.first, searchStr))
+                        filmRollViewModel.updateViewRule(Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(f.first, searchStr)))
                     },
                     onSearchClick = {
                         val title = getString(R.string.title_dialog_search_by_tags)

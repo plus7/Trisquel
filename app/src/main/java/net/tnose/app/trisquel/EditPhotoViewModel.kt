@@ -2,16 +2,17 @@ package net.tnose.app.trisquel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -69,9 +70,15 @@ class EditPhotoViewModel(
     private val _events = MutableSharedFlow<EditPhotoEvent>()
     val events = _events.asSharedFlow()
 
-    val filmRoll: LiveData<FilmRoll?> = repo.getFilmRollAndRels(savedStateHandle.get<Int>("filmroll") ?: 0).map { rels ->
-        if (rels == null) null else FilmRoll.fromEntity(rels)
-    }
+    val filmRoll: StateFlow<FilmRoll?> = repo.getFilmRollAndRelsFlow(savedStateHandle.get<Int>("filmroll") ?: 0)
+        .map { rels ->
+            if (rels == null) null else FilmRoll.fromEntity(rels)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     init {
         // Normalize ID: use 0 for new photos to ensure auto-increment works correctly in Room

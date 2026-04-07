@@ -25,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -38,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -70,8 +70,8 @@ fun TrisquelNavHost(
         modifier = modifier
     ) {
         composable(MainActivity.ROUTE_FILMROLLS) {
-            val filmrolls by filmRollViewModel.allFilmRollAndRels.observeAsState(emptyList())
-            val isFilmRollsLoading by filmRollViewModel.isLoading.observeAsState(false)
+            val filmrolls by filmRollViewModel.allFilmRollAndRels.collectAsStateWithLifecycle()
+            val isFilmRollsLoading by filmRollViewModel.isLoading.collectAsStateWithLifecycle()
             
             Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_FILMROLLS) }) { paddingValues ->
                 Box(Modifier.fillMaxSize().padding(paddingValues)) {
@@ -107,8 +107,8 @@ fun TrisquelNavHost(
             }
         }
         composable(MainActivity.ROUTE_CAMERAS) {
-            val cameras by cameraViewModel.cameras.observeAsState(emptyList())
-            val isCamerasLoading by cameraViewModel.isLoading.observeAsState(false)
+            val cameras by cameraViewModel.cameras.collectAsStateWithLifecycle()
+            val isCamerasLoading by cameraViewModel.isLoading.collectAsStateWithLifecycle()
             var isFabExpanded by rememberSaveable { mutableStateOf(false) }
             val interactionSource = remember { MutableInteractionSource() }
             
@@ -197,8 +197,8 @@ fun TrisquelNavHost(
             }
         }
         composable(MainActivity.ROUTE_LENSES) {
-            val lenses by lensViewModel.lenses.observeAsState(emptyList())
-            val isLensesLoading by lensViewModel.isLoading.observeAsState(false)
+            val lenses by lensViewModel.lenses.collectAsStateWithLifecycle()
+            val isLensesLoading by lensViewModel.isLoading.collectAsStateWithLifecycle()
             
             Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_LENSES) }) { paddingValues ->
                 Box(Modifier.fillMaxSize().padding(paddingValues)) {
@@ -226,8 +226,8 @@ fun TrisquelNavHost(
             }
         }
         composable(MainActivity.ROUTE_ACCESSORIES) {
-            val accessories by accessoryViewModel.allAccessories.observeAsState(emptyList())
-            val isAccessoriesLoading by accessoryViewModel.isLoading.observeAsState(false)
+            val accessories by accessoryViewModel.allAccessories.collectAsStateWithLifecycle()
+            val isAccessoriesLoading by accessoryViewModel.isLoading.collectAsStateWithLifecycle()
             
             Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_ACCESSORIES) }) { paddingValues ->
                 Box(Modifier.fillMaxSize().padding(paddingValues)) {
