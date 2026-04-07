@@ -51,8 +51,6 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.18.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
-    implementation 'androidx.recyclerview:recyclerview:1.4.0'
-    implementation 'androidx.viewpager2:viewpager2:1.1.0'
     implementation 'androidx.vectordrawable:vectordrawable:1.2.0'
     implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation 'com.google.android.material:material:1.13.0'
@@ -87,8 +85,6 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:5.0.5'
     implementation 'com.github.bumptech.glide:compose:1.0.0-beta01'
     annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5'
-
-    implementation 'com.github.chuross.recyclerview-adapters:recyclerview-adapters:2.1.4'
 
     implementation 'com.larswerkman:LicenseView:1.1'
     debugImplementation 'androidx.compose.ui:ui-tooling'
