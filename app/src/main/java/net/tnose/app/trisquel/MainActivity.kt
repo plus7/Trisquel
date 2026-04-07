@@ -21,6 +21,7 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
@@ -40,11 +41,6 @@ class MainActivity : AppCompatActivity() {
         
         val TOP_LEVEL_ROUTES = listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES, ROUTE_FAVORITES)
     }
-
-    private val cameraViewModel: CameraViewModel by viewModels()
-    private val lensViewModel: LensViewModel by viewModels()
-    private val accessoryViewModel: AccessoryViewModel by viewModels()
-    private val filmRollViewModel: FilmRollViewModel by viewModels()
 
     private val mainViewModel: MainViewModel by viewModels()
     private lateinit var userPreferencesRepository: UserPreferencesRepository
@@ -176,37 +172,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-                launch {
-                    cameraViewModel.events.collect { event ->
-                        when (event) {
-                            is CameraEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
-                            is CameraEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { cameraViewModel.deleteCamera(event.id) }))
-                        }
-                    }
-                }
-                launch {
-                    lensViewModel.events.collect { event ->
-                        when (event) {
-                            is LensEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
-                            is LensEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { lensViewModel.deleteLens(event.id) }))
-                        }
-                    }
-                }
-                launch {
-                    accessoryViewModel.events.collect { event ->
-                        when (event) {
-                            is AccessoryEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.name)))
-                            is AccessoryEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { accessoryViewModel.delete(event.id) }))
-                        }
-                    }
-                }
-                launch {
-                    filmRollViewModel.events.collect { event ->
-                        when (event) {
-                            is FilmRollEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { filmRollViewModel.delete(event.id) }))
-                        }
-                    }
-                }
             }
         }
 
@@ -219,10 +184,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-
-        cameraViewModel.load()
-        lensViewModel.load()
-
         mainViewModel.checkAppStartupState(Util.TRISQUEL_VERSION)
     }
 
@@ -236,38 +197,11 @@ class MainActivity : AppCompatActivity() {
         return !(readDenied || mediaLocDenied || notificationDenied)
     }
 
-    fun onCameraDeleteRequest(item: CameraSpec) {
-        cameraViewModel.requestDeleteCamera(item)
-    }
-
-    fun onLensDeleteRequest(item: LensSpec) {
-        lensViewModel.requestDeleteLens(item)
-    }
-
-    fun onFilmRollDeleteRequest(item: FilmRoll) {
-        filmRollViewModel.requestDelete(item)
-    }
-
-    fun onAccessoryDeleteRequest(accessory: Accessory) {
-        accessoryViewModel.requestDeleteAccessory(accessory)
-    }
-
     fun onPhotoInteraction(item: Photo?, list: List<Photo?>) {
         val intent = Intent(application, GalleryActivity::class.java)
         intent.putExtra("photo", item)
         intent.putParcelableArrayListExtra("favList", ArrayList(list))
         startActivity(intent)
-    }
-
-    private fun handleSort(route: String, which: Int) {
-        userPreferencesRepository.setSortKey(route, which)
-
-        when (route) {
-            ROUTE_FILMROLLS -> filmRollViewModel.updateViewRule(Pair(which, filmRollViewModel.viewRule.value.second))
-            ROUTE_CAMERAS -> cameraViewModel.changeSortKey(which)
-            ROUTE_LENSES -> lensViewModel.changeSortKey(which)
-            ROUTE_ACCESSORIES -> accessoryViewModel.updateSortingRule(which)
-        }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -276,6 +210,11 @@ class MainActivity : AppCompatActivity() {
         val drawerState = androidx.compose.material3.rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         val navController = rememberNavController()
+
+        val cameraViewModel: CameraViewModel = viewModel()
+        val lensViewModel: LensViewModel = viewModel()
+        val accessoryViewModel: AccessoryViewModel = viewModel()
+        val filmRollViewModel: FilmRollViewModel = viewModel()
         
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val observedRoute = navBackStackEntry?.destination?.route ?: mainViewModel.startRoute
@@ -286,6 +225,40 @@ class MainActivity : AppCompatActivity() {
             mainViewModel.currentArguments = observedArgs
             if (observedRoute in TOP_LEVEL_ROUTES) {
                 mainViewModel.startRoute = observedRoute
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            launch {
+                cameraViewModel.events.collect { event ->
+                    when (event) {
+                        is CameraEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
+                        is CameraEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { cameraViewModel.deleteCamera(event.id) }))
+                    }
+                }
+            }
+            launch {
+                lensViewModel.events.collect { event ->
+                    when (event) {
+                        is LensEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
+                        is LensEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { lensViewModel.deleteLens(event.id) }))
+                    }
+                }
+            }
+            launch {
+                accessoryViewModel.events.collect { event ->
+                    when (event) {
+                        is AccessoryEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.name)))
+                        is AccessoryEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { accessoryViewModel.delete(event.id) }))
+                    }
+                }
+            }
+            launch {
+                filmRollViewModel.events.collect { event ->
+                    when (event) {
+                        is FilmRollEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { filmRollViewModel.delete(event.id) }))
+                    }
+                }
             }
         }
 
@@ -352,7 +325,7 @@ class MainActivity : AppCompatActivity() {
                             title = getString(R.string.label_sort_by),
                             items = arr,
                             selected = key,
-                            onConfirm = { handleSort(route, it) }
+                            onConfirm = { handleSort(route, it, filmRollViewModel, cameraViewModel, lensViewModel, accessoryViewModel) }
                         ))
                     },
                     onFilterNoFilterClick = {
@@ -403,12 +376,30 @@ class MainActivity : AppCompatActivity() {
                 cameraViewModel = cameraViewModel,
                 lensViewModel = lensViewModel,
                 accessoryViewModel = accessoryViewModel,
-                onFilmRollDeleteRequest = { onFilmRollDeleteRequest(it) },
-                onCameraDeleteRequest = { onCameraDeleteRequest(it) },
-                onLensDeleteRequest = { onLensDeleteRequest(it) },
-                onAccessoryDeleteRequest = { onAccessoryDeleteRequest(it) },
+                onFilmRollDeleteRequest = { filmRollViewModel.requestDelete(it) },
+                onCameraDeleteRequest = { cameraViewModel.requestDeleteCamera(it) },
+                onLensDeleteRequest = { lensViewModel.requestDeleteLens(it) },
+                onAccessoryDeleteRequest = { accessoryViewModel.requestDeleteAccessory(it) },
                 onPhotoInteraction = { photo, list -> onPhotoInteraction(photo, list) }
             )
+        }
+    }
+
+    private fun handleSort(
+        route: String,
+        which: Int,
+        filmRollViewModel: FilmRollViewModel,
+        cameraViewModel: CameraViewModel,
+        lensViewModel: LensViewModel,
+        accessoryViewModel: AccessoryViewModel
+    ) {
+        userPreferencesRepository.setSortKey(route, which)
+
+        when (route) {
+            ROUTE_FILMROLLS -> filmRollViewModel.updateViewRule(Pair(which, filmRollViewModel.viewRule.value.second))
+            ROUTE_CAMERAS -> cameraViewModel.changeSortKey(which)
+            ROUTE_LENSES -> lensViewModel.changeSortKey(which)
+            ROUTE_ACCESSORIES -> accessoryViewModel.updateSortingRule(which)
         }
     }
 }
