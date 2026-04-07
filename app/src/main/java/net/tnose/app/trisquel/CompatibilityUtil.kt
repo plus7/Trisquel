@@ -7,6 +7,7 @@ import android.util.Log
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.InputStream
+import androidx.core.net.toUri
 
 class CompatibilityUtil {
     companion object {
@@ -16,9 +17,9 @@ class CompatibilityUtil {
             } else {
                 val photoUri =
                         if (reqOrig) {
-                            MediaStore.setRequireOriginal(Uri.parse(path))
+                            MediaStore.setRequireOriginal(path.toUri())
                         }else {
-                            Uri.parse(path)
+                            path.toUri()
                         }
                 val ist: InputStream?
                 try{
@@ -36,7 +37,7 @@ class CompatibilityUtil {
                 return File(path).name
             }else{
                 val cursor = contentResolver.query(
-                        Uri.parse(path), arrayOf(MediaStore.Images.Media.DISPLAY_NAME),
+                    path.toUri(), arrayOf(MediaStore.Images.Media.DISPLAY_NAME),
                         null,null, null)
                 cursor?.moveToFirst()
                 val displayName = cursor?.getString(cursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)) ?: ""

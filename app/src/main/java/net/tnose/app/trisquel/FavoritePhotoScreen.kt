@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.integration.compose.placeholder
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
@@ -60,7 +61,7 @@ fun FavoritePhotoScreen(
                 ) {
                     if (photo.supplementalImages.isNotEmpty()) {
                         val path = photo.supplementalImages[0]
-                        val model = if (path.startsWith("/")) java.io.File(path) else android.net.Uri.parse(path)
+                        val model = if (path.startsWith("/")) java.io.File(path) else path.toUri()
                         GlideImage(
                             model = model,
                             contentDescription = null,

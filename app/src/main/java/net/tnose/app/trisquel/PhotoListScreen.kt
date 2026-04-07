@@ -39,6 +39,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.integration.compose.placeholder
@@ -149,7 +150,7 @@ fun PhotoItemCompose(
             ) {
                 val model = if (photo.supplementalImages.isNotEmpty()) {
                     val path = photo.supplementalImages[0]
-                    if (path.startsWith("/")) File(path) else android.net.Uri.parse(path)
+                    if (path.startsWith("/")) File(path) else path.toUri()
                 } else null
 
                 if (model != null) {

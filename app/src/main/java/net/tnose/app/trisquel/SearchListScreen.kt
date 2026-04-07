@@ -45,6 +45,7 @@ import com.bumptech.glide.integration.compose.placeholder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.core.net.toUri
 
 @Composable
 fun SearchListScreen(
@@ -164,7 +165,7 @@ fun SearchItemCompose(
             ) {
                 val model = if (photo.supplementalImages.isNotEmpty()) {
                     val path = photo.supplementalImages[0]
-                    if (path.startsWith("/")) File(path) else android.net.Uri.parse(path)
+                    if (path.startsWith("/")) File(path) else path.toUri()
                 } else null
 
                 if (model != null) {

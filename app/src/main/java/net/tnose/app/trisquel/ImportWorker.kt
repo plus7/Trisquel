@@ -36,6 +36,7 @@ import java.io.InputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.coroutines.cancellation.CancellationException
+import androidx.core.net.toUri
 
 class VersionUnmatchException : Exception()
 
@@ -89,7 +90,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 
         val retval = try {
             backupDBBeforeImport()
-            val result = importFromZip(Uri.parse(uri!!), (mode == 0))
+            val result = importFromZip(uri!!.toUri(), (mode == 0))
             if(result != SUCCESS){
                 val errstr = when(result){
                     VERSION_UNMATCH -> "Database version is too new"
@@ -420,7 +421,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             val md5sum = md5sums.getString(i)
 
             // if(pathが存在してファイル名もmd5sumも一致) -> pathを採用(同じスマートフォンからのインポートを想定)
-            val contentUri = Uri.parse(path)
+            val contentUri = path.toUri()
             if(isContentUriExists(contentUri) && isMd5sumMatch(contentUri, md5sum)){
                 result.add(path)
             }else{
@@ -437,7 +438,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                             Log.d("ImportDebug",
                                 "fileName:" + fileName
                                         + " Candidate URI:" + c
-                                        + " Path:" +getRealPathFromURI(Uri.parse(c)))
+                                        + " Path:" +getRealPathFromURI(c.toUri()))
                             CompatibilityUtil.pathToInputStream(
                                 applicationContext.contentResolver,
                                 c, true)?.use { ist ->

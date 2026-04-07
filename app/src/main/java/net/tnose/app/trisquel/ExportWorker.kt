@@ -30,6 +30,7 @@ import java.io.OutputStreamWriter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.coroutines.cancellation.CancellationException
+import androidx.core.net.toUri
 
 class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     private val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -63,7 +64,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         val retval = try {
             val appContext = applicationContext
             val zipFile = inputData.getString(PARAM_ZIPFILE)
-            val uri = Uri.parse(zipFile!!)
+            val uri = zipFile!!.toUri()
             val mode = inputData.getInt(PARAM_MODE, 0)
             //makeStatusNotification("Blurring image", appContext)
             var backupSuccess = false

@@ -24,6 +24,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
+import androidx.core.net.toUri
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -131,9 +132,10 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     is MainEvent.RequireDbConvAction -> {
-                        val uri = Uri.parse("https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/")
+                        val uri = "https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/".toUri()
                         startActivity(Intent(Intent.ACTION_VIEW, uri))
                     }
+
                     is MainEvent.ShowReleaseNotesConfirm -> {
                         mainViewModel.showDialog(ActiveDialog.Confirm(
                             title = "Trisquel",
@@ -141,7 +143,7 @@ class MainActivity : AppCompatActivity() {
                             positive = getString(R.string.show_release_notes),
                             negative = getString(R.string.close),
                             onConfirm = {
-                                val uri = Uri.parse(RELEASE_NOTES_URL)
+                                val uri = RELEASE_NOTES_URL.toUri()
                                 val i = Intent(Intent.ACTION_VIEW, uri)
                                 startActivity(i)
                             }
@@ -312,7 +314,7 @@ class MainActivity : AppCompatActivity() {
                     descs = arrayOf(getString(R.string.description_slim_backup), getString(R.string.description_whole_backup), getString(R.string.description_backup_help)),
                     onSelected = { mode ->
                         if (mode < 2) mainViewModel.requestBackup(mode, checkPermissions())
-                        else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
+                        else startActivity(Intent(Intent.ACTION_VIEW, "https://pentax.tnose.net/trisquel-for-android/import_export/".toUri()))
                     }
                 ))
             },
@@ -324,11 +326,15 @@ class MainActivity : AppCompatActivity() {
                     descs = arrayOf(getString(R.string.description_merge_zip), getString(R.string.description_import_zip), getString(R.string.description_backup_help)),
                     onSelected = { mode ->
                         if (mode < 2) mainViewModel.requestImport(mode, checkPermissions())
-                        else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pentax.tnose.net/trisquel-for-android/import_export/")))
+                        else startActivity(Intent(Intent.ACTION_VIEW, "https://pentax.tnose.net/trisquel-for-android/import_export/".toUri()))
                     }
                 ))
             },
-            onReleaseNotesClick = { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RELEASE_NOTES_URL))) },
+            onReleaseNotesClick = {
+                startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        RELEASE_NOTES_URL.toUri())) },
             onLicenseClick = { navController.navigate(ROUTE_LICENSE) }
         ) {
             val mainTopBar: @Composable (String) -> Unit = { route ->

@@ -92,6 +92,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.core.net.toUri
 
 @Composable
 fun CheckListDialog(
@@ -734,7 +735,7 @@ fun EditPhotoScreen(
                                     val file = File(path)
                                     FileProvider.getUriForFile(context, context.applicationContext.packageName + ".provider", file)
                                 } else {
-                                    Uri.parse(path)
+                                    path.toUri()
                                 }
                                 intent.action = Intent.ACTION_VIEW
                                 intent.setDataAndType(photoURI, "image/*")
@@ -752,7 +753,7 @@ fun EditPhotoScreen(
                             },
                             update = { view ->
                                 com.bumptech.glide.Glide.with(view)
-                                    .load(if (path.startsWith("/")) File(path) else Uri.parse(path))
+                                    .load(if (path.startsWith("/")) File(path) else path.toUri())
                                     .into(view)
                             },
                             modifier = Modifier.fillMaxHeight()
