@@ -1,13 +1,10 @@
 plugins {
     id 'com.android.application'
-    id 'kotlin-android'  //追加
+    id 'kotlin-android'
     id 'com.google.devtools.ksp'
-    id 'org.jetbrains.kotlin.plugin.compose'//追加
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.10'
 }
-
-//apply plugin: 'com.android.application'
-//apply plugin: 'kotlin-android'
-
 
 android {
     namespace = "net.tnose.app.trisquel"
@@ -70,6 +67,7 @@ dependencies {
     implementation 'androidx.compose.material:material-icons-core'
     implementation 'androidx.compose.runtime:runtime-livedata'
     implementation "androidx.navigation:navigation-compose:2.8.5"
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.7.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
@@ -109,5 +107,3 @@ dependencies {
 repositories {
     mavenCentral()
 }
-
-//apply plugin: 'kotlin-android-extensions'

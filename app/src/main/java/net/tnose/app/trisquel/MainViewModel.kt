@@ -45,33 +45,6 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
         activeDialog = null
     }
 
-    // 表示用のルート（パターンを含む）
-    private val _currentRoute = mutableStateOf(savedStateHandle.get<String>("current_route") ?: MainActivity.ROUTE_FILMROLLS)
-    var currentRoute: String
-        get() = _currentRoute.value
-        set(value) {
-            _currentRoute.value = value
-            savedStateHandle["current_route"] = value
-        }
-
-    // 現在のルートに付随する引数
-    private val _currentArguments = mutableStateOf(savedStateHandle.get<Bundle>("current_arguments"))
-    var currentArguments: Bundle?
-        get() = _currentArguments.value
-        set(value) {
-            _currentArguments.value = value
-            savedStateHandle["current_arguments"] = value
-        }
-
-    // NavHostの初期起動時に使用する安全なルート（引数なしのトップレベルルート）
-    private val _startRoute = mutableStateOf(savedStateHandle.get<String>("start_route") ?: MainActivity.ROUTE_FILMROLLS)
-    var startRoute: String
-        get() = _startRoute.value
-        set(value) {
-            _startRoute.value = value
-            savedStateHandle["start_route"] = value
-        }
-
     private val _currentFilter = mutableStateOf(Pair(
         savedStateHandle.get<Int>("filter_type") ?: 0,
         savedStateHandle.get<ArrayList<String>>("filter_value") ?: arrayListOf<String>()

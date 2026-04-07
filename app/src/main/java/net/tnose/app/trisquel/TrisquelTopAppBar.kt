@@ -22,13 +22,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrisquelTopAppBar(
-    observedRoute: String,
+    currentDestination: NavDestination?,
     currentSubtitle: String,
     currentFilter: Pair<Int, ArrayList<String>>,
     drawerState: androidx.compose.material3.DrawerState,
@@ -47,19 +49,21 @@ fun TrisquelTopAppBar(
     var showFilterMenu by rememberSaveable { mutableStateOf(false) }
     var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
 
-    val titleRes = when(observedRoute) {
-        MainActivity.ROUTE_CAMERAS -> R.string.title_activity_cam_list
-        MainActivity.ROUTE_LENSES -> R.string.title_activity_lens_list
-        MainActivity.ROUTE_ACCESSORIES -> R.string.title_activity_accessory_list
-        MainActivity.ROUTE_FAVORITES -> R.string.title_activity_favorites
+    val titleRes = when {
+        currentDestination?.hasRoute(CamerasRoute::class) == true -> R.string.title_activity_cam_list
+        currentDestination?.hasRoute(LensesRoute::class) == true -> R.string.title_activity_lens_list
+        currentDestination?.hasRoute(AccessoriesRoute::class) == true -> R.string.title_activity_accessory_list
+        currentDestination?.hasRoute(FavoritesRoute::class) == true -> R.string.title_activity_favorites
         else -> R.string.title_activity_filmroll_list
     }
+    
+    val isFilmRolls = currentDestination?.hasRoute(FilmRollsRoute::class) == true
 
     TopAppBar(
         title = {
             Column {
                 Text(stringResource(titleRes))
-                if (observedRoute == MainActivity.ROUTE_FILMROLLS && currentSubtitle.isNotEmpty()) {
+                if (isFilmRolls && currentSubtitle.isNotEmpty()) {
                     Text(currentSubtitle, style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -76,12 +80,12 @@ fun TrisquelTopAppBar(
             }
         },
         actions = {
-            if (observedRoute in listOf(MainActivity.ROUTE_FILMROLLS, MainActivity.ROUTE_CAMERAS, MainActivity.ROUTE_LENSES, MainActivity.ROUTE_ACCESSORIES)) {
+            if (isFilmRolls || currentDestination?.hasRoute(CamerasRoute::class) == true || currentDestination?.hasRoute(LensesRoute::class) == true || currentDestination?.hasRoute(AccessoriesRoute::class) == true) {
                 IconButton(onClick = onSortClick) {
                     Icon(painterResource(R.drawable.ic_sort_white_24dp), null)
                 }
             }
-            if (observedRoute == MainActivity.ROUTE_FILMROLLS) {
+            if (isFilmRolls) {
                 Box {
                     IconButton(onClick = { showFilterMenu = true }) {
                         Icon(painterResource(R.drawable.ic_filter_white), null)

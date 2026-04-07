@@ -17,17 +17,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.reflect.KClass
 
-data class DrawerItem(val route: String, val title: String, val iconRes: Int)
+data class DrawerItem(val routeClass: KClass<*>, val routeObj: Any, val title: String, val iconRes: Int)
+data class ActionDrawerItem(val actionId: String, val title: String, val iconRes: Int)
 
 @Composable
 fun TrisquelNavigationDrawer(
     drawerState: DrawerState,
     navController: NavHostController,
-    observedRoute: String,
+    currentDestination: NavDestination?,
     scope: CoroutineScope,
     gesturesEnabled: Boolean = true,
     onSettingsClick: () -> Unit,
@@ -38,22 +42,22 @@ fun TrisquelNavigationDrawer(
     content: @Composable () -> Unit
 ) {
     val drawerItems = listOf(
-        DrawerItem(MainActivity.ROUTE_FILMROLLS, stringResource(R.string.title_activity_filmroll_list), R.drawable.ic_filmroll_vector),
-        DrawerItem(MainActivity.ROUTE_FAVORITES, stringResource(R.string.title_activity_favorites), R.drawable.ic_fav_border_black)
+        DrawerItem(FilmRollsRoute::class, FilmRollsRoute, stringResource(R.string.title_activity_filmroll_list), R.drawable.ic_filmroll_vector),
+        DrawerItem(FavoritesRoute::class, FavoritesRoute, stringResource(R.string.title_activity_favorites), R.drawable.ic_fav_border_black)
     )
     val gearItems = listOf(
-        DrawerItem(MainActivity.ROUTE_CAMERAS, stringResource(R.string.title_activity_cam_list), R.drawable.ic_menu_camera),
-        DrawerItem(MainActivity.ROUTE_LENSES, stringResource(R.string.title_activity_lens_list), R.drawable.ic_lens),
-        DrawerItem(MainActivity.ROUTE_ACCESSORIES, stringResource(R.string.title_activity_accessory_list), R.drawable.ic_extension_black_24dp)
+        DrawerItem(CamerasRoute::class, CamerasRoute, stringResource(R.string.title_activity_cam_list), R.drawable.ic_menu_camera),
+        DrawerItem(LensesRoute::class, LensesRoute, stringResource(R.string.title_activity_lens_list), R.drawable.ic_lens),
+        DrawerItem(AccessoriesRoute::class, AccessoriesRoute, stringResource(R.string.title_activity_accessory_list), R.drawable.ic_extension_black_24dp)
     )
     val infoItems = listOf(
-        DrawerItem("settings", stringResource(R.string.action_settings), R.drawable.ic_settings_black_24dp),
-        DrawerItem("backup", stringResource(R.string.title_backup), R.drawable.ic_export),
-        DrawerItem("import", stringResource(R.string.title_import), R.drawable.ic_import)
+        ActionDrawerItem("settings", stringResource(R.string.action_settings), R.drawable.ic_settings_black_24dp),
+        ActionDrawerItem("backup", stringResource(R.string.title_backup), R.drawable.ic_export),
+        ActionDrawerItem("import", stringResource(R.string.title_import), R.drawable.ic_import)
     )
     val otherItems = listOf(
-        DrawerItem("release_notes", stringResource(R.string.action_releasenotes), 0),
-        DrawerItem("license", stringResource(R.string.action_license), 0)
+        ActionDrawerItem("release_notes", stringResource(R.string.action_releasenotes), 0),
+        ActionDrawerItem("license", stringResource(R.string.action_license), 0)
     )
 
     ModalNavigationDrawer(
@@ -66,10 +70,10 @@ fun TrisquelNavigationDrawer(
                     items(drawerItems) { item ->
                         NavigationDrawerItem(
                             label = { Text(item.title) },
-                            selected = observedRoute == item.route,
+                            selected = currentDestination?.hasRoute(item.routeClass) == true,
                             icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
                             onClick = {
-                                navController.navigate(item.route) { launchSingleTop = true }
+                                navController.navigate(item.routeObj) { launchSingleTop = true }
                                 scope.launch { drawerState.close() }
                             },
                             modifier = Modifier.padding(horizontal = 12.dp)
@@ -80,10 +84,10 @@ fun TrisquelNavigationDrawer(
                     items(gearItems) { item ->
                         NavigationDrawerItem(
                             label = { Text(item.title) },
-                            selected = observedRoute == item.route,
+                            selected = currentDestination?.hasRoute(item.routeClass) == true,
                             icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
                             onClick = {
-                                navController.navigate(item.route) { launchSingleTop = true }
+                                navController.navigate(item.routeObj) { launchSingleTop = true }
                                 scope.launch { drawerState.close() }
                             },
                             modifier = Modifier.padding(horizontal = 12.dp)
@@ -97,7 +101,7 @@ fun TrisquelNavigationDrawer(
                             icon = { if (item.iconRes != 0) Icon(painterResource(item.iconRes), null) },
                             onClick = {
                                 scope.launch { drawerState.close() }
-                                when (item.route) {
+                                when (item.actionId) {
                                     "settings" -> onSettingsClick()
                                     "backup" -> onBackupClick()
                                     "import" -> onImportClick()
@@ -113,7 +117,7 @@ fun TrisquelNavigationDrawer(
                             selected = false,
                             onClick = {
                                 scope.launch { drawerState.close() }
-                                when (item.route) {
+                                when (item.actionId) {
                                     "release_notes" -> onReleaseNotesClick()
                                     "license" -> onLicenseClick()
                                 }

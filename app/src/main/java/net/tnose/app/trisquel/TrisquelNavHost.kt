@@ -34,18 +34,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
 fun TrisquelNavHost(
     navController: NavHostController,
-    initialRoute: String,
     modifier: Modifier = Modifier,
-    mainTopBar: @Composable (String) -> Unit,
+    mainTopBar: @Composable (NavDestination?) -> Unit,
     mainViewModel: MainViewModel,
     filmRollViewModel: FilmRollViewModel,
     cameraViewModel: CameraViewModel,
@@ -62,20 +63,20 @@ fun TrisquelNavHost(
 
     NavHost(
         navController = navController,
-        startDestination = initialRoute,
+        startDestination = FilmRollsRoute,
         modifier = modifier
     ) {
-        composable(MainActivity.ROUTE_FILMROLLS) {
+        composable<FilmRollsRoute> {
             val filmrolls by filmRollViewModel.allFilmRollAndRels.collectAsStateWithLifecycle()
             val isFilmRollsLoading by filmRollViewModel.isLoading.collectAsStateWithLifecycle()
             
-            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_FILMROLLS) }) { paddingValues ->
+            Scaffold(topBar = { mainTopBar(it.destination) }) { paddingValues ->
                 Box(Modifier.fillMaxSize().padding(paddingValues)) {
                     FilmRollListScreen(
                         filmrolls = filmrolls,
                         onItemClick = { item ->
                             val f = FilmRoll.fromEntity(item)
-                            navController.navigate("photo_list/${f.id}")
+                            navController.navigate(PhotoListRoute(id = f.id))
                         },
                         onItemLongClick = { onFilmRollDeleteRequest(FilmRoll.fromEntity(it)) },
                         emptyMessage = stringResource(R.string.warning_filmroll_not_registered),
@@ -92,7 +93,12 @@ fun TrisquelNavHost(
                                 defaultManufacturer = mainViewModel.currentFilter.second[0]
                                 defaultBrand = mainViewModel.currentFilter.second[1]
                             }
-                            navController.navigate("edit_filmroll?id=-1&default_camera=${defaultCameraId}&default_manufacturer=${defaultManufacturer}&default_brand=${defaultBrand}")
+                            navController.navigate(EditFilmRollRoute(
+                                id = -1,
+                                defaultCamera = defaultCameraId,
+                                defaultManufacturer = defaultManufacturer,
+                                defaultBrand = defaultBrand
+                            ))
                         },
                         containerColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
@@ -102,18 +108,18 @@ fun TrisquelNavHost(
                 }
             }
         }
-        composable(MainActivity.ROUTE_CAMERAS) {
+        composable<CamerasRoute> {
             val cameras by cameraViewModel.cameras.collectAsStateWithLifecycle()
             val isCamerasLoading by cameraViewModel.isLoading.collectAsStateWithLifecycle()
             var isFabExpanded by rememberSaveable { mutableStateOf(false) }
             val interactionSource = remember { MutableInteractionSource() }
             
-            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_CAMERAS) }) { paddingValues ->
+            Scaffold(topBar = { mainTopBar(it.destination) }) { paddingValues ->
                 Box(Modifier.fillMaxSize().padding(paddingValues)) {
                     CameraListScreen(
                         cameras = cameras,
                         onItemClick = { item ->
-                            navController.navigate("edit_camera/${item.type}?id=${item.id}")
+                            navController.navigate(EditCameraRoute(type = item.type, id = item.id))
                         },
                         onItemLongClick = { onCameraDeleteRequest(it) },
                         emptyMessage = stringResource(R.string.warning_cam_not_registered),
@@ -150,7 +156,7 @@ fun TrisquelNavHost(
                                     SmallFloatingActionButton(
                                         onClick = {
                                             isFabExpanded = false
-                                            navController.navigate("edit_camera/1?id=-1")
+                                            navController.navigate(EditCameraRoute(type = 1, id = -1))
                                         },
                                         containerColor = MaterialTheme.colorScheme.secondary
                                     ) {
@@ -167,7 +173,7 @@ fun TrisquelNavHost(
                                     SmallFloatingActionButton(
                                         onClick = {
                                             isFabExpanded = false
-                                            navController.navigate("edit_camera/0?id=-1")
+                                            navController.navigate(EditCameraRoute(type = 0, id = -1))
                                         },
                                         containerColor = MaterialTheme.colorScheme.secondary
                                     ) {
@@ -192,16 +198,16 @@ fun TrisquelNavHost(
                 }
             }
         }
-        composable(MainActivity.ROUTE_LENSES) {
+        composable<LensesRoute> {
             val lenses by lensViewModel.lenses.collectAsStateWithLifecycle()
             val isLensesLoading by lensViewModel.isLoading.collectAsStateWithLifecycle()
             
-            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_LENSES) }) { paddingValues ->
+            Scaffold(topBar = { mainTopBar(it.destination) }) { paddingValues ->
                 Box(Modifier.fillMaxSize().padding(paddingValues)) {
                     LensListScreen(
                         lenses = lenses,
                         onItemClick = { item ->
-                            navController.navigate("edit_lens?id=${item.id}")
+                            navController.navigate(EditLensRoute(id = item.id))
                         },
                         onItemLongClick = { onLensDeleteRequest(it) },
                         emptyMessage = stringResource(R.string.warning_lens_not_registered),
@@ -211,7 +217,7 @@ fun TrisquelNavHost(
                     )
                     FloatingActionButton(
                         onClick = {
-                            navController.navigate("edit_lens?id=-1")
+                            navController.navigate(EditLensRoute(id = -1))
                         },
                         containerColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
@@ -221,17 +227,17 @@ fun TrisquelNavHost(
                 }
             }
         }
-        composable(MainActivity.ROUTE_ACCESSORIES) {
+        composable<AccessoriesRoute> {
             val accessories by accessoryViewModel.allAccessories.collectAsStateWithLifecycle()
             val isAccessoriesLoading by accessoryViewModel.isLoading.collectAsStateWithLifecycle()
             
-            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_ACCESSORIES) }) { paddingValues ->
+            Scaffold(topBar = { mainTopBar(it.destination) }) { paddingValues ->
                 Box(Modifier.fillMaxSize().padding(paddingValues)) {
                     AccessoryListScreen(
                         accessories = accessories,
                         onItemClick = { item ->
                             val a = Accessory.fromEntity(item)
-                            navController.navigate("edit_accessory?id=${a.id}")
+                            navController.navigate(EditAccessoryRoute(id = a.id))
                         },
                         onItemLongClick = { onAccessoryDeleteRequest(Accessory.fromEntity(it)) },
                         emptyMessage = stringResource(R.string.warning_accessory_not_registered),
@@ -239,7 +245,7 @@ fun TrisquelNavHost(
                     )
                     FloatingActionButton(
                         onClick = {
-                            navController.navigate("edit_accessory?id=-1")
+                            navController.navigate(EditAccessoryRoute(id = -1))
                         },
                         containerColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
@@ -249,14 +255,11 @@ fun TrisquelNavHost(
                 }
             }
         }
-        composable(
-            route = "edit_accessory?id={id}",
-            arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 })
-        ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getInt("id") ?: -1
-            EditAccessoryRoute(id = id, onCancel = { navController.popBackStack() })
+        composable<EditAccessoryRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<EditAccessoryRoute>()
+            EditAccessoryRoute(id = route.id, onCancel = { navController.popBackStack() })
         }
-        composable(MainActivity.ROUTE_FAVORITES) {
+        composable<FavoritesRoute> {
             val groupedPhotos = remember { mutableStateOf<List<Pair<String, List<Photo>>>>(emptyList()) }
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) {
@@ -271,7 +274,7 @@ fun TrisquelNavHost(
                     withContext(Dispatchers.Main) { groupedPhotos.value = result }
                 }
             }
-            Scaffold(topBar = { mainTopBar(MainActivity.ROUTE_FAVORITES) }) { paddingValues ->
+            Scaffold(topBar = { mainTopBar(it.destination) }) { paddingValues ->
                 Box(Modifier.fillMaxSize().padding(paddingValues)) {
                     FavoritePhotoScreen(
                         groupedPhotos = groupedPhotos.value,
@@ -281,24 +284,17 @@ fun TrisquelNavHost(
                 }
             }
         }
-        composable(MainActivity.ROUTE_SETTINGS) {
+        composable<SettingsRoute> {
             SettingsScreen(onBack = { navController.popBackStack() })
         }
-        composable(MainActivity.ROUTE_LICENSE) {
+        composable<LicenseRoute> {
             LicenseScreen(onBack = { navController.popBackStack() })
         }
-        composable(
-            route = "edit_camera/{type}?id={id}",
-            arguments = listOf(
-                androidx.navigation.navArgument("type") { type = androidx.navigation.NavType.IntType },
-                androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 }
-            )
-        ) { backStackEntry ->
-            val type = backStackEntry.arguments?.getInt("type") ?: 0
-            val id = backStackEntry.arguments?.getInt("id") ?: -1
+        composable<EditCameraRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<EditCameraRoute>()
             EditCameraRoute(
-                id = id, 
-                type = type, 
+                id = route.id, 
+                type = route.type, 
                 onSaveSuccess = { 
                     cameraViewModel.load()
                     navController.popBackStack() 
@@ -306,66 +302,41 @@ fun TrisquelNavHost(
                 onCancel = { navController.popBackStack() }
             )
         }
-        composable(
-            route = "edit_filmroll?id={id}&default_camera={default_camera}&default_manufacturer={default_manufacturer}&default_brand={default_brand}",
-            arguments = listOf(
-                androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 },
-                androidx.navigation.navArgument("default_camera") { type = androidx.navigation.NavType.IntType; defaultValue = -1 },
-                androidx.navigation.navArgument("default_manufacturer") { type = androidx.navigation.NavType.StringType; defaultValue = "" },
-                androidx.navigation.navArgument("default_brand") { type = androidx.navigation.NavType.StringType; defaultValue = "" }
-            )
-        ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getInt("id") ?: -1
+        composable<EditFilmRollRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<EditFilmRollRoute>()
             EditFilmRollRoute(
-                id = id,
+                id = route.id,
                 onCancel = { navController.popBackStack() },
-                onNavigateToEditCamera = { navController.navigate("edit_camera/0?id=-1") }
+                onNavigateToEditCamera = { navController.navigate(EditCameraRoute(type = 0, id = -1)) }
             )
         }
-        composable(
-            route = "photo_list/{id}",
-            arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType })
-        ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getInt("id") ?: -1
+        composable<PhotoListRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<PhotoListRoute>()
             EditPhotoListRoute(
-                id = id,
+                id = route.id,
                 onBack = { navController.popBackStack() },
-                onNavigateToEditFilmRoll = { frId -> navController.navigate("edit_filmroll?id=$frId") },
+                onNavigateToEditFilmRoll = { frId -> navController.navigate(EditFilmRollRoute(id = frId)) },
                 onNavigateToEditPhoto = { frId, pId, fIdx -> 
-                    navController.navigate("edit_photo?filmroll=$frId&id=$pId&frameIndex=$fIdx")
+                    navController.navigate(EditPhotoRoute(filmroll = frId, id = pId, frameIndex = fIdx))
                 }
             )
         }
-        composable(
-            route = "edit_photo?filmroll={filmroll}&id={id}&frameIndex={frameIndex}",
-            arguments = listOf(
-                androidx.navigation.navArgument("filmroll") { type = androidx.navigation.NavType.IntType },
-                androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 },
-                androidx.navigation.navArgument("frameIndex") { type = androidx.navigation.NavType.IntType; defaultValue = -1 }
-            )
-        ) { backStackEntry ->
-            val filmroll = backStackEntry.arguments?.getInt("filmroll") ?: -1
-            val id = backStackEntry.arguments?.getInt("id") ?: -1
-            val frameIndex = backStackEntry.arguments?.getInt("frameIndex") ?: -1
+        composable<EditPhotoRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<EditPhotoRoute>()
             EditPhotoRoute(
-                id = id,
-                filmRollId = filmroll,
-                frameIndex = frameIndex,
+                id = route.id,
+                filmRollId = route.filmroll,
+                frameIndex = route.frameIndex,
                 onCancel = { navController.popBackStack() },
                 onNavigateToEditLens = {
-                    navController.navigate("edit_lens?id=-1")
+                    navController.navigate(EditLensRoute(id = -1))
                 }
             )
         }
-        composable(
-            route = "edit_lens?id={id}",
-            arguments = listOf(
-                androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.IntType; defaultValue = -1 }
-            )
-        ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getInt("id") ?: -1
+        composable<EditLensRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<EditLensRoute>()
             EditLensRoute(
-                id = id,
+                id = route.id,
                 onSaveSuccess = {
                     lensViewModel.load()
                     navController.popBackStack()
@@ -373,19 +344,14 @@ fun TrisquelNavHost(
                 onCancel = { navController.popBackStack() }
             )
         }
-        composable(
-            route = "search?tags={tags}",
-            arguments = listOf(
-                androidx.navigation.navArgument("tags") { type = androidx.navigation.NavType.StringType; defaultValue = "" }
-            )
-        ) { backStackEntry ->
-            val tagsString = backStackEntry.arguments?.getString("tags") ?: ""
-            val tags = tagsString.split(",").filter { it.isNotEmpty() }
+        composable<SearchRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<SearchRoute>()
+            val tags = route.tags.split(",").filter { it.isNotEmpty() }
             SearchRoute(
                 tags = tags,
                 onBack = { navController.popBackStack() },
                 onNavigateToEditPhoto = { frId, pId, fIdx ->
-                    navController.navigate("edit_photo?filmroll=$frId&id=$pId&frameIndex=$fIdx")
+                    navController.navigate(EditPhotoRoute(filmroll = frId, id = pId, frameIndex = fIdx))
                 },
                 onNavigateToGallery = { photo, list ->
                     onPhotoInteraction(photo, list)
