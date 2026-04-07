@@ -1,23 +1,18 @@
 package net.tnose.app.trisquel
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.ParcelFileDescriptor
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,15 +22,7 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.work.WorkInfo
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.FileInputStream
-import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Calendar
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 
 class MainActivity : AppCompatActivity() {
@@ -63,8 +50,6 @@ class MainActivity : AppCompatActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
     private lateinit var userPreferencesRepository: UserPreferencesRepository
-
-    internal var currentRoute = ROUTE_FILMROLLS
 
     private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -99,29 +84,27 @@ class MainActivity : AppCompatActivity() {
     fun handleExportPermissionsResult(permissions: Map<String, Boolean>) {
         val granted = permissions.entries.all { it.value }
         if (granted) {
-            pendingExportMode?.let { mainViewModel.requestBackup(it, true) }
+            mainViewModel.pendingExportMode?.let { mainViewModel.requestBackup(it, true) }
         } else {
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
         }
-        pendingExportMode = null
+        mainViewModel.pendingExportMode = null
     }
 
     fun handleImportPermissionsResult(permissions: Map<String, Boolean>) {
         val granted = permissions.entries.all { it.value }
         if (granted) {
-            pendingImportMode?.let { mainViewModel.requestImport(it, true) }
+            mainViewModel.pendingImportMode?.let { mainViewModel.requestImport(it, true) }
         } else {
             Toast.makeText(this, getString(R.string.error_permission_denied_sdcard), Toast.LENGTH_LONG).show()
         }
-        pendingImportMode = null
+        mainViewModel.pendingImportMode = null
     }
 
-    private var pendingExportMode: Int? = null
     private val requestExportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         handleExportPermissionsResult(permissions)
     }
 
-    private var pendingImportMode: Int? = null
     private val requestImportPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         handleImportPermissionsResult(permissions)
     }
@@ -172,11 +155,9 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this@MainActivity, event.message, Toast.LENGTH_LONG).show()
                     }
                     is MainEvent.RequestExportPermissions -> {
-                        pendingExportMode = event.mode
                         requestExportPermissionsLauncher.launch(PERMISSIONS)
                     }
                     is MainEvent.RequestImportPermissions -> {
-                        pendingImportMode = event.mode
                         requestImportPermissionsLauncher.launch(PERMISSIONS)
                     }
                     is MainEvent.LaunchExportDocumentTree -> {
@@ -236,22 +217,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        pendingExportMode = if (savedInstanceState?.containsKey("pending_export_mode") == true) savedInstanceState.getInt("pending_export_mode") else null
-        pendingImportMode = if (savedInstanceState?.containsKey("pending_import_mode") == true) savedInstanceState.getInt("pending_import_mode") else null
-
-        val filtertype = savedInstanceState?.getInt("filmroll_filtertype") ?: 0
-        val filtervalue = savedInstanceState?.getStringArrayList("filmroll_filtervalue") ?: arrayListOf("")
-        mainViewModel.currentFilter = Pair(filtertype, filtervalue)
-        if (filtertype != 0) {
-            mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
-        }
-        
-        val routeMap = mapOf(ID_FILMROLL to ROUTE_FILMROLLS, ID_CAMERA to ROUTE_CAMERAS, ID_LENS to ROUTE_LENSES, ID_ACCESSORY to ROUTE_ACCESSORIES, ID_FAVORITES to ROUTE_FAVORITES)
-        val initialRoute = routeMap[savedInstanceState?.getInt("current_fragment") ?: ID_FILMROLL] ?: ROUTE_FILMROLLS
-
         setContent {
             TrisquelTheme {
-                MainAppScreen(initialRoute)
+                MainAppScreen(mainViewModel.currentRoute)
             }
         }
     }
@@ -265,27 +233,6 @@ class MainActivity : AppCompatActivity() {
 
         mainViewModel.checkAppStartupState(Util.TRISQUEL_VERSION)
     }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putInt("current_fragment", when (currentRoute) {
-            ROUTE_CAMERAS -> ID_CAMERA
-            ROUTE_LENSES -> ID_LENS
-            ROUTE_ACCESSORIES -> ID_ACCESSORY
-            ROUTE_FAVORITES -> ID_FAVORITES
-            else -> ID_FILMROLL
-        })
-        if (currentRoute == ROUTE_FILMROLLS) {
-            outState.putInt("filmroll_filtertype", mainViewModel.currentFilter.first)
-            outState.putStringArrayList("filmroll_filtervalue", mainViewModel.currentFilter.second)
-        }
-        pendingExportMode?.let { outState.putInt("pending_export_mode", it) }
-        pendingImportMode?.let { outState.putInt("pending_import_mode", it) }
-    }
-
-
-
-
 
     private fun checkPermissions(): Boolean {
         val readDenied = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
@@ -342,7 +289,7 @@ class MainActivity : AppCompatActivity() {
         val observedRoute = navBackStackEntry?.destination?.route ?: initialRoute
 
         LaunchedEffect(observedRoute) {
-            currentRoute = observedRoute
+            mainViewModel.currentRoute = observedRoute
         }
 
         TrisquelDialogManager(
@@ -355,7 +302,7 @@ class MainActivity : AppCompatActivity() {
             navController = navController,
             observedRoute = observedRoute,
             scope = scope,
-            gesturesEnabled = currentRoute in listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES, ROUTE_FAVORITES),
+            gesturesEnabled = mainViewModel.currentRoute in listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES, ROUTE_FAVORITES),
             onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
             onBackupClick = {
                 mainViewModel.showDialog(ActiveDialog.RichSelection(
@@ -409,14 +356,12 @@ class MainActivity : AppCompatActivity() {
                     },
                     onFilterNoFilterClick = {
                         mainViewModel.currentFilter = Pair(0, arrayListOf())
-                        mainViewModel.currentSubtitle = ""
                         filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(0, ""))
                     },
                     onFilterByCameraClick = {
                         mainViewModel.requestFilterByCamera { _, id ->
                             if (id != null) {
                                 mainViewModel.currentFilter = Pair(1, arrayListOf(id.toString()))
-                                mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
                                 filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(1, id.toString()))
                             }
                         }
@@ -424,13 +369,11 @@ class MainActivity : AppCompatActivity() {
                     onFilterByFilmBrandClick = {
                         mainViewModel.requestFilterByFilmBrand { fb ->
                             mainViewModel.currentFilter = Pair(2, arrayListOf(fb.first, fb.second))
-                            mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(mainViewModel.currentFilter)
                             filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(2, fb.second))
                         }
                     },
                     onPinnedFilterClick = { f ->
                         mainViewModel.currentFilter = f
-                        mainViewModel.currentSubtitle = mainViewModel.getFilterLabel(f)
                         val searchStr = if(f.first == 1) f.second[0].toInt().toString() else f.second[1]
                         filmRollViewModel.viewRule.value = Pair(userPreferencesRepository.getSortKey(ROUTE_FILMROLLS), Pair(f.first, searchStr))
                     },

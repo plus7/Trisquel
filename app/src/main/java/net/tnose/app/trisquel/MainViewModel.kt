@@ -1,18 +1,24 @@
 package net.tnose.app.trisquel
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import android.net.Uri
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 sealed class MainEvent {
     data class RestoreDatabaseResult(val success: Boolean) : MainEvent()
@@ -25,7 +31,7 @@ sealed class MainEvent {
     data class LaunchImportDocumentPicker(val mode: Int) : MainEvent()
 }
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
     var activeDialog by mutableStateOf<ActiveDialog?>(null)
 
     private val _events = MutableSharedFlow<MainEvent>()
@@ -39,8 +45,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         activeDialog = null
     }
 
-    var currentFilter by mutableStateOf(Pair(0, arrayListOf<String>()))
-    var currentSubtitle by mutableStateOf("")
+    private val _currentRoute = mutableStateOf(savedStateHandle.get<String>("current_route") ?: MainActivity.ROUTE_FILMROLLS)
+    var currentRoute: String
+        get() = _currentRoute.value
+        set(value) {
+            _currentRoute.value = value
+            savedStateHandle["current_route"] = value
+        }
+
+    private val _currentFilter = mutableStateOf(Pair(
+        savedStateHandle.get<Int>("filter_type") ?: 0,
+        savedStateHandle.get<ArrayList<String>>("filter_value") ?: arrayListOf<String>()
+    ))
+    var currentFilter: Pair<Int, ArrayList<String>>
+        get() = _currentFilter.value
+        set(value) {
+            _currentFilter.value = value
+            savedStateHandle["filter_type"] = value.first
+            savedStateHandle["filter_value"] = value.second
+            currentSubtitle = if (value.first != 0) getFilterLabel(value) else ""
+        }
+
+    private val _currentSubtitle = mutableStateOf(savedStateHandle.get<String>("current_subtitle") ?: "")
+    var currentSubtitle: String
+        get() = _currentSubtitle.value
+        set(value) {
+            _currentSubtitle.value = value
+            savedStateHandle["current_subtitle"] = value
+        }
+
+    private val _pendingExportMode = mutableStateOf(savedStateHandle.get<Int?>("pending_export_mode"))
+    var pendingExportMode: Int?
+        get() = _pendingExportMode.value
+        set(value) {
+            _pendingExportMode.value = value
+            savedStateHandle["pending_export_mode"] = value
+        }
+
+    private val _pendingImportMode = mutableStateOf(savedStateHandle.get<Int?>("pending_import_mode"))
+    var pendingImportMode: Int?
+        get() = _pendingImportMode.value
+        set(value) {
+            _pendingImportMode.value = value
+            savedStateHandle["pending_import_mode"] = value
+        }
 
     private val userPreferencesRepository = UserPreferencesRepository(application)
     private val repo = TrisquelRepo(application)
@@ -121,24 +169,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun requestBackup(mode: Int, hasPermissions: Boolean) {
         if (!hasPermissions) {
+            pendingExportMode = mode
             viewModelScope.launch { _events.emit(MainEvent.RequestExportPermissions(mode)) }
             return
         }
-        val calendar = java.util.Calendar.getInstance()
-        val sdf = java.text.SimpleDateFormat("yyyyMMddHHmmss", java.util.Locale.US)
+        val calendar = Calendar.getInstance()
+        val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
         val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
         viewModelScope.launch { _events.emit(MainEvent.LaunchExportDocumentTree(mode, backupZipFileName)) }
     }
 
     fun requestImport(mode: Int, hasPermissions: Boolean) {
         if (!hasPermissions) {
+            pendingImportMode = mode
             viewModelScope.launch { _events.emit(MainEvent.RequestImportPermissions(mode)) }
             return
         }
         viewModelScope.launch { _events.emit(MainEvent.LaunchImportDocumentPicker(mode)) }
     }
 
-    fun onBackupDirChosen(uri: android.net.Uri?, mode: Int) {
+    fun onBackupDirChosen(uri: Uri?, mode: Int) {
         if (uri == null) return
         workManager.pruneWork()
         val req = ExportWorker.createExportRequest(uri.toString(), mode)
@@ -148,7 +198,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         ) { workManager.cancelAllWorkByTag(Util.WORKER_TAG_EXPORT) })
     }
 
-    fun onImportFileChosen(uri: android.net.Uri?, mode: Int) {
+    fun onImportFileChosen(uri: Uri?, mode: Int) {
         if (uri == null) return
         workManager.pruneWork()
         val req = ImportWorker.createImportRequest(uri.toString(), mode)
@@ -158,7 +208,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         ) { workManager.cancelAllWorkByTag(Util.WORKER_TAG_IMPORT) })
     }
 
-    fun onDbFileChosen(uri: android.net.Uri?, contentResolver: android.content.ContentResolver) {
+    fun onDbFileChosen(uri: Uri?, contentResolver: android.content.ContentResolver) {
         if (uri == null) return
         requestRestoreDatabase(uri, contentResolver)
     }
@@ -247,7 +297,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         userPreferencesRepository.setLastVersion(currentVersion)
     }
 
-    fun requestRestoreDatabase(uri: android.net.Uri, contentResolver: android.content.ContentResolver) = viewModelScope.launch(Dispatchers.IO) {
+    fun requestRestoreDatabase(uri: Uri, contentResolver: android.content.ContentResolver) = viewModelScope.launch(Dispatchers.IO) {
         val context = getApplication<Application>()
         val dbpath = context.getDatabasePath("trisquel.db")
         
@@ -275,8 +325,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return@launch
         }
 
-        val calendar = java.util.Calendar.getInstance()
-        val sdf = java.text.SimpleDateFormat("yyyyMMddHHmmss", java.util.Locale.US)
+        val calendar = Calendar.getInstance()
+        val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
         val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
 
         if (dbpath.exists()) {

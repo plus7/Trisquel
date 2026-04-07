@@ -1,9 +1,12 @@
 package net.tnose.app.trisquel
 
 import android.app.Application
+import android.content.Intent
+import androidx.core.os.BundleCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -17,7 +20,7 @@ sealed class LensEvent {
     data class ShowDeleteConfirm(val id: Int, val modelName: String) : LensEvent()
 }
 
-class LensViewModel(application: Application) : AndroidViewModel(application) {
+class LensViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
     private val repo = TrisquelRepo(application)
     
     private val _events = MutableSharedFlow<LensEvent>()
@@ -29,7 +32,9 @@ class LensViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
-    private val _sortKey = MutableLiveData<Int>(0)
+    private var _sortKey: Int
+        get() = savedStateHandle["sort_key"] ?: 0
+        set(value) { savedStateHandle["sort_key"] = value }
 
     init {
         load()
@@ -39,17 +44,16 @@ class LensViewModel(application: Application) : AndroidViewModel(application) {
         _isLoading.value = true
         withContext(Dispatchers.IO) {
             val entities = repo.getAllLensesRaw()
-            // Legacy code used "allVisibleLenses" which filters out fixed lenses (body != 0)
             val list = entities.filter { it.body == 0 }.map { LensSpec.fromEntity(it) }
             withContext(Dispatchers.Main) {
-                _lenses.value = sortList(list, _sortKey.value ?: 0)
+                _lenses.value = sortList(list, _sortKey)
                 _isLoading.value = false
             }
         }
     }
 
     fun changeSortKey(key: Int) {
-        _sortKey.value = key
+        _sortKey = key
         _lenses.value = sortList(_lenses.value ?: emptyList(), key)
     }
 
@@ -63,16 +67,16 @@ class LensViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val l = androidx.core.os.BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
+    fun handleAddResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
+        val l = BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
         if (l != null) {
             repo.upsertLens(l.toEntity())
             load()
         }
     }
 
-    fun handleEditResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
-        val l = androidx.core.os.BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
+    fun handleEditResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
+        val l = BundleCompat.getParcelable(intent?.extras ?: return@launch, "lensspec", LensSpec::class.java)
         if (l != null) {
             repo.upsertLens(l.toEntity())
             load()

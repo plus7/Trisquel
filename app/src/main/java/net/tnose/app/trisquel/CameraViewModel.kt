@@ -1,23 +1,25 @@
 package net.tnose.app.trisquel
 
 import android.app.Application
+import android.content.Intent
+import androidx.core.os.BundleCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed class CameraEvent {
     data class ShowCannotDeleteAlert(val modelName: String) : CameraEvent()
     data class ShowDeleteConfirm(val id: Int, val modelName: String) : CameraEvent()
 }
 
-class CameraViewModel(application: Application) : AndroidViewModel(application) {
+class CameraViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
     private val repo = TrisquelRepo(application)
     
     private val _events = MutableSharedFlow<CameraEvent>()
@@ -29,7 +31,9 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
-    private val _sortKey = MutableLiveData<Int>(0)
+    private var _sortKey: Int
+        get() = savedStateHandle["sort_key"] ?: 0
+        set(value) { savedStateHandle["sort_key"] = value }
 
     init {
         load()
@@ -41,14 +45,14 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             val entities = repo.getAllCamerasRaw()
             val list = entities.map { CameraSpec.fromEntity(it) }
             withContext(Dispatchers.Main) {
-                _cameras.value = sortList(list, _sortKey.value ?: 0)
+                _cameras.value = sortList(list, _sortKey)
                 _isLoading.value = false
             }
         }
     }
 
     fun changeSortKey(key: Int) {
-        _sortKey.value = key
+        _sortKey = key
         _cameras.value = sortList(_cameras.value ?: emptyList(), key)
     }
 
@@ -62,12 +66,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun handleAddResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
+    fun handleAddResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
         val bundle = intent?.extras ?: return@launch
-        val c = androidx.core.os.BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
+        val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
         val newId = repo.upsertCamera(c.toEntity())
         if (c.type == 1) {
-            val l = androidx.core.os.BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
+            val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
             if (l != null) {
                 l.body = newId.toInt()
                 repo.upsertLens(l.toEntity())
@@ -76,13 +80,13 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         load()
     }
 
-    fun handleEditResult(intent: android.content.Intent?) = viewModelScope.launch(Dispatchers.IO) {
+    fun handleEditResult(intent: Intent?) = viewModelScope.launch(Dispatchers.IO) {
         val bundle = intent?.extras ?: return@launch
-        val c = androidx.core.os.BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
+        val c = BundleCompat.getParcelable(bundle, "cameraspec", CameraSpec::class.java) ?: return@launch
         repo.upsertCamera(c.toEntity())
         if (c.type == 1) {
             val lensEntity = repo.getLensByFixedBody(c.id)
-            val l = androidx.core.os.BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
+            val l = BundleCompat.getParcelable(bundle, "fixed_lens", LensSpec::class.java)
             if (l != null) {
                 l.id = lensEntity?.id ?: 0
                 l.body = c.id
