@@ -9,10 +9,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 
-sealed class Optional<T>
-data class Some<T>(val value: T) : Optional<T>()
-class None<T> : Optional<T>()
-
 class Util {
 
     inner class ZoomRange {

@@ -323,21 +323,6 @@ class EditPhotoViewModel(
         }
     }
 
-    fun handleAddLensResult(lens: LensSpec) = viewModelScope.launch(Dispatchers.IO) {
-        val newId = repo.upsertLens(lens.toEntity()).toInt()
-        val filmRollEntity = repo.getFilmRollRaw(_uiState.value.filmRollId) ?: return@launch
-        val cameraEntity = repo.getCamera(filmRollEntity.camera!!) ?: return@launch
-        val camera = CameraSpec.fromEntity(cameraEntity)
-        val lEntity = repo.getLens(newId)
-        val l = if (lEntity != null) LensSpec.fromEntity(lEntity) else null
-        
-        if (l != null) {
-            _uiState.update { it.copy(lensId = newId, focalLengthRange = Util.getFocalLengthRangeFromStr(l.focalLength), focalLengthProgress = 0, isDirty = true) }
-            updateLensListInternal(l, camera)
-            refreshApertureListInternal(l)
-        }
-    }
-
     fun onMountAdaptersChanged(mount: String, selectedMounts: ArrayList<String>) = viewModelScope.launch(Dispatchers.IO) {
         userPrefs.saveSuggestListSub("mount_adapters", mount, selectedMounts)
         val filmRollEntity = repo.getFilmRollRaw(_uiState.value.filmRollId) ?: return@launch

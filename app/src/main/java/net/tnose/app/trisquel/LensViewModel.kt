@@ -1,8 +1,6 @@
 package net.tnose.app.trisquel
 
 import android.app.Application
-import android.content.Intent
-import androidx.core.os.BundleCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope

@@ -197,9 +197,9 @@ class TrisquelRepo(private val application: Application) {
         }
         for(tm in tagmaps){
             if(tm.tag!!.refcnt == 1){
-                deleteTag(tm.tag!!.id)
+                deleteTag(tm.tag.id)
             }else{
-                upsertTag(TagEntity(tm.tag!!.id, tm.tag!!.label, tm.tag!!.refcnt!! - 1))
+                upsertTag(TagEntity(tm.tag.id, tm.tag.label, tm.tag.refcnt!! - 1))
             }
         }
         mTrisquelDao.deletePhoto(
@@ -280,9 +280,9 @@ class TrisquelRepo(private val application: Application) {
         for(t in removeList){
             deleteTagMap(t.tagMap.tagId!!)
             if(t.tag!!.refcnt == 1){
-                deleteTag(t.tag!!.id)
+                deleteTag(t.tag.id)
             }else{
-                upsertTag(TagEntity(t.tag!!.id, t.tag!!.label, t.tag!!.refcnt!! - 1))
+                upsertTag(TagEntity(t.tag.id, t.tag.label, t.tag.refcnt!! - 1))
             }
         }
     }

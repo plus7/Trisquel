@@ -1,7 +1,6 @@
 package net.tnose.app.trisquel
 
 import android.content.ContentResolver
-import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import java.io.File

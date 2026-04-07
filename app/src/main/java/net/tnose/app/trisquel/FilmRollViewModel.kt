@@ -1,11 +1,9 @@
 package net.tnose.app.trisquel
 
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +15,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Date
 
 sealed class FilmRollEvent {
     data class ShowDeleteConfirm(val id: Int, val name: String) : FilmRollEvent()
@@ -56,11 +53,6 @@ class FilmRollViewModel(application: Application, private val savedStateHandle: 
 
     fun update(entity: FilmRollEntity) = viewModelScope.launch {
         mRepository.upsertFilmRoll(entity)
-    }
-
-    fun refresh(id: Int) = viewModelScope.launch {
-        val entity = mRepository.getFilmRollRaw(id)
-        entity?.let { mRepository.upsertFilmRoll(it) }
     }
 
     fun requestDelete(filmRoll: FilmRoll) = viewModelScope.launch {
