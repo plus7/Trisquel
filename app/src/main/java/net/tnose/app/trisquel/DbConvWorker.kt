@@ -1,6 +1,5 @@
 package net.tnose.app.trisquel
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
