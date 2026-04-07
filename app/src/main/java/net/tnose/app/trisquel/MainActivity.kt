@@ -18,7 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
@@ -120,96 +122,100 @@ class MainActivity : AppCompatActivity() {
         userPreferencesRepository = UserPreferencesRepository(this)
         
         lifecycleScope.launch {
-            mainViewModel.events.collect { event ->
-                when (event) {
-                    is MainEvent.RestoreDatabaseResult -> {
-                        if (event.success) {
-                            val intent = RestartActivity.createIntent(applicationContext)
-                            startActivity(intent)
-                        } else {
-                            Toast.makeText(this@MainActivity, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
-                        }
-                    }
-                    is MainEvent.RequireDbConvAction -> {
-                        val uri = "https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/".toUri()
-                        startActivity(Intent(Intent.ACTION_VIEW, uri))
-                    }
-
-                    is MainEvent.ShowReleaseNotesConfirm -> {
-                        mainViewModel.showDialog(ActiveDialog.Confirm(
-                            title = "Trisquel",
-                            message = getString(R.string.warning_newversion),
-                            positive = getString(R.string.show_release_notes),
-                            negative = getString(R.string.close),
-                            onConfirm = {
-                                val uri = RELEASE_NOTES_URL.toUri()
-                                val i = Intent(Intent.ACTION_VIEW, uri)
-                                startActivity(i)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    mainViewModel.events.collect { event ->
+                        when (event) {
+                            is MainEvent.RestoreDatabaseResult -> {
+                                if (event.success) {
+                                    val intent = RestartActivity.createIntent(applicationContext)
+                                    startActivity(intent)
+                                } else {
+                                    Toast.makeText(this@MainActivity, getString(R.string.error_not_sqlite3_db), Toast.LENGTH_LONG).show()
+                                }
                             }
-                        ))
-                    }
-                    is MainEvent.ShowToast -> {
-                        Toast.makeText(this@MainActivity, event.message, Toast.LENGTH_LONG).show()
-                    }
-                    is MainEvent.RequestExportPermissions -> {
-                        requestExportPermissionsLauncher.launch(PERMISSIONS)
-                    }
-                    is MainEvent.RequestImportPermissions -> {
-                        requestImportPermissionsLauncher.launch(PERMISSIONS)
-                    }
-                    is MainEvent.LaunchExportDocumentTree -> {
-                        val chooserIntent = Intent(Intent.ACTION_CREATE_DOCUMENT)
-                        chooserIntent.addCategory(Intent.CATEGORY_OPENABLE)
-                        chooserIntent.type = "application/zip"
-                        chooserIntent.putExtra(Intent.EXTRA_TITLE, event.fileName)
-                        if(event.mode == 0) backupDirChosenForSlimExLauncher.launch(chooserIntent)
-                        else backupDirChosenForFullExLauncher.launch(chooserIntent)
-                    }
-                    is MainEvent.LaunchImportDocumentPicker -> {
-                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                        intent.addCategory(Intent.CATEGORY_OPENABLE)
-                        if(event.mode == 2){
-                            intent.type = "*/*"
-                        }else {
-                            intent.type = "application/zip"
+                            is MainEvent.RequireDbConvAction -> {
+                                val uri = "https://pentax.tnose.net/trisquel-for-android/db_conv_on_recent_android/".toUri()
+                                startActivity(Intent(Intent.ACTION_VIEW, uri))
+                            }
+
+                            is MainEvent.ShowReleaseNotesConfirm -> {
+                                mainViewModel.showDialog(ActiveDialog.Confirm(
+                                    title = "Trisquel",
+                                    message = getString(R.string.warning_newversion),
+                                    positive = getString(R.string.show_release_notes),
+                                    negative = getString(R.string.close),
+                                    onConfirm = {
+                                        val uri = RELEASE_NOTES_URL.toUri()
+                                        val i = Intent(Intent.ACTION_VIEW, uri)
+                                        startActivity(i)
+                                    }
+                                ))
+                            }
+                            is MainEvent.ShowToast -> {
+                                Toast.makeText(this@MainActivity, event.message, Toast.LENGTH_LONG).show()
+                            }
+                            is MainEvent.RequestExportPermissions -> {
+                                requestExportPermissionsLauncher.launch(PERMISSIONS)
+                            }
+                            is MainEvent.RequestImportPermissions -> {
+                                requestImportPermissionsLauncher.launch(PERMISSIONS)
+                            }
+                            is MainEvent.LaunchExportDocumentTree -> {
+                                val chooserIntent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+                                chooserIntent.addCategory(Intent.CATEGORY_OPENABLE)
+                                chooserIntent.type = "application/zip"
+                                chooserIntent.putExtra(Intent.EXTRA_TITLE, event.fileName)
+                                if(event.mode == 0) backupDirChosenForSlimExLauncher.launch(chooserIntent)
+                                else backupDirChosenForFullExLauncher.launch(chooserIntent)
+                            }
+                            is MainEvent.LaunchImportDocumentPicker -> {
+                                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                intent.addCategory(Intent.CATEGORY_OPENABLE)
+                                if(event.mode == 2){
+                                    intent.type = "*/*"
+                                }else {
+                                    intent.type = "application/zip"
+                                }
+                                when(event.mode){
+                                    0 -> zipFileChosenForMergeIpLauncher.launch(intent)
+                                    1 -> zipFileChosenForReplIpLauncher.launch(intent)
+                                    else -> dbFileChosenForReplDbLauncher.launch(intent)
+                                }
+                            }
                         }
-                        when(event.mode){
-                            0 -> zipFileChosenForMergeIpLauncher.launch(intent)
-                            1 -> zipFileChosenForReplIpLauncher.launch(intent)
-                            else -> dbFileChosenForReplDbLauncher.launch(intent)
+                    }
+                }
+                launch {
+                    cameraViewModel.events.collect { event ->
+                        when (event) {
+                            is CameraEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
+                            is CameraEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { cameraViewModel.deleteCamera(event.id) }))
                         }
                     }
                 }
-            }
-        }
-        lifecycleScope.launch {
-            cameraViewModel.events.collect { event ->
-                when (event) {
-                    is CameraEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
-                    is CameraEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { cameraViewModel.deleteCamera(event.id) }))
+                launch {
+                    lensViewModel.events.collect { event ->
+                        when (event) {
+                            is LensEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
+                            is LensEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { lensViewModel.deleteLens(event.id) }))
+                        }
+                    }
                 }
-            }
-        }
-        lifecycleScope.launch {
-            lensViewModel.events.collect { event ->
-                when (event) {
-                    is LensEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.modelName)))
-                    is LensEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.modelName), onConfirm = { lensViewModel.deleteLens(event.id) }))
+                launch {
+                    accessoryViewModel.events.collect { event ->
+                        when (event) {
+                            is AccessoryEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.name)))
+                            is AccessoryEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { accessoryViewModel.delete(event.id) }))
+                        }
+                    }
                 }
-            }
-        }
-        lifecycleScope.launch {
-            accessoryViewModel.events.collect { event ->
-                when (event) {
-                    is AccessoryEvent.ShowCannotDeleteAlert -> mainViewModel.showDialog(ActiveDialog.Alert(getString(R.string.msg_cannot_remove_item).format(event.name)))
-                    is AccessoryEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { accessoryViewModel.delete(event.id) }))
-                }
-            }
-        }
-        lifecycleScope.launch {
-            filmRollViewModel.events.collect { event ->
-                when (event) {
-                    is FilmRollEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { filmRollViewModel.delete(event.id) }))
+                launch {
+                    filmRollViewModel.events.collect { event ->
+                        when (event) {
+                            is FilmRollEvent.ShowDeleteConfirm -> mainViewModel.showDialog(ActiveDialog.Confirm(message = getString(R.string.msg_confirm_remove_item).format(event.name), onConfirm = { filmRollViewModel.delete(event.id) }))
+                        }
+                    }
                 }
             }
         }
