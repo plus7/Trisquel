@@ -3,64 +3,52 @@ package net.tnose.app.trisquel
 import android.content.Context
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
+import com.google.gson.reflect.TypeToken
+
+// 既存のJSON構造との互換性を保つためのデータクラス
+data class PinnedFilterItem(
+    @SerializedName("type") val type: Int,
+    @SerializedName("values") val values: ArrayList<String>
+)
 
 class UserPreferencesRepository(private val context: Context) {
     private val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+    private val gson = Gson()
 
     fun getPinnedFilters(): ArrayList<Pair<Int, ArrayList<String>>> {
-        val prefstr = sharedPreferences.getString("pinned_filters", "[]") ?: "[]"
-        val array = JSONArray(prefstr)
-        val arrayOfFilter = ArrayList<Pair<Int, ArrayList<String>>>()
-        for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            val filtertype = obj.getInt("type")
-            val jsonfiltervalues = obj.getJSONArray("values")
-            val filtervalues = ArrayList<String>()
-            for (j in 0 until jsonfiltervalues.length()) {
-                filtervalues.add(jsonfiltervalues.getString(j))
-            }
-            arrayOfFilter.add(Pair(filtertype, filtervalues))
+        val prefStr = sharedPreferences.getString("pinned_filters", "[]") ?: "[]"
+        return try {
+            val type = object : TypeToken<List<PinnedFilterItem>>() {}.type
+            val list: List<PinnedFilterItem>? = gson.fromJson(prefStr, type)
+            ArrayList(list?.map { Pair(it.type, it.values) } ?: emptyList())
+        } catch (e: Exception) {
+            ArrayList()
         }
-        return arrayOfFilter
     }
 
-    fun addPinnedFilter(newfilter: Pair<Int, ArrayList<String>>) {
-        val pinnedFilters = getPinnedFilters()
-        val array = JSONArray()
-        pinnedFilters.forEach { f ->
-            val jsonfilter = JSONObject()
-            jsonfilter.put("type", f.first)
-            jsonfilter.put("values", JSONArray(f.second))
-            array.put(jsonfilter)
-        }
-        val jsonfilter = JSONObject()
-        jsonfilter.put("type", newfilter.first)
-        jsonfilter.put("values", JSONArray(newfilter.second))
-        array.put(jsonfilter)
-        sharedPreferences.edit { putString("pinned_filters", array.toString()) }
+    fun addPinnedFilter(newFilter: Pair<Int, ArrayList<String>>) {
+        val currentFilters = getPinnedFilters()
+        currentFilters.add(newFilter)
+        
+        val itemsToSave = currentFilters.map { PinnedFilterItem(it.first, it.second) }
+        sharedPreferences.edit { putString("pinned_filters", gson.toJson(itemsToSave)) }
     }
 
     fun removePinnedFilter(filter: Pair<Int, ArrayList<String>>) {
-        val prefstr = sharedPreferences.getString("pinned_filters", "[]") ?: "[]"
-        val array = JSONArray(prefstr)
-
-        for (i in 0 until array.length()) {
-            val obj = array.getJSONObject(i)
-            val filtertype = obj.getInt("type")
-            val jsonfiltervalues = obj.getJSONArray("values")
-            val filtervalues = ArrayList<String>()
-            for (j in 0 until jsonfiltervalues.length()) {
-                filtervalues.add(jsonfiltervalues.getString(j))
-            }
-            if (filtertype == filter.first && filtervalues.containsAll(filter.second)) {
-                array.remove(i)
+        val currentFilters = getPinnedFilters()
+        val iterator = currentFilters.iterator()
+        while (iterator.hasNext()) {
+            val f = iterator.next()
+            if (f.first == filter.first && f.second.containsAll(filter.second)) {
+                iterator.remove()
                 break
             }
         }
-        sharedPreferences.edit { putString("pinned_filters", array.toString()) }
+        
+        val itemsToSave = currentFilters.map { PinnedFilterItem(it.first, it.second) }
+        sharedPreferences.edit { putString("pinned_filters", gson.toJson(itemsToSave)) }
     }
 
     fun getSortKey(route: String): Int {
@@ -111,127 +99,80 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
-    fun getSuggestList(prefKey: String, defRscId: Int): List<String> {
-        val prefstr = sharedPreferences.getString(prefKey, "[]") ?: "[]"
-        val strArray = mutableListOf<String>()
-        val defRsc = context.resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
+    private fun getStoredList(prefKey: String): MutableList<String> {
+        val prefStr = sharedPreferences.getString(prefKey, "[]") ?: "[]"
+        return try {
+            val type = object : TypeToken<MutableList<String>>() {}.type
+            gson.fromJson(prefStr, type) ?: mutableListOf()
+        } catch (e: Exception) {
+            mutableListOf()
         }
-        strArray.addAll(defRsc)
-        return strArray.distinct()
+    }
+
+    fun getSuggestList(prefKey: String, defRscId: Int): List<String> {
+        val storedList = getStoredList(prefKey)
+        val defRsc = context.resources.getStringArray(defRscId).toList()
+        return (storedList + defRsc).distinct()
     }
 
     fun saveSuggestList(prefKey: String, defRscId: Int, newValue: String) {
         if (newValue.isEmpty()) return
-        val prefstr = sharedPreferences.getString(prefKey, "[]") ?: "[]"
-        val strArray = mutableListOf<String>()
-        val defRsc = context.resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
-        }
-
-        if (strArray.contains(newValue)) {
-            strArray.remove(newValue)
-        }
-        strArray.add(0, newValue)
-        strArray.addAll(defRsc)
-
-        val result = JSONArray(strArray.distinct())
-        sharedPreferences.edit { putString(prefKey, result.toString()) }
+        val storedList = getStoredList(prefKey)
+        
+        storedList.remove(newValue)
+        storedList.add(0, newValue)
+        
+        val defRsc = context.resources.getStringArray(defRscId).toList()
+        val result = (storedList + defRsc).distinct()
+        
+        sharedPreferences.edit { putString(prefKey, gson.toJson(result)) }
     }
 
     fun saveSuggestList(prefKey: String, defRscId: Int, newValues: Array<String>) {
-        val prefstr = sharedPreferences.getString(prefKey, "[]") ?: "[]"
-        val strArray = mutableListOf<String>()
-        val defRsc = context.resources.getStringArray(defRscId)
-        try {
-            val array = JSONArray(prefstr)
-            for (i in 0 until array.length()) {
-                strArray.add(array.getString(i))
-            }
-        } catch (e: JSONException) {
-        }
+        val storedList = getStoredList(prefKey)
 
         for (item in newValues) {
             if (item.isEmpty()) continue
-            if (strArray.contains(item)) {
-                strArray.remove(item)
-            }
-            strArray.add(0, item)
+            storedList.remove(item)
+            storedList.add(0, item)
         }
-        strArray.addAll(defRsc)
+        
+        val defRsc = context.resources.getStringArray(defRscId).toList()
+        val result = (storedList + defRsc).distinct()
+        
+        sharedPreferences.edit { putString(prefKey, gson.toJson(result)) }
+    }
 
-        val result = JSONArray(strArray.distinct())
-        sharedPreferences.edit { putString(prefKey, result.toString()) }
+    private fun getStoredMap(parentKey: String): MutableMap<String, List<String>> {
+        val prefStr = sharedPreferences.getString(parentKey, "{}") ?: "{}"
+        return try {
+            val type = object : TypeToken<MutableMap<String, List<String>>>() {}.type
+            gson.fromJson(prefStr, type) ?: mutableMapOf()
+        } catch (e: Exception) {
+            mutableMapOf()
+        }
     }
 
     fun getSuggestListSub(parentKey: String, subKey: String): List<String> {
-        val prefstr = sharedPreferences.getString(parentKey, "{}") ?: "{}"
-        val strArray = mutableListOf<String>()
-        try {
-            val obj = JSONObject(prefstr)
-            if (!obj.isNull(subKey)) {
-                val array = obj.getJSONArray(subKey)
-                for (i in 0 until array.length()) {
-                    strArray.add(array.getString(i))
-                }
-            }
-        } catch (e: JSONException) {
-        }
-        return strArray
+        return getStoredMap(parentKey)[subKey] ?: emptyList()
     }
 
     fun saveSuggestListSub(parentKey: String, subKey: String, newValue: String) {
         if (newValue.isEmpty() || subKey.isEmpty()) return
-        val prefstr = sharedPreferences.getString(parentKey, "{}") ?: "{}"
-        val strArray = mutableListOf<String>()
-        var obj: JSONObject
-        try {
-            obj = JSONObject(prefstr)
-            if (!obj.isNull(subKey)) {
-                val array = obj.getJSONArray(subKey)
-                for (i in 0 until array.length()) {
-                    strArray.add(array.getString(i))
-                }
-            }
-        } catch (e: JSONException) {
-            obj = JSONObject()
-        }
-
-        if (strArray.contains(newValue)) {
-            strArray.remove(newValue)
-        }
-        strArray.add(0, newValue)
-
-        try {
-            obj.put(subKey, JSONArray(strArray.distinct()))
-            sharedPreferences.edit { putString(parentKey, obj.toString()) }
-        } catch (e: JSONException) {
-        }
+        
+        val map = getStoredMap(parentKey)
+        val list = map[subKey]?.toMutableList() ?: mutableListOf()
+        
+        list.remove(newValue)
+        list.add(0, newValue)
+        
+        map[subKey] = list.distinct()
+        sharedPreferences.edit { putString(parentKey, gson.toJson(map)) }
     }
 
     fun saveSuggestListSub(parentKey: String, subKey: String, values: List<String>) {
-        val prefstr = sharedPreferences.getString(parentKey, "{}") ?: "{}"
-        var obj: JSONObject
-        try {
-            obj = JSONObject(prefstr)
-        } catch (e: JSONException) {
-            obj = JSONObject()
-        }
-
-        try {
-            obj.put(subKey, JSONArray(values))
-            sharedPreferences.edit { putString(parentKey, obj.toString()) }
-        } catch (e: JSONException) {
-        }
+        val map = getStoredMap(parentKey)
+        map[subKey] = values
+        sharedPreferences.edit { putString(parentKey, gson.toJson(map)) }
     }
 }
