@@ -287,7 +287,7 @@ fun EditPhotoListScreen(
         val photo = showOpDialog!!
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showOpDialog = null },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.app_name)) },
             text = {
                 Column {
@@ -300,7 +300,6 @@ fun EditPhotoListScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    showOpDialog = null
                                     when (index) {
                                         0 -> onDeletePhoto(photo)
                                         1 -> onAddPhotoSameIndex(photo)
@@ -322,7 +321,7 @@ fun EditPhotoListScreen(
         var input by remember { mutableStateOf((photo.frameIndex + 1).toString()) }
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showIndexDialog = null },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.title_dialog_edit_index)) },
             text = {
                 ClassicTextField(
@@ -334,7 +333,6 @@ fun EditPhotoListScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    showIndexDialog = null
                     val newIndex = (input.toIntOrNull() ?: 1) - 1
                     if (newIndex >= 0 && photo.frameIndex != newIndex) {
                         onUpdatePhotoIndex(photo, newIndex)
@@ -344,7 +342,7 @@ fun EditPhotoListScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showIndexDialog = null }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(android.R.string.cancel))
                 }
             }
@@ -357,7 +355,7 @@ fun EditPhotoListScreen(
         val downshiftLimit = possibleDownShiftLimit(photo)
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showShiftDialog = null },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.title_dialog_shift_index)) },
             text = {
                 Column {
@@ -372,7 +370,6 @@ fun EditPhotoListScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    showShiftDialog = null
                     val newIndex = (input.toIntOrNull() ?: 1) - 1
                     if (newIndex >= downshiftLimit && photo.frameIndex != newIndex) {
                         onShiftPhotoIndex(photo, newIndex - photo.frameIndex)
@@ -382,7 +379,7 @@ fun EditPhotoListScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showShiftDialog = null }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(android.R.string.cancel))
                 }
             }
