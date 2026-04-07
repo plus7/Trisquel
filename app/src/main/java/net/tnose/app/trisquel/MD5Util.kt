@@ -14,7 +14,7 @@ class MD5Util {
                 if(n > 0) md5digest.update(buffer, 0, n)
             }while (n > 0)
             val md5bytes = md5digest.digest()
-            return md5bytes.map { it ->
+            return md5bytes.map {
                 if(it in 1..15) "0" + Integer.toHexString(it.toInt().and(0xFF))
                 else Integer.toHexString(it.toInt().and(0xFF))
             }.joinToString("")

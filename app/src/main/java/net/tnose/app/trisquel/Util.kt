@@ -11,7 +11,7 @@ import java.util.Date
 
 class Util {
 
-    inner class ZoomRange {
+    class ZoomRange {
         private var wideEnd: Int = 0
         private var teleEnd: Int = 0
 

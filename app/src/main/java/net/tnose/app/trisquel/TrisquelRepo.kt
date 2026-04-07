@@ -381,8 +381,7 @@ class TrisquelRepo(private val application: Application) {
         val cval = ContentValues()
         obj.keys().forEach { key ->
             if (key != "_id") {
-                val value = obj.get(key)
-                when (value) {
+                when (val value = obj.get(key)) {
                     is Int -> cval.put(key, value)
                     is Double -> cval.put(key, value)
                     is String -> cval.put(key, value)
@@ -402,8 +401,7 @@ class TrisquelRepo(private val application: Application) {
             if (key != "_id") {
                 if (key == "body") cval.put("body", cameraOld2NewId[obj.getInt(key)])
                 else {
-                    val value = obj.get(key)
-                    when (value) {
+                    when (val value = obj.get(key)) {
                         is Int -> cval.put(key, value)
                         is Double -> cval.put(key, value)
                         is String -> cval.put(key, value)
@@ -422,8 +420,7 @@ class TrisquelRepo(private val application: Application) {
         val cval = ContentValues()
         obj.keys().forEach { key ->
             if (key != "_id") {
-                val value = obj.get(key)
-                when (value) {
+                when (val value = obj.get(key)) {
                     is Int -> cval.put(key, value)
                     is Double -> cval.put(key, value)
                     is String -> cval.put(key, value)
@@ -443,8 +440,7 @@ class TrisquelRepo(private val application: Application) {
             if (key != "_id") {
                 if (key == "camera") cval.put("camera", cameraOld2NewId[obj.getInt(key)])
                 else {
-                    val value = obj.get(key)
-                    when (value) {
+                    when (val value = obj.get(key)) {
                         is Int -> cval.put(key, value)
                         is Double -> cval.put(key, value)
                         is String -> cval.put(key, value)
@@ -491,8 +487,7 @@ class TrisquelRepo(private val application: Application) {
                     }
                     else -> {
                         if (!key.startsWith("suppimgs_")) {
-                            val value = obj.get(key)
-                            when (value) {
+                            when (val value = obj.get(key)) {
                                 is Int -> cval.put(key, value)
                                 is Double -> cval.put(key, value)
                                 is String -> cval.put(key, value)
