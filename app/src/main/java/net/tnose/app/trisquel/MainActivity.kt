@@ -41,6 +41,8 @@ class MainActivity : AppCompatActivity() {
         const val ROUTE_SETTINGS = "settings"
         const val ROUTE_LICENSE = "license"
         const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
+        
+        val TOP_LEVEL_ROUTES = listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES, ROUTE_FAVORITES)
     }
 
     private val cameraViewModel: CameraViewModel by viewModels()
@@ -219,7 +221,7 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             TrisquelTheme {
-                MainAppScreen(mainViewModel.currentRoute)
+                MainAppScreen()
             }
         }
     }
@@ -227,7 +229,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        // Issue #55 を修正する案としてGeminiが提案してきたがこれでいいのか半信半疑
         cameraViewModel.load()
         lensViewModel.load()
 
@@ -280,16 +281,21 @@ class MainActivity : AppCompatActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun MainAppScreen(initialRoute: String) {
+    fun MainAppScreen() {
         val drawerState = androidx.compose.material3.rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         val navController = rememberNavController()
         
         val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val observedRoute = navBackStackEntry?.destination?.route ?: initialRoute
+        val observedRoute = navBackStackEntry?.destination?.route ?: mainViewModel.startRoute
+        val observedArgs = navBackStackEntry?.arguments
 
-        LaunchedEffect(observedRoute) {
+        LaunchedEffect(observedRoute, observedArgs) {
             mainViewModel.currentRoute = observedRoute
+            mainViewModel.currentArguments = observedArgs
+            if (observedRoute in TOP_LEVEL_ROUTES) {
+                mainViewModel.startRoute = observedRoute
+            }
         }
 
         TrisquelDialogManager(
@@ -302,7 +308,7 @@ class MainActivity : AppCompatActivity() {
             navController = navController,
             observedRoute = observedRoute,
             scope = scope,
-            gesturesEnabled = mainViewModel.currentRoute in listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES, ROUTE_FAVORITES),
+            gesturesEnabled = observedRoute in listOf(ROUTE_FILMROLLS, ROUTE_CAMERAS, ROUTE_LENSES, ROUTE_ACCESSORIES, ROUTE_FAVORITES),
             onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
             onBackupClick = {
                 mainViewModel.showDialog(ActiveDialog.RichSelection(
@@ -394,7 +400,7 @@ class MainActivity : AppCompatActivity() {
 
             TrisquelNavHost(
                 navController = navController,
-                initialRoute = initialRoute,
+                initialRoute = mainViewModel.startRoute,
                 modifier = Modifier,
                 mainTopBar = mainTopBar,
                 mainViewModel = mainViewModel,
