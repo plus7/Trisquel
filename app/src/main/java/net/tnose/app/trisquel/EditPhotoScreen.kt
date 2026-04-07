@@ -89,9 +89,10 @@ import com.zhihu.matisse.internal.entity.CaptureStrategy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.TimeZone
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun CheckListDialog(
@@ -403,24 +404,23 @@ fun EditPhotoScreen(
 
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     if (showDatePicker) {
-        val sdf = SimpleDateFormat("yyyy/MM/dd")
+        val formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd")
         val initialDateMillis = try {
-            val d = sdf.parse(uiState.date)
-            d?.time ?: System.currentTimeMillis()
+            val localDate = LocalDate.parse(uiState.date, formatter)
+            localDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
         } catch (e: Exception) {
             System.currentTimeMillis()
         }
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = initialDateMillis + TimeZone.getDefault().getOffset(initialDateMillis)
+            initialSelectedDateMillis = initialDateMillis
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        val c = Calendar.getInstance()
-                        c.timeInMillis = millis - TimeZone.getDefault().getOffset(millis)
-                        onDateChange(sdf.format(c.time))
+                        val localDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
+                        onDateChange(localDate.format(formatter))
                     }
                     showDatePicker = false
                 }) {

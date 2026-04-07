@@ -14,8 +14,8 @@ import androidx.work.workDataOf
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class DbConvWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     private val repo = TrisquelRepo(ctx as android.app.Application)
@@ -61,12 +61,10 @@ class DbConvWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     }
 
     // DB変換前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
-    @SuppressLint("SimpleDateFormat")
     fun backupDBBeforeConvert(){
         val dbpath = applicationContext.getDatabasePath("trisquel.db")
-        val calendar = Calendar.getInstance()
-        val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-        val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+        val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+        val backupPath = dbpath.absolutePath + "." + LocalDateTime.now().format(formatter) + ".bak"
 
         val fos = FileOutputStream(backupPath)
         val fis = FileInputStream(dbpath)

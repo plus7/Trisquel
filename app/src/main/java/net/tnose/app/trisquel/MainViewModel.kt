@@ -2,7 +2,6 @@ package net.tnose.app.trisquel
 
 import android.app.Application
 import android.net.Uri
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,7 +15,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
 
@@ -173,9 +173,8 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
             viewModelScope.launch { _events.emit(MainEvent.RequestExportPermissions(mode)) }
             return
         }
-        val calendar = Calendar.getInstance()
-        val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
-        val backupZipFileName = "trisquel-" + sdf.format(calendar.time) + ".zip"
+        val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss", Locale.US)
+        val backupZipFileName = "trisquel-" + LocalDateTime.now().format(formatter) + ".zip"
         viewModelScope.launch { _events.emit(MainEvent.LaunchExportDocumentTree(mode, backupZipFileName)) }
     }
 
@@ -325,9 +324,8 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
             return@launch
         }
 
-        val calendar = Calendar.getInstance()
-        val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
-        val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+        val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss", Locale.US)
+        val backupPath = dbpath.absolutePath + "." + LocalDateTime.now().format(formatter) + ".bak"
 
         if (dbpath.exists()) {
             java.io.FileInputStream(dbpath).use { fis ->

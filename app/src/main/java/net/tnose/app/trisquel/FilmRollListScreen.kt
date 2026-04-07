@@ -18,34 +18,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
-import java.text.ParseException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.TimeZone
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 fun getDateRange(dates: List<String>): String {
     if (dates.isEmpty()) return ""
 
-    var minDate = Date(Long.MAX_VALUE)
-    var maxDate = Date(0)
-    val sdf = SimpleDateFormat("yyyy/MM/dd")
-    sdf.timeZone = TimeZone.getTimeZone("UTC")
+    val formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd").withZone(ZoneOffset.UTC)
+    var minDate: LocalDate? = null
+    var maxDate: LocalDate? = null
 
     for (date in dates) {
-        var d = Date(0)
         try {
-            d = sdf.parse(date) ?: Date(0)
-        } catch (e: ParseException) {
+            val d = LocalDate.parse(date, formatter)
+            if (minDate == null || d.isBefore(minDate)) minDate = d
+            if (maxDate == null || d.isAfter(maxDate)) maxDate = d
+        } catch (e: DateTimeParseException) {
         }
-
-        if (minDate.after(d)) minDate = d
-        if (maxDate.before(d)) maxDate = d
     }
 
+    if (minDate == null || maxDate == null) return ""
+
     return if (minDate == maxDate) {
-        sdf.format(minDate)
+        minDate.format(formatter)
     } else {
-        sdf.format(minDate) + "-" + sdf.format(maxDate)
+        "${minDate.format(formatter)}-${maxDate.format(formatter)}"
     }
 }
 

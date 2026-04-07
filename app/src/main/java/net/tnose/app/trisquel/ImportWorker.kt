@@ -34,8 +34,8 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.coroutines.cancellation.CancellationException
 
 class VersionUnmatchException : Exception()
@@ -459,12 +459,10 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         return Pair(result, importErrors.joinToString("\n"))
     }
     // インポート前に現在のDBを念の為アプリ内ローカルの領域にコピーしておく
-    @SuppressLint("SimpleDateFormat")
     private fun backupDBBeforeImport(){
         val dbpath = applicationContext.getDatabasePath("trisquel.db")
-        val calendar = Calendar.getInstance()
-        val sdf = SimpleDateFormat("yyyyMMddHHmmss")
-        val backupPath = dbpath.absolutePath + "." + sdf.format(calendar.time) + ".bak"
+        val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+        val backupPath = dbpath.absolutePath + "." + LocalDateTime.now().format(formatter) + ".bak"
 
         val fos = FileOutputStream(backupPath)
         val fis = FileInputStream(dbpath)

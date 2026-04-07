@@ -1,9 +1,10 @@
 package net.tnose.app.trisquel
 
-import java.text.ParseException
-import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Date
-import java.util.TimeZone
 
 /**
  * Created by user on 2018/01/13.
@@ -34,33 +35,27 @@ class FilmRoll {
 
     val dateRange: String
         get() {
-            if (photos.size == 0) return ""
+            if (photos.isEmpty()) return ""
 
-            var minDate = Date(java.lang.Long.MAX_VALUE)
-            var maxDate = Date(0)
-            val sdf = SimpleDateFormat("yyyy/MM/dd")
-            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            val formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd").withZone(ZoneOffset.UTC)
+            var minDate: LocalDate? = null
+            var maxDate: LocalDate? = null
 
             for (p in photos) {
-                var d = Date(0)
                 try {
-                    d = sdf.parse(p.date)
-                } catch (e: ParseException) {
-
-                }
-
-                if (minDate.after(d)) {
-                    minDate = d
-                }
-                if (maxDate.before(d)) {
-                    maxDate = d
+                    val d = LocalDate.parse(p.date, formatter)
+                    if (minDate == null || d.isBefore(minDate)) minDate = d
+                    if (maxDate == null || d.isAfter(maxDate)) maxDate = d
+                } catch (e: DateTimeParseException) {
                 }
             }
 
+            if (minDate == null || maxDate == null) return ""
+
             return if (minDate == maxDate) {
-                sdf.format(minDate)
+                minDate.format(formatter)
             } else {
-                sdf.format(minDate) + "-" + sdf.format(maxDate)
+                "${minDate.format(formatter)}-${maxDate.format(formatter)}"
             }
         }
     val exposures: Int
@@ -130,18 +125,5 @@ class FilmRoll {
                 fEntity.manufacturer, fEntity.brand,
                 fEntity.iso.toInt(), 0, ArrayList())// pEntities)
         }
-        /*
-        internal fun fromEntity(fEntity : FilmrollEntity, cEntity: CameraEntity) : FilmRoll {
-
-            return FilmRoll(fEntity.id, fEntity.created, fEntity.lastModified,
-                CameraSpec.fromEntity(cEntity), fEntity.manufacturer, fEntity.brand,
-                fEntity.iso, 0)
-        }
-        */
-        /*
-        internal fun fromEntity(fentity : FilmrollEntity, pentities : List<PhotoEntity>) : FilmRoll {
-        }
-
-         */
     }
 }

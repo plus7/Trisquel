@@ -4,10 +4,10 @@ package net.tnose.app.trisquel
  * Created by user on 2018/02/09.
  */
 
-import java.text.ParseException
-import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Date
-import java.util.TimeZone
 
 sealed class Optional<T>
 data class Some<T>(val value: T) : Optional<T>()
@@ -89,28 +89,19 @@ class Util {
             return focalLength.indexOf("-") >= 0
         }
 
-        private val sdf = SimpleDateFormat("yyyy/MM/dd HH:mm:ss:SSS")
-        private var sdf_inited = false
+        private val formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss:SSS")
 
         internal fun stringToDateUTC(s: String): Date {
-            if(!sdf_inited){
-                sdf.timeZone = TimeZone.getTimeZone("UTC")
-                sdf_inited = true
+            return try {
+                val ldt = LocalDateTime.parse(s, formatter)
+                Date.from(ldt.atZone(ZoneId.of("UTC")).toInstant())
+            } catch (e: Exception) {
+                Date(0)
             }
-            try {
-                return sdf.parse(s)
-            } catch (e: ParseException) {
-                return Date(0)
-            }
-
         }
 
         internal fun dateToStringUTC(d: Date): String {
-            if(!sdf_inited){
-                sdf.timeZone = TimeZone.getTimeZone("UTC")
-                sdf_inited = true
-            }
-            return sdf.format(d)
+            return formatter.format(d.toInstant().atZone(ZoneId.of("UTC")))
         }
     }
 }

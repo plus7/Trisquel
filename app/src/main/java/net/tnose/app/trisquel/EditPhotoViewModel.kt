@@ -17,9 +17,8 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.TimeZone
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 sealed class EditPhotoEvent {
     data class ShowToast(val message: String) : EditPhotoEvent()
@@ -145,9 +144,8 @@ class EditPhotoViewModel(
             allTags = allTagsDb.map { it.label }
             tagCheckedStates = allTagsDb.map { t -> tagAndTagMaps.any { it.tag?.id == t.id } }
         } else {
-            val calendar = Calendar.getInstance()
-            val sdf = SimpleDateFormat("yyyy/MM/dd")
-            date = sdf.format(calendar.time)
+            val formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd")
+            date = LocalDate.now().format(formatter)
 
             if (camera.type == 1) {
                 lensId = repo.getLensByFixedBody(camera.id)?.id ?: -1
