@@ -24,8 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -58,10 +56,10 @@ class MainActivity : AppCompatActivity() {
         const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
     }
 
-    private lateinit var cameraViewModel: CameraViewModel
-    private lateinit var lensViewModel: LensViewModel
-    private lateinit var accessoryViewModel: AccessoryViewModel
-    private lateinit var filmRollViewModel: FilmRollViewModel
+    private val cameraViewModel: CameraViewModel by viewModels()
+    private val lensViewModel: LensViewModel by viewModels()
+    private val accessoryViewModel: AccessoryViewModel by viewModels()
+    private val filmRollViewModel: FilmRollViewModel by viewModels()
 
     private val mainViewModel: MainViewModel by viewModels()
     private lateinit var userPreferencesRepository: UserPreferencesRepository
@@ -142,11 +140,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         userPreferencesRepository = UserPreferencesRepository(this)
         
-        cameraViewModel = ViewModelProvider(this)[CameraViewModel::class.java]
-        lensViewModel = ViewModelProvider(this)[LensViewModel::class.java]
-        accessoryViewModel = ViewModelProvider(this)[AccessoryViewModel::class.java]
-        filmRollViewModel = ViewModelProvider(this)[FilmRollViewModel::class.java]
-
         lifecycleScope.launch {
             mainViewModel.events.collect { event ->
                 when (event) {
