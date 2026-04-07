@@ -52,3 +52,6 @@ data class EditLensRoute(val id: Int = -1)
 
 @Serializable
 data class SearchRoute(val tags: String = "")
+
+@Serializable
+data class GalleryRoute(val initialPhotoId: Int, val photoIds: List<Int>)

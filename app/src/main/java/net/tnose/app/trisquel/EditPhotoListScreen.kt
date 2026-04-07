@@ -64,6 +64,7 @@ fun EditPhotoListRoute(
     onBack: () -> Unit,
     onNavigateToEditFilmRoll: (Int) -> Unit,
     onNavigateToEditPhoto: (Int, Int, Int) -> Unit,
+    onNavigateToGallery: (Photo, List<Photo>) -> Unit,
     viewModel: EditPhotoListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val context = LocalContext.current
@@ -160,10 +161,7 @@ fun EditPhotoListRoute(
             if (item.supplementalImages.isEmpty()) {
                 checkPermAndEditThumbPhoto(item)
             } else {
-                val intent = Intent(context, GalleryActivity::class.java)
-                intent.putExtra("photo", item)
-                intent.putParcelableArrayListExtra("favList", ArrayList(photos.map { Photo.fromEntity(it.second.photo) }))
-                context.startActivity(intent)
+                onNavigateToGallery(item, photos.map { Photo.fromEntity(it.second.photo) })
             }
         },
         onFavoriteClick = { viewModel.toggleFavPhoto(it) },

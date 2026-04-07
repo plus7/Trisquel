@@ -197,13 +197,6 @@ class MainActivity : AppCompatActivity() {
         return !(readDenied || mediaLocDenied || notificationDenied)
     }
 
-    fun onPhotoInteraction(item: Photo?, list: List<Photo?>) {
-        val intent = Intent(application, GalleryActivity::class.java)
-        intent.putExtra("photo", item)
-        intent.putParcelableArrayListExtra("favList", ArrayList(list))
-        startActivity(intent)
-    }
-
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainAppScreen() {
@@ -385,7 +378,11 @@ class MainActivity : AppCompatActivity() {
                 onCameraDeleteRequest = { cameraViewModel.requestDeleteCamera(it) },
                 onLensDeleteRequest = { lensViewModel.requestDeleteLens(it) },
                 onAccessoryDeleteRequest = { accessoryViewModel.requestDeleteAccessory(it) },
-                onPhotoInteraction = { photo, list -> onPhotoInteraction(photo, list) }
+                onPhotoInteraction = { photo, list ->
+                    if (photo != null) {
+                        navController.navigate(GalleryRoute(initialPhotoId = photo.id, photoIds = list.mapNotNull { it?.id }))
+                    }
+                }
             )
         }
     }

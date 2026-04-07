@@ -58,10 +58,6 @@
             android:name=".PrintPreviewActivity"
             android:label="@string/title_activity_print_preview"
             android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name=".GalleryActivity"
-            android:label="@string/title_activity_gallery"
-            android:theme="@style/AppTheme.NoActionBar" />
 
 
         <meta-data

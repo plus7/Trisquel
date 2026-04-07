@@ -318,6 +318,9 @@ fun TrisquelNavHost(
                 onNavigateToEditFilmRoll = { frId -> navController.navigate(EditFilmRollRoute(id = frId)) },
                 onNavigateToEditPhoto = { frId, pId, fIdx -> 
                     navController.navigate(EditPhotoRoute(filmroll = frId, id = pId, frameIndex = fIdx))
+                },
+                onNavigateToGallery = { photo, list ->
+                    onPhotoInteraction(photo, list)
                 }
             )
         }
@@ -358,6 +361,33 @@ fun TrisquelNavHost(
                 },
                 mainViewModel = mainViewModel
             )
+        }
+        composable<GalleryRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<GalleryRoute>()
+            val initialPhotoId = route.initialPhotoId
+            val photoIds = route.photoIds
+            
+            var initialPhoto by remember { mutableStateOf<Photo?>(null) }
+            var photoList by remember { mutableStateOf<List<Photo>?>(null) }
+            
+            LaunchedEffect(initialPhotoId, photoIds) {
+                withContext(Dispatchers.IO) {
+                    val list = photoIds.mapNotNull { id ->
+                        repo.getPhoto(id)?.let { Photo.fromEntity(it) }
+                    }
+                    val initial = list.find { it.id == initialPhotoId }
+                    withContext(Dispatchers.Main) {
+                        photoList = list
+                        initialPhoto = initial
+                    }
+                }
+            }
+            
+            if (initialPhoto != null && photoList != null) {
+                GalleryScreen(initialPhoto = initialPhoto!!, favList = photoList!!)
+            } else {
+                Box(Modifier.fillMaxSize().background(Color.Black))
+            }
         }
     }
 }
