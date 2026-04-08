@@ -23,7 +23,7 @@ class UserPreferencesRepository(private val context: Context) {
             val type = object : TypeToken<List<PinnedFilterItem>>() {}.type
             val list: List<PinnedFilterItem>? = gson.fromJson(prefStr, type)
             ArrayList(list?.map { Pair(it.type, it.values) } ?: emptyList())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             ArrayList()
         }
     }
@@ -104,7 +104,7 @@ class UserPreferencesRepository(private val context: Context) {
         return try {
             val type = object : TypeToken<MutableList<String>>() {}.type
             gson.fromJson(prefStr, type) ?: mutableListOf()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             mutableListOf()
         }
     }
@@ -148,7 +148,7 @@ class UserPreferencesRepository(private val context: Context) {
         return try {
             val type = object : TypeToken<MutableMap<String, List<String>>>() {}.type
             gson.fromJson(prefStr, type) ?: mutableMapOf()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             mutableMapOf()
         }
     }

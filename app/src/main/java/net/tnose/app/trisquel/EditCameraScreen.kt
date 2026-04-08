@@ -448,11 +448,10 @@ fun EditCameraScreen(
     if (showSaveDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showSaveDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
             confirmButton = {
                 TextButton(onClick = {
-                    showSaveDialog = false
                     onSave(manufacturer, mount, model, format, fastestSs, slowestSs, bulbAvailable, ssCustomSteps, ssGrainSize, evGrainSize, evWidth, lensName, focalLength, fSteps)
                 }) {
                     Text(stringResource(R.string.save))
@@ -460,7 +459,6 @@ fun EditCameraScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showSaveDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -472,16 +470,15 @@ fun EditCameraScreen(
     if (showDiscardDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showDiscardDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(R.string.continue_editing))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showDiscardDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -506,11 +503,9 @@ fun EditCameraScreen(
                 ssCustomSteps = list
                 previousCheckedSsSteps = 0
                 isDirty = true
-                showCustomSsDialog = false
             },
             onDismiss = {
                 ssGrainSize = previousCheckedSsSteps
-                showCustomSsDialog = false
             }
         )
     }
@@ -684,9 +679,6 @@ fun EditCameraScreen(
                             modifier = Modifier
                                 .clickable {
                                     if (value == 0) {
-                                        if (previousCheckedSsSteps != 0) {
-                                            showCustomSsDialog = true
-                                        }
                                         ssGrainSize = value
                                     } else {
                                         ssGrainSize = value

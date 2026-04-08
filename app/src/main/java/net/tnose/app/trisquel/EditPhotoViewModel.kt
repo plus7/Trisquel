@@ -113,8 +113,8 @@ class EditPhotoViewModel(
             ssval <= (camera.slowestShutterSpeed ?: 999.0) && ssval >= (camera.fastestShutterSpeed ?: 0.0)
         }
 
-        var lensId = -1
-        var date = ""
+        var lensId: Int
+        var date: String
         var latitude = 999.0
         var longitude = 999.0
         var accessories: List<Int> = emptyList()
@@ -127,8 +127,8 @@ class EditPhotoViewModel(
         var focalLengthProgress = 0
         var favorite = false
         var supplementalImages: List<String> = emptyList()
-        var allTags: List<String> = emptyList()
-        var tagCheckedStates: List<Boolean> = emptyList()
+        var allTags: List<String>
+        var tagCheckedStates: List<Boolean>
 
         if (photoEntity != null) {
             val photo = Photo.fromEntity(photoEntity)

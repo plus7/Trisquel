@@ -140,16 +140,18 @@ fun TrisquelTopAppBar(
                     DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
                         val pinnedFilters = getPinnedFilters()
                         val isPinned = pinnedFilters.any { it.first == currentFilter.first && it.second.containsAll(currentFilter.second) }
-                        if (currentFilter.first != 0 && !isPinned) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_pin_current_filter)) },
-                                onClick = { onPinFilterClick(); showOverflowMenu = false }
-                            )
-                        } else if (currentFilter.first != 0 && isPinned) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_unpin_current_filter)) },
-                                onClick = { onUnpinFilterClick(); showOverflowMenu = false }
-                            )
+                        if (currentFilter.first != 0) {
+                            if(!isPinned) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_pin_current_filter)) },
+                                    onClick = { onPinFilterClick(); showOverflowMenu = false }
+                                )
+                            }else{
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_unpin_current_filter)) },
+                                    onClick = { onUnpinFilterClick(); showOverflowMenu = false }
+                                )
+                            }
                         }
                     }
                 }

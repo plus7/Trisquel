@@ -260,6 +260,8 @@ interface TrisquelDao2 {
     @Query("SELECT * from photo where favorite = 1 order by date desc")
     suspend fun getAllFavedPhotosRaw(): List<PhotoEntity>
 
+    // suppImgは生の絶対パスが入っているが、これはAndroid11では使えなくなるので、content://に変換する必要がある
+    // ["/path/to/file"] となっているものは変換する必要がある。先頭の ["\/ で判定可能。
     @Query("SELECT * from photo where suppimgs like '[\"\\/' || '%'")
     suspend fun getPhotos4Conversion(): List<PhotoEntity>
 
@@ -587,8 +589,6 @@ open class DatabaseHelper(context: Context?){ //} : SQLiteOpenHelper(context, DA
     }*/
 
     companion object {
-        internal val DATABASE_NAME = "trisquel.db"
-
         internal val DATABASE_VERSION = 18
     }
 }

@@ -44,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.util.regex.Pattern
@@ -123,11 +122,10 @@ fun EditLensScreen(
     if (showSaveDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showSaveDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
             confirmButton = {
                 TextButton(onClick = {
-                    showSaveDialog = false
                     onSave()
                 }) {
                     Text(stringResource(R.string.save))
@@ -135,7 +133,6 @@ fun EditLensScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showSaveDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -147,16 +144,15 @@ fun EditLensScreen(
     if (showDiscardDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showDiscardDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(R.string.continue_editing))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showDiscardDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))

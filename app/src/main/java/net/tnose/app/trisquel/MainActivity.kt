@@ -36,9 +36,6 @@ class MainActivity : AppCompatActivity() {
         const val ROUTE_CAMERAS = "cameras"
         const val ROUTE_LENSES = "lenses"
         const val ROUTE_ACCESSORIES = "accessories"
-        const val ROUTE_FAVORITES = "favorites"
-        const val ROUTE_SETTINGS = "settings"
-        const val ROUTE_LICENSE = "license"
         const val RELEASE_NOTES_URL = "https://x.com/trisquel_app"
     }
 

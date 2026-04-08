@@ -2,17 +2,13 @@ package net.tnose.app.trisquel
 
 import android.app.Application
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,12 +21,10 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,11 +37,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -59,14 +51,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
-import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.core.os.BundleCompat
-import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 import java.util.regex.Pattern
 
 class EditFilmRollViewModel(
@@ -271,11 +258,10 @@ fun EditFilmRollScreen(
     if (showSaveDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showSaveDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
             confirmButton = {
                 TextButton(onClick = {
-                    showSaveDialog = false
                     onSave(name, cameraId, manufacturer, brand, iso)
                 }) {
                     Text(stringResource(R.string.save))
@@ -283,7 +269,6 @@ fun EditFilmRollScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showSaveDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -295,16 +280,15 @@ fun EditFilmRollScreen(
     if (showDiscardDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showDiscardDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(R.string.continue_editing))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showDiscardDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -315,19 +299,18 @@ fun EditFilmRollScreen(
 
     if (showAskCreateCameraDialog) {
         AlertDialog(
-            onDismissRequest = { showAskCreateCameraDialog = false },
+            onDismissRequest = {  },
             title = null,
             text = { Text(stringResource(R.string.msg_ask_create_camera)) },
             confirmButton = {
                 TextButton(onClick = {
-                    showAskCreateCameraDialog = false
                     onAddCamera()
                 }) {
                     Text(stringResource(android.R.string.yes))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAskCreateCameraDialog = false }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(android.R.string.no))
                 }
             }
@@ -383,9 +366,7 @@ fun EditFilmRollScreen(
             ExposedDropdownMenuBox(
                 expanded = expandedCamera,
                 onExpandedChange = { 
-                    if (cameras.isEmpty()) {
-                        showAskCreateCameraDialog = true
-                    } else {
+                    if (!cameras.isEmpty()) {
                         expandedCamera = it
                     }
                 }

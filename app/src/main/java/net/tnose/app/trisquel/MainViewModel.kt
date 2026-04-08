@@ -46,7 +46,7 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
 
     private val _currentFilter = mutableStateOf(Pair(
         savedStateHandle.get<Int>("filter_type") ?: 0,
-        savedStateHandle.get<ArrayList<String>>("filter_value") ?: arrayListOf<String>()
+        savedStateHandle.get<ArrayList<String>>("filter_value") ?: arrayListOf()
     ))
     var currentFilter: Pair<Int, ArrayList<String>>
         get() = _currentFilter.value
@@ -90,7 +90,7 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
     init {
         viewModelScope.launch {
             workManager.getWorkInfosByTagFlow(Util.WORKER_TAG_EXPORT).collect { listOfWorkInfo ->
-                if (listOfWorkInfo.isNullOrEmpty()) return@collect
+                if (listOfWorkInfo.isEmpty()) return@collect
                 val workInfo = listOfWorkInfo[0]
                 if (workInfo.state.isFinished) {
                     var status = workInfo.outputData.getString(ExportWorker.PARAM_STATUS) ?: ""
@@ -112,7 +112,7 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
         
         viewModelScope.launch {
             workManager.getWorkInfosByTagFlow(Util.WORKER_TAG_IMPORT).collect { listOfWorkInfo ->
-                if (listOfWorkInfo.isNullOrEmpty()) return@collect
+                if (listOfWorkInfo.isEmpty()) return@collect
                 val workInfo = listOfWorkInfo[0]
                 if (workInfo.state.isFinished) {
                     var status = workInfo.outputData.getString(ImportWorker.PARAM_STATUS) ?: ""
@@ -134,7 +134,7 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
 
         viewModelScope.launch {
             workManager.getWorkInfosByTagFlow(Util.WORKER_TAG_DBCONV).collect { listOfWorkInfo ->
-                if (listOfWorkInfo.isNullOrEmpty()) return@collect
+                if (listOfWorkInfo.isEmpty()) return@collect
                 val workInfo = listOfWorkInfo[0]
                 if (workInfo.state.isFinished) {
                     val status = workInfo.outputData.getString(DbConvWorker.PARAM_STATUS) ?: ""
@@ -310,7 +310,7 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
                 _events.emit(MainEvent.RestoreDatabaseResult(false))
                 return@launch
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             _events.emit(MainEvent.RestoreDatabaseResult(false))
             return@launch
         }

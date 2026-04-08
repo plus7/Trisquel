@@ -338,15 +338,15 @@ fun EditPhotoScreen(
     if (showSaveDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showSaveDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = { showSaveDialog = false; onSave() }) {
+                TextButton(onClick = { onSave() }) {
                     Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false; onCancel() }) {
+                TextButton(onClick = { onCancel() }) {
                     Text(stringResource(R.string.discard))
                 }
             }
@@ -356,15 +356,15 @@ fun EditPhotoScreen(
     if (showDiscardDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showDiscardDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(R.string.continue_editing))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDiscardDialog = false; onCancel() }) {
+                TextButton(onClick = { onCancel() }) {
                     Text(stringResource(R.string.discard))
                 }
             }
@@ -373,19 +373,18 @@ fun EditPhotoScreen(
 
     if (showAskCreateLensDialog) {
         AlertDialog(
-            onDismissRequest = { showAskCreateLensDialog = false },
+            onDismissRequest = {  },
             title = null,
             text = { Text(stringResource(R.string.msg_ask_create_lens)) },
             confirmButton = {
                 TextButton(onClick = {
-                    showAskCreateLensDialog = false
                     onNavigateToEditLens()
                 }) {
                     Text(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAskCreateLensDialog = false }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(android.R.string.cancel))
                 }
             }
@@ -398,27 +397,26 @@ fun EditPhotoScreen(
         val initialDateMillis = try {
             val localDate = LocalDate.parse(uiState.date, formatter)
             localDate.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             System.currentTimeMillis()
         }
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = initialDateMillis
         )
         DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
+            onDismissRequest = {  },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
                         val localDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
                         onDateChange(localDate.format(formatter))
                     }
-                    showDatePicker = false
                 }) {
                     Text(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(android.R.string.cancel))
                 }
             }
@@ -443,10 +441,9 @@ fun EditPhotoScreen(
                 if (uiState.selectedAccessories.contains(accessory.id)) index else null
             },
             onConfirm = { checkedIndices ->
-                showAccessoryDialog = false
                 onAccessoriesChange(checkedIndices.map { accessories[it].id })
             },
-            onDismiss = { showAccessoryDialog = false }
+            onDismiss = {  }
         )
     }
 
@@ -464,7 +461,7 @@ fun EditPhotoScreen(
             }
         }
 
-        val checkedMounts = if (mount != null) userPrefs.getSuggestListSub("mount_adapters", mount) else ArrayList<String>()
+        val checkedMounts = if (mount != null) userPrefs.getSuggestListSub("mount_adapters", mount) else ArrayList()
         val checkedIndices = checkedMounts.mapNotNull { m -> availableLensMounts.indexOf(m).let { if (it >= 0) it else null } }
 
         CheckListDialog(
@@ -472,13 +469,12 @@ fun EditPhotoScreen(
             items = availableLensMounts,
             initialCheckedIndices = checkedIndices,
             onConfirm = { checkedIndicesOutput ->
-                showMountAdaptersDialog = false
                 if (mount != null) {
                     val checkedItems = checkedIndicesOutput.map { availableLensMounts[it] }.toCollection(ArrayList())
                     onMountAdaptersChanged(mount, checkedItems)
                 }
             },
-            onDismiss = { showMountAdaptersDialog = false }
+            onDismiss = {  }
         )
     }
 
@@ -525,7 +521,7 @@ fun EditPhotoScreen(
                     label = stringResource(R.string.label_date),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
+                Spacer(modifier = Modifier.matchParentSize().clickable {  })
             }
 
             // Lens
@@ -537,9 +533,7 @@ fun EditPhotoScreen(
                 ExposedDropdownMenuBox(
                     expanded = expandedLens,
                     onExpandedChange = { 
-                        if (uiState.lensList.isEmpty()) {
-                            showAskCreateLensDialog = true
-                        } else {
+                        if (!uiState.lensList.isEmpty()) {
                             expandedLens = it 
                         }
                     },
@@ -572,7 +566,7 @@ fun EditPhotoScreen(
                 }
                 
                 IconButton(
-                    onClick = { showMountAdaptersDialog = true },
+                    onClick = { },
                     enabled = filmRoll?.camera?.type != 1
                 ) {
                     Icon(
@@ -684,7 +678,7 @@ fun EditPhotoScreen(
                     label = stringResource(R.string.label_accessories),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.matchParentSize().clickable { showAccessoryDialog = true })
+                Spacer(modifier = Modifier.matchParentSize().clickable { })
             }
 
             // Location

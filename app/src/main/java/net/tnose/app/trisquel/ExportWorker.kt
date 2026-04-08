@@ -9,7 +9,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -87,7 +86,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                         Pair(PARAM_PERCENTAGE, 100.0),
                         Pair(PARAM_STATUS, "Backup failed.")))
             }
-        } catch (error: CancellationException) {
+        } catch (_: CancellationException) {
             //Toast.makeText(applicationContext, "Backup canceled.", Toast.LENGTH_LONG).show()
             Result.failure(
                 workDataOf(
@@ -243,7 +242,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 
                     val ist2 = CompatibilityUtil.pathToInputStream(appContext.contentResolver, path, true)
                     md5str = if(ist2 != null) MD5Util.digestAsStr(ist2) else ""
-                } catch (e: Exception){}
+                } catch (_: Exception){}
                 val displayname = CompatibilityUtil.pathToDisplayName(appContext.contentResolver, path)
                 suppimgs_date_taken.put(j, datetaken)
                 suppimgs_file_name.put(j, displayname)
@@ -340,7 +339,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 percentage = doPhotoContentWrite(appContext, percentage, zos, osw, entries)
             }
             completed = true
-        } catch (e: InterruptedException){
+        } catch (_: InterruptedException){
             Log.d("EIS", "interrupted")
         } finally {
             zos.close()

@@ -66,7 +66,7 @@ class Util {
         internal fun safeStr2Dobule(s : String) : Double{
             try {
                 return s.toDouble()
-            }catch (e: NumberFormatException){
+            }catch (_: NumberFormatException){
                 return 0.0
             }
         }
@@ -91,7 +91,7 @@ class Util {
             return try {
                 val ldt = LocalDateTime.parse(s, formatter)
                 Date.from(ldt.atZone(ZoneId.of("UTC")).toInstant())
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Date(0)
             }
         }

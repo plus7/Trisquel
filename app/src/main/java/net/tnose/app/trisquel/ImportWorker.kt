@@ -1,6 +1,7 @@
 package net.tnose.app.trisquel
 
 import android.R
+import android.app.Application
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
@@ -45,10 +46,9 @@ sealed class WrappedZipFile {
     data class ApacheCCZipFile(val zf: ZipFile): WrappedZipFile()
 }
 
-class CustomImportException : Exception ("Internal backup before import failed!")
 class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     private val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    private val repo = TrisquelRepo(ctx as android.app.Application)
+    private val repo = TrisquelRepo(ctx as Application)
 
     companion object{
         val PARAM_ZIPFILE = "zipfile"
@@ -351,7 +351,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             val pfd = applicationContext.contentResolver.openFileDescriptor(uri, "r")
             if(pfd==null){ result = false }
             pfd?.close()
-        }catch(e: FileNotFoundException){
+        }catch(_: FileNotFoundException){
             result = false
         }
         return result
@@ -482,8 +482,8 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     }
 
     private suspend fun importFromZip(uri: Uri, merge: Boolean): Int{
-        var result = UNKNOWN
-        var pfd: ParcelFileDescriptor? = null
+        var result: Int
+        var pfd: ParcelFileDescriptor?
         //どうもここでval pfdとするとファイルディスクリプタがGCされてしまう？？？
 
         pfd = applicationContext.contentResolver.openFileDescriptor(uri, "r")
@@ -554,7 +554,7 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 
             repo.setTransactionSuccessful()
             result = SUCCESS
-        } catch (e: VersionUnmatchException) {
+        } catch (_: VersionUnmatchException) {
             result = VERSION_UNMATCH
         } catch (e: Throwable){
             Log.e("TrisquelImport", "Error during import loop: ${e.message}", e)

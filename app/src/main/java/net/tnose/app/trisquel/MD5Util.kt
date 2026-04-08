@@ -8,7 +8,7 @@ class MD5Util {
         internal fun digestAsStr(ist : InputStream) : String{
             val md5digest = MessageDigest.getInstance("MD5")
             val buffer = ByteArray(1024 * 128)
-            var n = 0
+            var n: Int
             do{
                 n = ist.read(buffer)
                 if(n > 0) md5digest.update(buffer, 0, n)

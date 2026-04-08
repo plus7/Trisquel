@@ -244,6 +244,7 @@ class TrisquelRepo(private val application: Application) {
                 removeList.remove(existingTag)
             }
         }
+        //作成またはrefcntをインクリメント
         for(label in createList){
             val t = getTagByLabel(label)
             if(t == null) {
@@ -254,11 +255,12 @@ class TrisquelRepo(private val application: Application) {
                 mTrisquelDao.upsertTagMap(TagMapEntity(0, photoId, t.id, filmRollId))
             }
         }
+        //currentTagsとcurrentTagMapsに残ったものはrefcntをデクリメントもしくは削除の対象
         for(t in removeList){
             deleteTagMap(t.tagMap.tagId!!)
-            if(t.tag!!.refcnt == 1){
+            if(t.tag!!.refcnt == 1){ // 削除対象
                 deleteTag(t.tag.id)
-            }else{
+            }else{ // デクリメントだけ
                 upsertTag(TagEntity(t.tag.id, t.tag.label, t.tag.refcnt!! - 1))
             }
         }
@@ -371,6 +373,7 @@ class TrisquelRepo(private val application: Application) {
             sdb.delete(table, null, null)
             val cval = ContentValues()
             cval.put("seq", 0)
+            //reset autoincrement
             sdb.update("sqlite_sequence", SQLiteDatabase.CONFLICT_ABORT, cval, "name = ?", arrayOf(table))
         }
     }
@@ -469,7 +472,7 @@ class TrisquelRepo(private val application: Application) {
                     "camera" -> cval.put(key, cameraOld2NewId[obj.getInt(key)])
                     "lens" -> cval.put(key, lensOld2NewId[obj.getInt(key)])
                     "filmroll" -> cval.put(key, filmrollOld2NewId[obj.getInt(key)])
-                    "accessories" -> {
+                    "accessories" -> { //アクセサリは少し特殊。横着してLIKEで検索できるようにしたかったため。
                         val accessories = obj.getString(key)
                             .split(Photo.splitter)
                             .filter { it.isNotEmpty() }
@@ -477,6 +480,7 @@ class TrisquelRepo(private val application: Application) {
                             .joinToString("/", "/", "/")
                         cval.put(key, accessories)
                     }
+                    // newpathsで置換
                     "suppimgs" -> cval.put(key, JSONArray(newpaths).toString())
                     "memo" -> {
                         val value = obj.getString(key)
@@ -502,6 +506,7 @@ class TrisquelRepo(private val application: Application) {
         return Pair(oldId, newId.toInt())
     }
 
+    //tagはそれなりに特殊
     @WorkerThread
     fun mergeTagMapJSON(tagmaps: JSONArray, tags: JSONArray,
                         filmrollOld2NewId: Map<Int, Int>, photoOld2NewId: Map<Int, Int>) {
@@ -521,9 +526,9 @@ class TrisquelRepo(private val application: Application) {
             ))
         }
 
-        for (group in tagmapsArray.groupBy { it.first }) {
+        for (group in tagmapsArray.groupBy { it.first }) { // group by photo_id
             if (group.key == -1) continue
-            val filmrollId = group.value[0].second
+            val filmrollId = group.value[0].second  // filmroll_id must be same
             if (filmrollId == -1) continue
             
             val tagLabels = ArrayList(group.value.map { it.third })

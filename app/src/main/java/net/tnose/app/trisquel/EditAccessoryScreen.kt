@@ -301,11 +301,10 @@ fun EditAccessoryScreen(
     if (showSaveDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showSaveDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
             confirmButton = {
                 TextButton(onClick = {
-                    showSaveDialog = false
                     onSave(type, name, mount, flFactor)
                 }) {
                     Text(stringResource(R.string.save))
@@ -313,7 +312,6 @@ fun EditAccessoryScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showSaveDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -325,16 +323,15 @@ fun EditAccessoryScreen(
     if (showDiscardDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = { showDiscardDialog = false },
+            onDismissRequest = {  },
             title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
+                TextButton(onClick = {  }) {
                     Text(stringResource(R.string.continue_editing))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showDiscardDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
