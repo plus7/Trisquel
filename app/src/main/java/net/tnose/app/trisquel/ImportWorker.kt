@@ -52,7 +52,6 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 
     companion object{
         val PARAM_ZIPFILE = "zipfile"
-        val PARAM_URI = "uri"
         val PARAM_MODE = "mode"
         val PARAM_PERCENTAGE = "percentage"
         val PARAM_STATUS = "status"

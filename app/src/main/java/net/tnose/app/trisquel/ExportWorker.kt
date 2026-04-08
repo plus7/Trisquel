@@ -41,7 +41,6 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         const val PARAM_ZIPFILE = "zipfile"
         const val PARAM_PERCENTAGE = "percentage"
         const val PARAM_STATUS = "status"
-        const val PARAM_ERROR = "error"
         const val PARAM_MODE = "mode"
         const val notificationId = 1
         const val channelId = "trisquel_ch"
@@ -336,7 +335,7 @@ class ExportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             val entries = repo.getAllEntriesJSON("photo")
             percentage = doPhotoInfoWrite(appContext, mode, percentage, zos, osw, entries)
             if(mode == 1) {
-                percentage = doPhotoContentWrite(appContext, percentage, zos, osw, entries)
+                doPhotoContentWrite(appContext, percentage, zos, osw, entries)
             }
             completed = true
         } catch (_: InterruptedException){

@@ -678,10 +678,8 @@ fun EditCameraScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clickable {
-                                    if (value == 0) {
-                                        ssGrainSize = value
-                                    } else {
-                                        ssGrainSize = value
+                                    ssGrainSize = value
+                                    if (value != 0) {
                                         previousCheckedSsSteps = value
                                         isDirty = true
                                     }
