@@ -46,7 +46,6 @@ fun TrisquelTopAppBar(
     getFilterLabel: (Pair<Int, ArrayList<String>>) -> String
 ) {
     var showFilterMenu by rememberSaveable { mutableStateOf(false) }
-    var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
 
     val titleRes = when {
         currentDestination?.hasRoute(CamerasRoute::class) == true -> R.string.title_activity_cam_list
@@ -114,6 +113,20 @@ fun TrisquelTopAppBar(
                             }
                         )
                         val pinnedFilters = getPinnedFilters()
+                        val isPinned = pinnedFilters.any { it.first == currentFilter.first && it.second.containsAll(currentFilter.second) }
+                        if (currentFilter.first != 0) {
+                            if(!isPinned) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_pin_current_filter)) },
+                                    onClick = { onPinFilterClick(); showFilterMenu = false }
+                                )
+                            }else{
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.action_unpin_current_filter)) },
+                                    onClick = { onUnpinFilterClick(); showFilterMenu = false }
+                                )
+                            }
+                        }
                         if (pinnedFilters.isNotEmpty()) {
                             HorizontalDivider()
                             pinnedFilters.forEach { f ->
@@ -130,29 +143,6 @@ fun TrisquelTopAppBar(
                 }
                 IconButton(onClick = onSearchClick) {
                     Icon(painterResource(R.drawable.ic_search_white_24dp), null)
-                }
-                
-                Box {
-                    IconButton(onClick = { showOverflowMenu = true }) {
-                        Icon(Icons.Default.MoreVert, null)
-                    }
-                    DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
-                        val pinnedFilters = getPinnedFilters()
-                        val isPinned = pinnedFilters.any { it.first == currentFilter.first && it.second.containsAll(currentFilter.second) }
-                        if (currentFilter.first != 0) {
-                            if(!isPinned) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.action_pin_current_filter)) },
-                                    onClick = { onPinFilterClick(); showOverflowMenu = false }
-                                )
-                            }else{
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.action_unpin_current_filter)) },
-                                    onClick = { onUnpinFilterClick(); showOverflowMenu = false }
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
