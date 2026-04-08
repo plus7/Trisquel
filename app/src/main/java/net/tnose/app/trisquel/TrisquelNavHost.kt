@@ -1,9 +1,12 @@
 package net.tnose.app.trisquel
 
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -41,6 +46,33 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+@Composable
+fun SwipeBackWrapper(content: @Composable () -> Unit) {
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (offsetX > 150f) {
+                            dispatcher?.onBackPressed()
+                        }
+                        offsetX = 0f
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        if (dragAmount > 0 || offsetX > 0) {
+                            offsetX += dragAmount
+                        }
+                    }
+                )
+            }
+    ) {
+        content()
+    }
+}
 
 @Composable
 fun TrisquelNavHost(
@@ -255,9 +287,14 @@ fun TrisquelNavHost(
                 }
             }
         }
-        composable<EditAccessoryRoute> { backStackEntry ->
+        composable<EditAccessoryRoute>(
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<EditAccessoryRoute>()
-            EditAccessoryRoute(id = route.id, onCancel = { navController.popBackStack() })
+            SwipeBackWrapper {
+                EditAccessoryRoute(id = route.id, onCancel = { navController.popBackStack() })
+            }
         }
         composable<FavoritesRoute> {
             val groupedPhotos = remember { mutableStateOf<List<Pair<String, List<Photo>>>>(emptyList()) }
@@ -290,62 +327,93 @@ fun TrisquelNavHost(
         composable<LicenseRoute> {
             LicenseScreen(onBack = { navController.popBackStack() })
         }
-        composable<EditCameraRoute> { backStackEntry ->
+        composable<EditCameraRoute>(
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<EditCameraRoute>()
-            EditCameraRoute(
-                id = route.id, 
-                type = route.type, 
-                onSaveSuccess = { 
-                    cameraViewModel.load()
-                    navController.popBackStack() 
-                },
-                onCancel = { navController.popBackStack() }
-            )
+            SwipeBackWrapper {
+                EditCameraRoute(
+                    id = route.id, 
+                    type = route.type, 
+                    onSaveSuccess = { 
+                        cameraViewModel.load()
+                        navController.popBackStack() 
+                    },
+                    onCancel = { navController.popBackStack() }
+                )
+            }
         }
-        composable<EditFilmRollRoute> { backStackEntry ->
+        composable<EditFilmRollRoute>(
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<EditFilmRollRoute>()
-            EditFilmRollRoute(
-                id = route.id,
-                onCancel = { navController.popBackStack() },
-                onNavigateToEditCamera = { navController.navigate(EditCameraRoute(type = 0, id = -1)) }
-            )
+            SwipeBackWrapper {
+                EditFilmRollRoute(
+                    id = route.id,
+                    onCancel = { navController.popBackStack() },
+                    onNavigateToEditCamera = { navController.navigate(EditCameraRoute(type = 0, id = -1)) }
+                )
+            }
         }
-        composable<PhotoListRoute> { backStackEntry ->
+        composable<PhotoListRoute>(
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<PhotoListRoute>()
-            EditPhotoListRoute(
-                id = route.id,
-                onBack = { navController.popBackStack() },
-                onNavigateToEditFilmRoll = { frId -> navController.navigate(EditFilmRollRoute(id = frId)) },
-                onNavigateToEditPhoto = { frId, pId, fIdx -> 
-                    navController.navigate(EditPhotoRoute(filmroll = frId, id = pId, frameIndex = fIdx))
-                },
-                onNavigateToGallery = { photo, list ->
-                    onPhotoInteraction(photo, list)
-                }
-            )
+            SwipeBackWrapper {
+                EditPhotoListRoute(
+                    id = route.id,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToEditFilmRoll = { frId -> navController.navigate(EditFilmRollRoute(id = frId)) },
+                    onNavigateToEditPhoto = { frId, pId, fIdx ->
+                        navController.navigate(
+                            EditPhotoRoute(
+                                filmroll = frId,
+                                id = pId,
+                                frameIndex = fIdx
+                            )
+                        )
+                    },
+                    onNavigateToGallery = { photo, list ->
+                        onPhotoInteraction(photo, list)
+                    }
+                )
+            }
         }
-        composable<EditPhotoRoute> { backStackEntry ->
+        composable<EditPhotoRoute>(
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<EditPhotoRoute>()
-            EditPhotoRoute(
-                id = route.id,
-                filmRollId = route.filmroll,
-                frameIndex = route.frameIndex,
-                onCancel = { navController.popBackStack() },
-                onNavigateToEditLens = {
-                    navController.navigate(EditLensRoute(id = -1))
-                }
-            )
+            SwipeBackWrapper {
+                EditPhotoRoute(
+                    id = route.id,
+                    filmRollId = route.filmroll,
+                    frameIndex = route.frameIndex,
+                    onCancel = { navController.popBackStack() },
+                    onNavigateToEditLens = {
+                        navController.navigate(EditLensRoute(id = -1))
+                    }
+                )
+            }
         }
-        composable<EditLensRoute> { backStackEntry ->
+        composable<EditLensRoute>(
+            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
+            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
+        ) { backStackEntry ->
             val route = backStackEntry.toRoute<EditLensRoute>()
-            EditLensRoute(
-                id = route.id,
-                onSaveSuccess = {
-                    lensViewModel.load()
-                    navController.popBackStack()
-                },
-                onCancel = { navController.popBackStack() }
-            )
+            SwipeBackWrapper {
+                EditLensRoute(
+                    id = route.id,
+                    onSaveSuccess = {
+                        lensViewModel.load()
+                        navController.popBackStack()
+                    },
+                    onCancel = { navController.popBackStack() }
+                )
+            }
         }
         composable<SearchRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<SearchRoute>()
