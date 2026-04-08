@@ -38,7 +38,10 @@ class LensViewModel(application: Application, private val savedStateHandle: Save
         repo.getAllLensesFlow(),
         sortKey
     ) { entities, key ->
-        val list = entities.filter { it.body == 0 }.map { LensSpec.fromEntity(it) }
+        // CursorのgetIntはカラムがNULLのとき0を返す仕様だったので、b5e6741のTrisquelDao.kt:275
+        // のようにbody == 0を見ればよかったが、今回の場合そうでもないのでnullチェックも必要、ということか？
+        // mergeLensJSONを見る限り、バックアップから復元すると交換レンズのbodyはNULLになってしまうように見える。
+        val list = entities.filter { it.body == null || it.body == 0 }.map { LensSpec.fromEntity(it) }
         sortList(list, key)
     }
     .onEach { _isLoading.value = false }
