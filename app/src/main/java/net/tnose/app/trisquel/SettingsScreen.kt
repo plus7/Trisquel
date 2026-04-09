@@ -41,11 +41,12 @@ fun SettingsScreen(onBack: () -> Unit) {
 
     if (showResetDialog) {
         AlertDialog(
-            onDismissRequest = {  },
+            onDismissRequest = { showResetDialog = false },
             title = { Text("Trisquel") },
             text = { Text(stringResource(R.string.msg_reset_autocomplete)) },
             confirmButton = {
                 TextButton(onClick = {
+                    showResetDialog = false
                     userPreferencesRepository.resetAutocompleteHistory()
                     Toast.makeText(context, context.getString(R.string.msg_reset_autocomplete_done), Toast.LENGTH_LONG).show()
                 }) {
@@ -53,7 +54,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = {  }) {
+                TextButton(onClick = { showResetDialog = false }) {
                     Text(stringResource(android.R.string.cancel))
                 }
             }
@@ -105,6 +106,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 headlineContent = { Text(stringResource(R.string.pref_title_reset_autocomplete_history)) },
                 supportingContent = { Text(stringResource(R.string.pref_description_reset_autocomplete_history)) },
                 modifier = Modifier.clickable {
+                    showResetDialog = true
                 }
             )
         }

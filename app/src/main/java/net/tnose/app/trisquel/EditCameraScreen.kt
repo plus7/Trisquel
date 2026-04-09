@@ -448,10 +448,11 @@ fun EditCameraScreen(
     if (showSaveDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = {  },
+            onDismissRequest = { showSaveDialog = false },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
             confirmButton = {
                 TextButton(onClick = {
+                    showSaveDialog = false
                     onSave(manufacturer, mount, model, format, fastestSs, slowestSs, bulbAvailable, ssCustomSteps, ssGrainSize, evGrainSize, evWidth, lensName, focalLength, fSteps)
                 }) {
                     Text(stringResource(R.string.save))
@@ -459,6 +460,7 @@ fun EditCameraScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
+                    showSaveDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -470,15 +472,16 @@ fun EditCameraScreen(
     if (showDiscardDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = {  },
+            onDismissRequest = { showDiscardDialog = false },
             title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = {  }) {
+                TextButton(onClick = { showDiscardDialog = false }) {
                     Text(stringResource(R.string.continue_editing))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
+                    showDiscardDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -499,12 +502,14 @@ fun EditCameraScreen(
             message = stringResource(R.string.msg_dialog_custom_ss),
             defaultValue = defaultValue,
             onConfirm = { valueStr ->
+                showCustomSsDialog = false
                 val list = valueStr.split("\n").filter { it.isNotEmpty() }.sortedBy { Util.stringToDoubleShutterSpeed(it) }
                 ssCustomSteps = list
                 previousCheckedSsSteps = 0
                 isDirty = true
             },
             onDismiss = {
+                showCustomSsDialog = false
                 ssGrainSize = previousCheckedSsSteps
             }
         )
@@ -682,6 +687,8 @@ fun EditCameraScreen(
                                     if (value != 0) {
                                         previousCheckedSsSteps = value
                                         isDirty = true
+                                    } else {
+                                        showCustomSsDialog = true
                                     }
                                 }
                                 .padding(vertical = 4.dp, horizontal = 4.dp)

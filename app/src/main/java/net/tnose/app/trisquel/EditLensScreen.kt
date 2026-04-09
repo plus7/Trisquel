@@ -122,10 +122,11 @@ fun EditLensScreen(
     if (showSaveDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = {  },
+            onDismissRequest = { showSaveDialog = false },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
             confirmButton = {
                 TextButton(onClick = {
+                    showSaveDialog = false
                     onSave()
                 }) {
                     Text(stringResource(R.string.save))
@@ -133,6 +134,7 @@ fun EditLensScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
+                    showSaveDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -144,15 +146,16 @@ fun EditLensScreen(
     if (showDiscardDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = {  },
+            onDismissRequest = { showDiscardDialog = false },
             title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = {  }) {
+                TextButton(onClick = { showDiscardDialog = false }) {
                     Text(stringResource(R.string.continue_editing))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
+                    showDiscardDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))

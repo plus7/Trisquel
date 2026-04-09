@@ -258,10 +258,11 @@ fun EditFilmRollScreen(
     if (showSaveDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = {  },
+            onDismissRequest = { showSaveDialog = false },
             title = { Text(stringResource(R.string.msg_save_or_discard_data)) },
             confirmButton = {
                 TextButton(onClick = {
+                    showSaveDialog = false
                     onSave(name, cameraId, manufacturer, brand, iso)
                 }) {
                     Text(stringResource(R.string.save))
@@ -269,6 +270,7 @@ fun EditFilmRollScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
+                    showSaveDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -280,15 +282,16 @@ fun EditFilmRollScreen(
     if (showDiscardDialog) {
         AlertDialog(
             shape = RoundedCornerShape(4.dp),
-            onDismissRequest = {  },
+            onDismissRequest = { showDiscardDialog = false },
             title = { Text(stringResource(R.string.msg_continue_editing_or_discard_data)) },
             confirmButton = {
-                TextButton(onClick = {  }) {
+                TextButton(onClick = { showDiscardDialog = false }) {
                     Text(stringResource(R.string.continue_editing))
                 }
             },
             dismissButton = {
                 TextButton(onClick = {
+                    showDiscardDialog = false
                     onCancel()
                 }) {
                     Text(stringResource(R.string.discard))
@@ -299,18 +302,19 @@ fun EditFilmRollScreen(
 
     if (showAskCreateCameraDialog) {
         AlertDialog(
-            onDismissRequest = {  },
+            onDismissRequest = { showAskCreateCameraDialog = false },
             title = null,
             text = { Text(stringResource(R.string.msg_ask_create_camera)) },
             confirmButton = {
                 TextButton(onClick = {
+                    showAskCreateCameraDialog = false
                     onAddCamera()
                 }) {
                     Text(stringResource(android.R.string.yes))
                 }
             },
             dismissButton = {
-                TextButton(onClick = {  }) {
+                TextButton(onClick = { showAskCreateCameraDialog = false }) {
                     Text(stringResource(android.R.string.no))
                 }
             }
