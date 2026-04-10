@@ -338,7 +338,14 @@ class TrisquelRepo(private val application: Application) {
                 for (i in 0 until it.columnCount) {
                     val cname = it.getColumnName(i)
                     when (it.getType(i)) {
-                        Cursor.FIELD_TYPE_NULL -> obj.put(cname, JSONObject.NULL)
+                        // もともとFIELD_TYPE_NULLの場合は第二引数にnullを指定していたが、
+                        // Geminiによる書き換えを行った当初、JSONObject.NULLに変わっていた。
+                        // これは下記仕様により挙動の変化をもたらし、インポート時に悪影響があったので、もとにもどしてある。
+                        // https://developer.android.com/reference/org/json/JSONObject
+                        // "In particular, calling put(name, null) removes the named entry
+                        // from the object but put(name, JSONObject.NULL) stores an entry
+                        // whose value is JSONObject.NULL. "
+                        Cursor.FIELD_TYPE_NULL -> obj.put(cname, null)
                         Cursor.FIELD_TYPE_FLOAT -> obj.put(cname, it.getDouble(i))
                         Cursor.FIELD_TYPE_INTEGER -> obj.put(cname, it.getInt(i))
                         Cursor.FIELD_TYPE_STRING -> obj.put(cname, it.getString(i))
