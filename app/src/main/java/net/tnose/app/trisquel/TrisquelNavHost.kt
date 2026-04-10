@@ -287,10 +287,7 @@ fun TrisquelNavHost(
                 }
             }
         }
-        composable<EditAccessoryRoute>(
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
-            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
-        ) { backStackEntry ->
+        composable<EditAccessoryRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<EditAccessoryRoute>()
             SwipeBackWrapper {
                 EditAccessoryRoute(id = route.id, onCancel = { navController.popBackStack() })
@@ -327,10 +324,7 @@ fun TrisquelNavHost(
         composable<LicenseRoute> {
             LicenseScreen(onBack = { navController.popBackStack() })
         }
-        composable<EditCameraRoute>(
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
-            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
-        ) { backStackEntry ->
+        composable<EditCameraRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<EditCameraRoute>()
             SwipeBackWrapper {
                 EditCameraRoute(
@@ -344,10 +338,7 @@ fun TrisquelNavHost(
                 )
             }
         }
-        composable<EditFilmRollRoute>(
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
-            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
-        ) { backStackEntry ->
+        composable<EditFilmRollRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<EditFilmRollRoute>()
             SwipeBackWrapper {
                 EditFilmRollRoute(
@@ -357,10 +348,7 @@ fun TrisquelNavHost(
                 )
             }
         }
-        composable<PhotoListRoute>(
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
-            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
-        ) { backStackEntry ->
+        composable<PhotoListRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<PhotoListRoute>()
             SwipeBackWrapper {
                 EditPhotoListRoute(
@@ -382,10 +370,7 @@ fun TrisquelNavHost(
                 )
             }
         }
-        composable<EditPhotoRoute>(
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
-            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
-        ) { backStackEntry ->
+        composable<EditPhotoRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<EditPhotoRoute>()
             SwipeBackWrapper {
                 EditPhotoRoute(
@@ -399,10 +384,7 @@ fun TrisquelNavHost(
                 )
             }
         }
-        composable<EditLensRoute>(
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left) },
-            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right) }
-        ) { backStackEntry ->
+        composable<EditLensRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<EditLensRoute>()
             SwipeBackWrapper {
                 EditLensRoute(
