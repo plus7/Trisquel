@@ -208,7 +208,7 @@ data class EditCameraUiState(
     val manufacturer: String = "",
     val mount: String = "",
     val modelName: String = "",
-    val format: Int = 0,
+    val format: Int = 6,
     val ssGrainSize: Int = 1,
     val ssCustomSteps: List<String> = emptyList(),
     val fastestSs: String = "",
