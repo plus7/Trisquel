@@ -15,7 +15,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.viewinterop.AndroidView
+import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,13 +37,10 @@ fun LicenseScreen(onBack: () -> Unit) {
             )
         }
     ) { paddingValues ->
-        AndroidView(
-            factory = { context ->
-                com.larswerkman.licenseview.LicenseView(context).apply {
-                    setLicenses(R.xml.licenses)
-                }
-            },
-            modifier = Modifier.padding(paddingValues).fillMaxSize()
+        LibrariesContainer(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
         )
     }
 }
