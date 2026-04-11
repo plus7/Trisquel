@@ -16,10 +16,11 @@ android {
         versionCode = 31
         versionName = "Release 25"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables.useSupportLibrary = true
     }
-    kotlinOptions {
-        jvmTarget = '11'
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
     }
     buildFeatures {
         viewBinding = true
@@ -39,8 +40,8 @@ android {
         checkReleaseBuilds = false
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 dependencies {
@@ -73,16 +74,14 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
     androidTestImplementation platform('androidx.compose:compose-bom:2026.03.01')
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
-    annotationProcessor 'com.google.auto.value:auto-value:1.11.1'
     implementation 'com.google.code.gson:gson:2.13.2'
-    implementation 'com.rengwuxian.materialedittext:library:2.1.4'
     implementation "androidx.work:work-runtime-ktx:2.11.2"
     implementation "androidx.print:print:1.1.0"
 
-    implementation 'it.sephiroth.android.library.imagezoom:library:1.0.4'
     implementation 'com.github.bumptech.glide:glide:5.0.5'
     implementation 'com.github.bumptech.glide:compose:1.0.0-beta08'
-    annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5'
+    //annotationProcessor 'com.github.bumptech.glide:compiler:5.0.5'
+    ksp 'com.github.bumptech.glide:ksp:5.0.5'
 
     implementation 'com.larswerkman:LicenseView:1.1'
     debugImplementation 'androidx.compose.ui:ui-tooling'
@@ -98,9 +97,6 @@ dependencies {
     androidTestImplementation "androidx.room:room-testing:$room_version"
 
     implementation project(':imagepicker')
-    implementation('com.github.ganfra:material-spinner:2.0.0') {
-        exclude group: 'com.android.support', module: 'appcompat-v7'
-    }
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'org.apache.commons:commons-compress:1.28.0'
 }
