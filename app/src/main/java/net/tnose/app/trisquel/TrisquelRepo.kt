@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import androidx.annotation.WorkerThread
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -358,19 +359,10 @@ class TrisquelRepo(private val application: Application) {
         return ja
     }
 
-    @WorkerThread
-    fun beginTransaction() {
-        db.openHelper.writableDatabase.beginTransaction()
-    }
-
-    @WorkerThread
-    fun setTransactionSuccessful() {
-        db.openHelper.writableDatabase.setTransactionSuccessful()
-    }
-
-    @WorkerThread
-    fun endTransaction() {
-        db.openHelper.writableDatabase.endTransaction()
+    suspend fun <R> runInTransaction(block: suspend () -> R): R {
+        return db.withTransaction {
+            block()
+        }
     }
 
     @WorkerThread
@@ -515,7 +507,7 @@ class TrisquelRepo(private val application: Application) {
 
     //tagはそれなりに特殊
     @WorkerThread
-    fun mergeTagMapJSON(tagmaps: JSONArray, tags: JSONArray,
+    suspend fun mergeTagMapJSON(tagmaps: JSONArray, tags: JSONArray,
                         filmrollOld2NewId: Map<Int, Int>, photoOld2NewId: Map<Int, Int>) {
         val tagOldId2Label = HashMap<Int, String>()
         for (i in 0 until tags.length()) {
@@ -539,9 +531,9 @@ class TrisquelRepo(private val application: Application) {
             if (filmrollId == -1) continue
             
             val tagLabels = ArrayList(group.value.map { it.third })
-            kotlinx.coroutines.runBlocking {
-                tagPhoto(group.key, filmrollId, tagLabels)
-            }
+
+            tagPhoto(group.key, filmrollId, tagLabels)
+
         }
     }
 }

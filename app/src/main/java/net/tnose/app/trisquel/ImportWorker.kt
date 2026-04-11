@@ -494,85 +494,105 @@ class ImportWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             val metadataJSON = getJSONObjectFromEntry(zipfile, "metadata.json")
             val dbver = metadataJSON.getInt("DB_VERSION")
             val mode = metadataJSON.getInt("EXPORT_MODE")
-            Log.d("importFromZip",
+            Log.d(
+                "importFromZip",
                 "DB_VERSION=" + dbver.toString() + ", " +
-                        "EXPORT_MODE=" + mode.toString())
+                        "EXPORT_MODE=" + mode.toString()
+            )
             if (dbver > DatabaseHelper.DATABASE_VERSION) {
                 throw VersionUnmatchException()
             }
 
-            repo.beginTransaction()
+            try {
+                repo.runInTransaction {
 
-            if (!merge) repo.deleteAll()
+                    if (!merge) repo.deleteAll()
 
-            val cameraJSON = getJSONArrayFromEntry(zipfile, "camera.json")
-            for (i in 0 until cameraJSON.length()) {
-                val id_pair = repo.mergeCameraJSON(cameraJSON.getJSONObject(i))
-                cameraIdOld2NewMap[id_pair.first] = id_pair.second
+                    val cameraJSON = getJSONArrayFromEntry(zipfile, "camera.json")
+                    for (i in 0 until cameraJSON.length()) {
+                        val id_pair = repo.mergeCameraJSON(cameraJSON.getJSONObject(i))
+                        cameraIdOld2NewMap[id_pair.first] = id_pair.second
+                    }
+
+                    val lensJSON = getJSONArrayFromEntry(zipfile, "lens.json")
+                    for (i in 0 until lensJSON.length()) {
+                        val id_pair =
+                            repo.mergeLensJSON(lensJSON.getJSONObject(i), cameraIdOld2NewMap)
+                        lensIdOld2NewMap[id_pair.first] = id_pair.second
+                    }
+
+                    val accessoryJSON = getJSONArrayFromEntry(zipfile, "accessory.json")
+                    for (i in 0 until accessoryJSON.length()) {
+                        val id_pair = repo.mergeAccessoryJSON(accessoryJSON.getJSONObject(i))
+                        accessoryIdOld2NewMap[id_pair.first] = id_pair.second
+                    }
+
+                    val filmrollJSON = getJSONArrayFromEntry(zipfile, "filmroll.json")
+                    for (i in 0 until filmrollJSON.length()) {
+                        val id_pair =
+                            repo.mergeFilmRollJSON(
+                                filmrollJSON.getJSONObject(i),
+                                cameraIdOld2NewMap
+                            )
+                        filmrollIdOld2NewMap[id_pair.first] = id_pair.second
+                        filmrollNameByOldIdMap[id_pair.first] =
+                            filmrollJSON.getJSONObject(i).getString("name")
+                    }
+
+                    val photoJSON = getJSONArrayFromEntry(zipfile, "photo.json")
+                    for (i in 0 until photoJSON.length()) {
+                        val pjo = photoJSON.getJSONObject(i)
+                        val tmp: Pair<ArrayList<String>, String> =
+                            if (mode == 0) assumedPaths(pjo)
+                            else newPathsFullRestore(zipfile, pjo, filmrollIdOld2NewMap)
+                        val newpaths = tmp.first
+                        val importErrorStr = tmp.second
+                        // val (newpaths, importErrorStr) = tmp なぜかこれができない
+                        val id_pair = repo.mergePhotoJSON(
+                            pjo,
+                            newpaths,
+                            importErrorStr,
+                            cameraIdOld2NewMap,
+                            lensIdOld2NewMap,
+                            filmrollIdOld2NewMap,
+                            accessoryIdOld2NewMap
+                        )
+                        photoIdOld2NewMap[id_pair.first] = id_pair.second
+
+                        val msg =
+                            if (mode == 0) "Searching photo files..." else "Copying photo files..."
+                        bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, msg)
+                    }
+
+                    val tagJSON = getJSONArrayFromEntry(zipfile, "tag.json")
+                    val tagmapJSON = getJSONArrayFromEntry(zipfile, "tagmap.json")
+                    repo.mergeTagMapJSON(
+                        tagmapJSON,
+                        tagJSON,
+                        filmrollIdOld2NewMap,
+                        photoIdOld2NewMap
+                    )
+
+                    //repo.setTransactionSuccessful()
+                }
+                result = SUCCESS
+            } catch (e: CancellationException) {
+                throw e // キャンセル例外は上に伝播させる
+            } catch (e: Throwable) {
+                result = UNKNOWN
+                Log.e("TrisquelImport", "Error during transaction: ${e.message}", e)
             }
-
-            val lensJSON = getJSONArrayFromEntry(zipfile, "lens.json")
-            for (i in 0 until lensJSON.length()) {
-                val id_pair = repo.mergeLensJSON(lensJSON.getJSONObject(i), cameraIdOld2NewMap)
-                lensIdOld2NewMap[id_pair.first] = id_pair.second
-            }
-
-            val accessoryJSON = getJSONArrayFromEntry(zipfile, "accessory.json")
-            for (i in 0 until accessoryJSON.length()) {
-                val id_pair = repo.mergeAccessoryJSON(accessoryJSON.getJSONObject(i))
-                accessoryIdOld2NewMap[id_pair.first] = id_pair.second
-            }
-
-            val filmrollJSON = getJSONArrayFromEntry(zipfile, "filmroll.json")
-            for (i in 0 until filmrollJSON.length()) {
-                val id_pair = repo.mergeFilmRollJSON(filmrollJSON.getJSONObject(i), cameraIdOld2NewMap)
-                filmrollIdOld2NewMap[id_pair.first] = id_pair.second
-                filmrollNameByOldIdMap[id_pair.first] = filmrollJSON.getJSONObject(i).getString("name")
-            }
-
-            val photoJSON = getJSONArrayFromEntry(zipfile, "photo.json")
-            for (i in 0 until photoJSON.length()) {
-                val pjo = photoJSON.getJSONObject(i)
-                val tmp: Pair<ArrayList<String>, String> =
-                    if (mode == 0) assumedPaths(pjo)
-                    else newPathsFullRestore(zipfile, pjo, filmrollIdOld2NewMap)
-                val newpaths = tmp.first
-                val importErrorStr = tmp.second
-                // val (newpaths, importErrorStr) = tmp なぜかこれができない
-                val id_pair = repo.mergePhotoJSON(pjo, newpaths, importErrorStr,
-                    cameraIdOld2NewMap, lensIdOld2NewMap, filmrollIdOld2NewMap, accessoryIdOld2NewMap)
-                photoIdOld2NewMap[id_pair.first] = id_pair.second
-
-                val msg = if(mode == 0) "Searching photo files..." else "Copying photo files..."
-                bcastProgress(i.toDouble() / photoJSON.length().toDouble() * 99.99, msg)
-            }
-
-            val tagJSON = getJSONArrayFromEntry(zipfile, "tag.json")
-            val tagmapJSON = getJSONArrayFromEntry(zipfile, "tagmap.json")
-            repo.mergeTagMapJSON(tagmapJSON, tagJSON, filmrollIdOld2NewMap, photoIdOld2NewMap)
-
-            repo.setTransactionSuccessful()
-            result = SUCCESS
         } catch (_: VersionUnmatchException) {
             result = VERSION_UNMATCH
-        } catch (e: Throwable){
-            Log.e("TrisquelImport", "Error during import loop: ${e.message}", e)
-            result = UNKNOWN
         } finally {
             try {
                 CloseWrappedZipFile(zipfile)
             } catch (e: Throwable) {
                 Log.e("TrisquelImport", "Error closing zip: ${e.message}", e)
             }
-            try {
-                repo.endTransaction()
-            } catch (e: Throwable) {
-                Log.e("TrisquelImport", "Error ending transaction: ${e.message}", e)
-            }
+            fis.close()
         }
         pfd.close()
-
-
         return result
     }
 }
