@@ -11,14 +11,18 @@ import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 
-class TrisquelRepo(private val application: Application) {
-    private val mTrisquelDao: TrisquelDao2
-    private val db: TrisquelRoomDatabase
+import javax.inject.Inject
+import javax.inject.Singleton
 
-    init {
-        db = TrisquelRoomDatabase.getInstance(application.applicationContext)
-        mTrisquelDao = db.trisquelDao()
-    }
+@Singleton
+class TrisquelRepo @Inject constructor(
+    private val mTrisquelDao: TrisquelDao2,
+    private val db: TrisquelRoomDatabase
+) {
+    constructor(application: Application) : this(
+        TrisquelRoomDatabase.getInstance(application.applicationContext).trisquelDao(),
+        TrisquelRoomDatabase.getInstance(application.applicationContext)
+    )
 
     /* Camera */
     fun getAllCamerasFlow(): Flow<List<CameraEntity>> = mTrisquelDao.allCamerasFlow()

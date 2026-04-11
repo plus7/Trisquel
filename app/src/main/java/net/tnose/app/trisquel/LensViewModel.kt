@@ -3,6 +3,8 @@ package net.tnose.app.trisquel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,8 +24,12 @@ sealed class LensEvent {
     data class ShowDeleteConfirm(val id: Int, val modelName: String) : LensEvent()
 }
 
-class LensViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
-    private val repo = TrisquelRepo(application)
+@HiltViewModel
+class LensViewModel @Inject constructor(
+    application: Application,
+    private val savedStateHandle: SavedStateHandle,
+    private val repo: TrisquelRepo
+) : AndroidViewModel(application) {
     
     private val _events = MutableSharedFlow<LensEvent>()
     val events = _events.asSharedFlow()

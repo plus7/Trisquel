@@ -3,6 +3,8 @@ package net.tnose.app.trisquel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -20,10 +22,12 @@ sealed class FilmRollEvent {
     data class ShowDeleteConfirm(val id: Int, val name: String) : FilmRollEvent()
 }
 
-class FilmRollViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(
-    application
-) {
-    private val mRepository: TrisquelRepo = TrisquelRepo(application)
+@HiltViewModel
+class FilmRollViewModel @Inject constructor(
+    application: Application,
+    private val savedStateHandle: SavedStateHandle,
+    private val mRepository: TrisquelRepo
+) : AndroidViewModel(application) {
 
     private val _events = MutableSharedFlow<FilmRollEvent>()
     val events = _events.asSharedFlow()

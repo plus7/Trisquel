@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,8 +46,8 @@ fun SearchRoute(
     onBack: () -> Unit,
     onNavigateToEditPhoto: (Int, Int, Int) -> Unit,
     onNavigateToGallery: (Photo, List<Photo>) -> Unit,
-    viewModel: SearchViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    mainViewModel: MainViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    viewModel: SearchViewModel = hiltViewModel(),
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val photos by viewModel.photosByAndQuery.collectAsState()

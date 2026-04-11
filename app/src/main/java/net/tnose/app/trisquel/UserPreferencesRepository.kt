@@ -3,6 +3,9 @@ package net.tnose.app.trisquel
 import android.content.Context
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
@@ -13,7 +16,8 @@ data class PinnedFilterItem(
     @SerializedName("values") val values: ArrayList<String>
 )
 
-class UserPreferencesRepository(private val context: Context) {
+@Singleton
+class UserPreferencesRepository @Inject constructor(@ApplicationContext private val context: Context) {
     private val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
     private val gson = Gson()
 

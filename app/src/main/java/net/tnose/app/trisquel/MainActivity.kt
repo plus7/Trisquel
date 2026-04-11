@@ -22,6 +22,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -30,6 +31,10 @@ import kotlinx.coroutines.launch
 import net.tnose.app.trisquel.ui.theme.TrisquelTheme
 import androidx.core.net.toUri
 
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     companion object {
         const val ROUTE_FILMROLLS = "filmrolls"
@@ -40,7 +45,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val mainViewModel: MainViewModel by viewModels()
-    private lateinit var userPreferencesRepository: UserPreferencesRepository
+
+    @Inject
+    lateinit var userPreferencesRepository: UserPreferencesRepository
 
     private val backupDirChosenForSlimExLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) {
@@ -112,7 +119,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        userPreferencesRepository = UserPreferencesRepository(this)
+        // userPreferencesRepository is injected by Hilt
         
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -201,10 +208,10 @@ class MainActivity : AppCompatActivity() {
         val scope = rememberCoroutineScope()
         val navController = rememberNavController()
 
-        val cameraViewModel: CameraViewModel = viewModel()
-        val lensViewModel: LensViewModel = viewModel()
-        val accessoryViewModel: AccessoryViewModel = viewModel()
-        val filmRollViewModel: FilmRollViewModel = viewModel()
+        val cameraViewModel: CameraViewModel = hiltViewModel()
+        val lensViewModel: LensViewModel = hiltViewModel()
+        val accessoryViewModel: AccessoryViewModel = hiltViewModel()
+        val filmRollViewModel: FilmRollViewModel = hiltViewModel()
         
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination

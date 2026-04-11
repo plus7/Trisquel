@@ -2,6 +2,8 @@ package net.tnose.app.trisquel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,8 +14,11 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class SearchViewModel(application: Application) : AndroidViewModel(application) {
-    private val repo = TrisquelRepo(application)
+@HiltViewModel
+class SearchViewModel @Inject constructor(
+    application: Application,
+    private val repo: TrisquelRepo
+) : AndroidViewModel(application) {
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading

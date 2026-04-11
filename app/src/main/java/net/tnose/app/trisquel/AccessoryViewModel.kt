@@ -3,6 +3,8 @@ package net.tnose.app.trisquel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,10 +24,12 @@ sealed class AccessoryEvent {
     data class ShowDeleteConfirm(val id: Int, val name: String) : AccessoryEvent()
 }
 
-class AccessoryViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(
-    application
-) {
-    private val mRepository: TrisquelRepo = TrisquelRepo(application)
+@HiltViewModel
+class AccessoryViewModel @Inject constructor(
+    application: Application,
+    private val savedStateHandle: SavedStateHandle,
+    private val mRepository: TrisquelRepo
+) : AndroidViewModel(application) {
 
     private val _events = MutableSharedFlow<AccessoryEvent>()
     val events = _events.asSharedFlow()

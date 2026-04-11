@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +32,13 @@ sealed class MainEvent {
     data class LaunchImportDocumentPicker(val mode: Int) : MainEvent()
 }
 
-class MainViewModel(application: Application, private val savedStateHandle: SavedStateHandle) : AndroidViewModel(application) {
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    application: Application,
+    private val savedStateHandle: SavedStateHandle,
+    private val repo: TrisquelRepo,
+    private val userPreferencesRepository: UserPreferencesRepository
+) : AndroidViewModel(application) {
     var activeDialog by mutableStateOf<ActiveDialog?>(null)
 
     private val _events = MutableSharedFlow<MainEvent>()
@@ -81,8 +89,8 @@ class MainViewModel(application: Application, private val savedStateHandle: Save
             savedStateHandle["pending_import_mode"] = value
         }
 
-    private val userPreferencesRepository = UserPreferencesRepository(application)
-    private val repo = TrisquelRepo(application)
+    // private val userPreferencesRepository = UserPreferencesRepository(application)
+    // private val repo = TrisquelRepo(application)
     private val workManager = WorkManager.getInstance(application)
 
     private val cameraNameCache = mutableMapOf<Int, String>()
