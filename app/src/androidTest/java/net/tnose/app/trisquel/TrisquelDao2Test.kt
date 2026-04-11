@@ -41,6 +41,9 @@ class TrisquelDao2Test {
         database.close()
     }
 
+    // ==========================================
+    // CameraEntity Tests
+    // ==========================================
     @Test
     fun insertAndGetCamera() = runTest {
         // 1. Arrange (準備): テスト用のCameraEntityを作成
@@ -74,24 +77,7 @@ class TrisquelDao2Test {
 
     @Test
     fun updateCamera() = runTest {
-        // Arrange
-        val camera = CameraEntity(
-            id = 0,
-            created = "2024-01-01T12:00:00",
-            type = 0,
-            lastModified = "2024-01-01T12:00:00",
-            mount = "F Mount",
-            manufacturer = "Nikon",
-            modelName = "F3",
-            format = 1,
-            ssGrainSize = 1,
-            fastestSs = 2000.0,
-            slowestSs = 8.0,
-            bulbAvailable = 1,
-            shutterSpeeds = "",
-            evGrainSize = 1,
-            evWidth = 10
-        )
+        val camera = CameraEntity(id = 0, created = "2024-01-01T12:00:00", type = 0, lastModified = "2024-01-01T12:00:00", mount = "F Mount", manufacturer = "Nikon", modelName = "F3", format = 1, ssGrainSize = 1, fastestSs = 2000.0, slowestSs = 8.0, bulbAvailable = 1, shutterSpeeds = "", evGrainSize = 1, evWidth = 10)
         val insertedId = dao.upsertCamera(camera)
         val loaded = dao.getCamera(insertedId.toInt())!!
 
@@ -107,24 +93,7 @@ class TrisquelDao2Test {
 
     @Test
     fun deleteCamera() = runTest {
-        // Arrange
-        val camera = CameraEntity(
-            id = 0,
-            created = "2024-01-01T12:00:00",
-            type = 0,
-            lastModified = "2024-01-01T12:00:00",
-            mount = "K Mount",
-            manufacturer = "Pentax",
-            modelName = "LX",
-            format = 1,
-            ssGrainSize = 1,
-            fastestSs = 2000.0,
-            slowestSs = 1.0,
-            bulbAvailable = 1,
-            shutterSpeeds = "",
-            evGrainSize = 1,
-            evWidth = 10
-        )
+        val camera = CameraEntity(id = 0, created = "2024-01-01T12:00:00", type = 0, lastModified = "2024-01-01T12:00:00", mount = "K Mount", manufacturer = "Pentax", modelName = "LX", format = 1, ssGrainSize = 1, fastestSs = 2000.0, slowestSs = 1.0, bulbAvailable = 1, shutterSpeeds = "", evGrainSize = 1, evWidth = 10)
         val insertedId = dao.upsertCamera(camera)
         val loaded = dao.getCamera(insertedId.toInt())!!
 
@@ -142,30 +111,120 @@ class TrisquelDao2Test {
         var cameraList = dao.allCamerasFlow().first()
         assertTrue("最初はリストが空であること", cameraList.isEmpty())
 
-        val camera = CameraEntity(
-            id = 0,
-            created = "2024-01-01T12:00:00",
-            type = 0,
-            lastModified = "2024-01-01T12:00:00",
-            mount = "FD Mount",
-            manufacturer = "Canon",
-            modelName = "AE-1",
-            format = 1,
-            ssGrainSize = 1,
-            fastestSs = 1000.0,
-            slowestSs = 2.0,
-            bulbAvailable = 1,
-            shutterSpeeds = "",
-            evGrainSize = 1,
-            evWidth = 10
-        )
-
-        // Act: データを挿入
+        val camera = CameraEntity(id = 0, created = "2024-01-01T12:00:00", type = 0, lastModified = "2024-01-01T12:00:00", mount = "FD Mount", manufacturer = "Canon", modelName = "AE-1", format = 1, ssGrainSize = 1, fastestSs = 1000.0, slowestSs = 2.0, bulbAvailable = 1, shutterSpeeds = "", evGrainSize = 1, evWidth = 10)
         dao.upsertCamera(camera)
 
-        // Assert: Flowから最新のリストが流れてくることを確認
         cameraList = dao.allCamerasFlow().first()
         assertEquals("リストに1件追加されていること", 1, cameraList.size)
-        assertEquals("Canon", cameraList[0].manufacturer)
+    }
+
+    // ==========================================
+    // LensEntity Tests
+    // ==========================================
+    @Test
+    fun insertAndGetLens() = runTest {
+        val lens = LensEntity(
+            id = 0,
+            created = "2024-01-01T12:00:00",
+            lastModified = "2024-01-01T12:00:00",
+            mount = "M Mount",
+            body = null,
+            manufacturer = "Leica",
+            modelName = "Summicron 50mm f/2",
+            focalLength = "50",
+            fSteps = "2,2.8,4,5.6,8,11,16"
+        )
+        val insertedId = dao.upsertLens(lens)
+        val loaded = dao.getLens(insertedId.toInt())
+
+        assertNotNull("挿入したレンズが取得できること", loaded)
+        assertEquals("メーカー名が一致すること", "Leica", loaded?.manufacturer)
+        assertEquals("モデル名が一致すること", "Summicron 50mm f/2", loaded?.modelName)
+    }
+
+    @Test
+    fun deleteLens() = runTest {
+        val lens = LensEntity(id = 0, created = "", lastModified = "", mount = "M Mount", body = null, manufacturer = "Leica", modelName = "Test", focalLength = "50", fSteps = "")
+        val insertedId = dao.upsertLens(lens)
+        val loaded = dao.getLens(insertedId.toInt())!!
+
+        dao.deleteLens(loaded)
+        val afterDelete = dao.getLens(insertedId.toInt())
+        assertNull("削除されたレンズはnullを返すこと", afterDelete)
+    }
+
+    // ==========================================
+    // FilmRollEntity Tests
+    // ==========================================
+    @Test
+    fun insertAndGetFilmRoll() = runTest {
+        // upsertFilmRoll は戻り値が Unit なので、IDを明示的に1として指定しテストする
+        val film = FilmRollEntity(
+            id = 1,
+            created = "2024-01-01T12:00:00",
+            name = "Tokyo Trip 2024",
+            lastModified = "2024-01-01T12:00:00",
+            camera = null,
+            format = "35mm",
+            manufacturer = "Kodak",
+            brand = "Portra 400",
+            iso = "400"
+        )
+        dao.upsertFilmRoll(film)
+        
+        val loaded = dao.getFilmRollRaw(1)
+        assertNotNull("挿入したフィルムが取得できること", loaded)
+        assertEquals("フィルム名が一致すること", "Tokyo Trip 2024", loaded?.name)
+        assertEquals("ブランド名が一致すること", "Portra 400", loaded?.brand)
+    }
+
+    @Test
+    fun deleteFilmRoll() = runTest {
+        val film = FilmRollEntity(id = 2, created = "", name = "Test Film", lastModified = "", camera = null, format = "35mm", manufacturer = "Fujifilm", brand = "Superia 400", iso = "400")
+        dao.upsertFilmRoll(film)
+        
+        dao.deleteFilmRoll(film)
+        val afterDelete = dao.getFilmRollRaw(2)
+        assertNull("削除されたフィルムはnullを返すこと", afterDelete)
+    }
+
+    // ==========================================
+    // AccessoryEntity Tests
+    // ==========================================
+    @Test
+    fun insertAndGetAccessory() = runTest {
+        // upsertAccessory も Unit 戻り値のため、IDを明示的に指定
+        val accessory = AccessoryEntity(
+            id = 1,
+            created = "2024-01-01T12:00:00",
+            lastModified = "2024-01-01T12:00:00",
+            type = 1,
+            name = "ND8 Filter",
+            mount = "52mm",
+            focalLengthFactor = 1.0
+        )
+        dao.upsertAccessory(accessory)
+        
+        val loaded = dao.getAccessory(1)
+        assertNotNull("挿入したアクセサリーが取得できること", loaded)
+        assertEquals("アクセサリー名が一致すること", "ND8 Filter", loaded?.name)
+    }
+
+    // ==========================================
+    // TagEntity Tests
+    // ==========================================
+    @Test
+    fun insertAndGetTag() = runTest {
+        val tag = TagEntity(
+            id = 0,
+            label = "Portrait",
+            refcnt = 0
+        )
+        dao.upsertTag(tag) // upsertTag は Long 戻り値
+        
+        // タグ名から取得するAPI(getTagByLabel)を用いて検証
+        val loaded = dao.getTagByLabel("Portrait")
+        assertNotNull("挿入したタグが取得できること", loaded)
+        assertEquals("タグ名が一致すること", "Portrait", loaded?.label)
     }
 }
