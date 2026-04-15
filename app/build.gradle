@@ -115,6 +115,11 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'org.apache.commons:commons-compress:1.28.0'
 }
+aboutLibraries {
+    // カスタムライセンスファイルの設定
+    collect.configPath.set(file("../aboutLibraries"))
+}
+
 repositories {
     mavenCentral()
 }

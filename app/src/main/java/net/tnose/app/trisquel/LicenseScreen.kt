@@ -13,8 +13,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,7 +39,9 @@ fun LicenseScreen(onBack: () -> Unit) {
             )
         }
     ) { paddingValues ->
+        val libraries by produceLibraries(R.raw.aboutlibraries)
         LibrariesContainer(
+            libraries,
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
