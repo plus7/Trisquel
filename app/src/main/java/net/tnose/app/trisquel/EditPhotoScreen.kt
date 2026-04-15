@@ -102,7 +102,7 @@ fun CheckListDialog(
     onConfirm: (List<Int>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val checkedStates = rememberSaveable { mutableStateOf(items.indices.map { initialCheckedIndices.contains(it) }) }
+    val checkedStates = rememberSaveable(items.size) { mutableStateOf(items.indices.map { initialCheckedIndices.contains(it) }) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
