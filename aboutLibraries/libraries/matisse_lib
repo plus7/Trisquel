@@ -1,0 +1,14 @@
+{
+  "uniqueId": "matisse_lib",
+  "artifactVersion": "v0.6.0",
+  "developers": [
+    {
+      "name": "Zhihu Inc"
+    }
+  ],
+  "description": "Matisse is a well-designed local image and video selector for Android.",
+  "name": "Matisse",
+  "licenses": [
+    "matisse_license"
+  ]
+}
