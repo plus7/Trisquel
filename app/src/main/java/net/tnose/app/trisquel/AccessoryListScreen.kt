@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,6 +32,8 @@ fun AccessoryListScreen(
     emptyMessage: String,
     isLoading: Boolean = false
 ) {
+    val listState = rememberLazyListState()
+
     if (isLoading) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -47,6 +50,7 @@ fun AccessoryListScreen(
         }
     } else {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize()
         ) {
             items(accessories, key = { it.id }) { accessory ->

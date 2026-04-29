@@ -29,6 +29,15 @@ fun LensListScreen(
     onScrollConsumed: () -> Unit,
     isLoading: Boolean = false
 ) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(scrollTargetIndex) {
+        if (scrollTargetIndex != null && scrollTargetIndex < lenses.size) {
+            listState.animateScrollToItem(scrollTargetIndex)
+            onScrollConsumed()
+        }
+    }
+
     if (isLoading) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -44,15 +53,6 @@ fun LensListScreen(
             Text(text = emptyMessage, style = MaterialTheme.typography.bodyLarge)
         }
     } else {
-        val listState = rememberLazyListState()
-
-        LaunchedEffect(scrollTargetIndex) {
-            if (scrollTargetIndex != null && scrollTargetIndex < lenses.size) {
-                listState.animateScrollToItem(scrollTargetIndex)
-                onScrollConsumed()
-            }
-        }
-
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize()
